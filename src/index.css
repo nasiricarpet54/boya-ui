@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-vazir: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-vazir);
+    background-color: #F5F0E8;
+    color: #1D1C17;
+    direction: rtl;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Persian numbers and typography styling */
+  .persian-nums {
+    font-feature-settings: "ss01";
+    font-variant-numeric: proportional-nums;
+  }
+}
+
+/* Custom scrollbars for clean luxury feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #EEDCC5;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C59B27;
+}
+
+/* Remove default focus outline and replace with elegant ring */
+*:focus-visible {
+  outline: 2px solid #C59B27;
+  outline-offset: 2px;
+}

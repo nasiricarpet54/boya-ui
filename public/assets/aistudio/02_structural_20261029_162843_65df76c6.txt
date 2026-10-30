@@ -1,0 +1,1044 @@
+﻿BOYA Snapshot - Structural - 20261029_162843
+Root: E:\boya\boya
+
+===== Directory tree (no node_modules/.git/build/dist) =====
+
+.\.brandtmp
+.\.brandtmp\__pycache__
+.\.brandtmp\out
+.\.brandtmp\probe
+.\.claude
+.\.claude\agents
+.\.claude\skills
+.\.claude\skills\booking-integrity-check
+.\.claude\skills\deploy-staging
+.\.claude\skills\review-backend
+.\.claude\skills\rls-audit
+.\.claude\skills\ui-finish-gate
+.\.cursor
+.\.cursor\agents
+.\.cursor\rules
+.\.cursor\skills
+.\.cursor\skills\booking-integrity-check
+.\.cursor\skills\deploy-staging
+.\.cursor\skills\review-backend
+.\.cursor\skills\rls-audit
+.\.cursor\skills\ui-finish-gate
+.\.fvm
+.\.fvm\flutter_sdk
+.\.fvm\versions
+.\.fvm\versions\3.41.4
+.\.github
+.\.github\workflows
+.\.harness
+.\_snapshots
+.\admin-panel
+.\admin-panel\.next
+.\admin-panel\node_modules
+.\admin-panel\src
+.\admin-panel\src\app
+.\admin-panel\src\app\[locale]
+.\admin-panel\src\app\[locale]\(protected)
+.\admin-panel\src\app\[locale]\(protected)\approvals
+.\admin-panel\src\app\[locale]\(protected)\audit-logs
+.\admin-panel\src\app\[locale]\(protected)\dashboard
+.\admin-panel\src\app\[locale]\(protected)\invites
+.\admin-panel\src\app\[locale]\(protected)\invites\components
+.\admin-panel\src\app\[locale]\(protected)\mobile-specialists
+.\admin-panel\src\app\[locale]\(protected)\settings
+.\admin-panel\src\app\[locale]\(protected)\tenants
+.\admin-panel\src\app\[locale]\(protected)\tenants\[id]
+.\admin-panel\src\app\[locale]\(protected)\tenants\create
+.\admin-panel\src\app\[locale]\(protected)\tenants\create\components
+.\admin-panel\src\app\[locale]\(protected)\transactions
+.\admin-panel\src\app\[locale]\(protected)\users
+.\admin-panel\src\app\[locale]\(protected)\users\[id]
+.\admin-panel\src\app\[locale]\(protected)\users\new
+.\admin-panel\src\app\[locale]\(protected)\users\new\components
+.\admin-panel\src\app\[locale]\login
+.\admin-panel\src\components
+.\admin-panel\src\components\auth
+.\admin-panel\src\components\layout
+.\admin-panel\src\components\location
+.\admin-panel\src\components\providers
+.\admin-panel\src\components\ui
+.\admin-panel\src\fonts
+.\admin-panel\src\lib
+.\admin-panel\src\lib\api
+.\admin-panel\src\lib\stores
+.\admin-panel\src\lib\utils
+.\admin-panel\src\messages
+.\admin-panel\src\types
+.\backend
+.\backend\dist
+.\backend\dist-test
+.\backend\dist-test\src
+.\backend\dist-test\src\common
+.\backend\dist-test\src\common\interceptors
+.\backend\dist-test\src\config
+.\backend\dist-test\src\database
+.\backend\dist-test\src\database\migrations
+.\backend\dist-test\src\modules
+.\backend\dist-test\src\modules\accounting
+.\backend\dist-test\src\modules\admin
+.\backend\dist-test\src\modules\admin\approvals
+.\backend\dist-test\src\modules\admin\approvals\dto
+.\backend\dist-test\src\modules\admin\audit-logs
+.\backend\dist-test\src\modules\admin\audit-logs\dto
+.\backend\dist-test\src\modules\admin\dashboard
+.\backend\dist-test\src\modules\admin\specialists
+.\backend\dist-test\src\modules\admin\tenants
+.\backend\dist-test\src\modules\admin\tenants\dto
+.\backend\dist-test\src\modules\admin\users
+.\backend\dist-test\src\modules\admin\users\dto
+.\backend\dist-test\src\modules\auth
+.\backend\dist-test\src\modules\auth\decorators
+.\backend\dist-test\src\modules\auth\dto
+.\backend\dist-test\src\modules\auth\guards
+.\backend\dist-test\src\modules\auth\interfaces
+.\backend\dist-test\src\modules\auth\storage
+.\backend\dist-test\src\modules\auth\utils
+.\backend\dist-test\src\modules\booking
+.\backend\dist-test\src\modules\common
+.\backend\dist-test\src\modules\health
+.\backend\dist-test\src\modules\location
+.\backend\dist-test\src\modules\location\dto
+.\backend\dist-test\src\modules\location\entities
+.\backend\dist-test\src\modules\notification
+.\backend\dist-test\src\modules\notification\entities
+.\backend\dist-test\src\modules\notification\listeners
+.\backend\dist-test\src\modules\notification\services
+.\backend\dist-test\src\modules\payment
+.\backend\dist-test\src\modules\payment\entities
+.\backend\dist-test\src\modules\payment\providers
+.\backend\dist-test\src\modules\referral
+.\backend\dist-test\src\modules\referral\controllers
+.\backend\dist-test\src\modules\referral\cron
+.\backend\dist-test\src\modules\referral\dto
+.\backend\dist-test\src\modules\referral\entities
+.\backend\dist-test\src\modules\referral\listeners
+.\backend\dist-test\src\modules\referral\services
+.\backend\dist-test\src\modules\review
+.\backend\dist-test\src\modules\review\dto
+.\backend\dist-test\src\modules\salon
+.\backend\dist-test\src\modules\salon\dto
+.\backend\dist-test\src\modules\salon\entities
+.\backend\dist-test\src\modules\service
+.\backend\dist-test\src\modules\service\entities
+.\backend\dist-test\src\modules\service-line
+.\backend\dist-test\src\modules\service-line\entities
+.\backend\dist-test\src\modules\specialist
+.\backend\dist-test\src\modules\specialist\entities
+.\backend\dist-test\src\modules\support
+.\backend\dist-test\src\modules\support\dto
+.\backend\dist-test\src\modules\tenant
+.\backend\dist-test\src\modules\tenant\dto
+.\backend\dist-test\src\modules\tenant\entities
+.\backend\dist-test\src\modules\tickets
+.\backend\dist-test\src\modules\tickets\dto
+.\backend\dist-test\src\modules\tickets\entities
+.\backend\dist-test\src\modules\upload
+.\backend\dist-test\src\modules\user
+.\backend\dist-test\src\modules\user\entities
+.\backend\dist-test\src\utils
+.\backend\dist-test\test
+.\backend\dist-test\test\integration
+.\backend\dist-test\test\setup
+.\backend\docs
+.\backend\docs\database
+.\backend\docs\reports
+.\backend\docs\review
+.\backend\node_modules
+.\backend\scripts
+.\backend\src
+.\backend\src\common
+.\backend\src\common\decorators
+.\backend\src\common\filters
+.\backend\src\common\guards
+.\backend\src\common\interceptors
+.\backend\src\common\pipes
+.\backend\src\config
+.\backend\src\database
+.\backend\src\database\migrations
+.\backend\src\database\seeds
+.\backend\src\modules
+.\backend\src\modules\accounting
+.\backend\src\modules\addresses
+.\backend\src\modules\addresses\dto
+.\backend\src\modules\addresses\entities
+.\backend\src\modules\admin
+.\backend\src\modules\admin\approvals
+.\backend\src\modules\admin\approvals\dto
+.\backend\src\modules\admin\audit-logs
+.\backend\src\modules\admin\audit-logs\dto
+.\backend\src\modules\admin\dashboard
+.\backend\src\modules\admin\specialists
+.\backend\src\modules\admin\tenants
+.\backend\src\modules\admin\tenants\dto
+.\backend\src\modules\admin\users
+.\backend\src\modules\admin\users\dto
+.\backend\src\modules\auth
+.\backend\src\modules\auth\decorators
+.\backend\src\modules\auth\dto
+.\backend\src\modules\auth\guards
+.\backend\src\modules\auth\interfaces
+.\backend\src\modules\auth\storage
+.\backend\src\modules\auth\utils
+.\backend\src\modules\booking
+.\backend\src\modules\cache
+.\backend\src\modules\common
+.\backend\src\modules\health
+.\backend\src\modules\location
+.\backend\src\modules\location\dto
+.\backend\src\modules\location\entities
+.\backend\src\modules\notification
+.\backend\src\modules\notification\entities
+.\backend\src\modules\notification\listeners
+.\backend\src\modules\notification\services
+.\backend\src\modules\payment
+.\backend\src\modules\payment\entities
+.\backend\src\modules\payment\providers
+.\backend\src\modules\referral
+.\backend\src\modules\referral\controllers
+.\backend\src\modules\referral\cron
+.\backend\src\modules\referral\dto
+.\backend\src\modules\referral\entities
+.\backend\src\modules\referral\listeners
+.\backend\src\modules\referral\services
+.\backend\src\modules\review
+.\backend\src\modules\review\dto
+.\backend\src\modules\salon
+.\backend\src\modules\salon\dto
+.\backend\src\modules\salon\entities
+.\backend\src\modules\service
+.\backend\src\modules\service\entities
+.\backend\src\modules\service-line
+.\backend\src\modules\service-line\entities
+.\backend\src\modules\specialist
+.\backend\src\modules\specialist\entities
+.\backend\src\modules\support
+.\backend\src\modules\support\dto
+.\backend\src\modules\tenant
+.\backend\src\modules\tenant\dto
+.\backend\src\modules\tenant\entities
+.\backend\src\modules\tickets
+.\backend\src\modules\tickets\dto
+.\backend\src\modules\tickets\entities
+.\backend\src\modules\upload
+.\backend\src\modules\user
+.\backend\src\modules\user\entities
+.\backend\src\utils
+.\backend\test
+.\backend\test\integration
+.\backend\test\setup
+.\blob
+.\blob\master
+.\blob\master\.harness
+.\design_system
+.\design_system\brand
+.\design_system\tools
+.\docker
+.\docker\postgres
+.\docker\postgres\init
+.\docs
+.\docs\report
+.\mobile
+.\mobile\customer_app
+.\mobile\customer_app\.dart_tool
+.\mobile\customer_app\assets
+.\mobile\customer_app\build
+.\mobile\customer_app\lib
+.\mobile\customer_app\lib\config
+.\mobile\customer_app\lib\core
+.\mobile\customer_app\lib\core\network
+.\mobile\customer_app\lib\features
+.\mobile\customer_app\lib\features\auth
+.\mobile\customer_app\lib\features\auth\application
+.\mobile\customer_app\lib\features\auth\data
+.\mobile\customer_app\lib\features\auth\domain
+.\mobile\customer_app\lib\features\auth\presentation
+.\mobile\customer_app\lib\features\auth\presentation\screens
+.\mobile\customer_app\lib\features\booking
+.\mobile\customer_app\lib\features\booking\application
+.\mobile\customer_app\lib\features\booking\domain
+.\mobile\customer_app\lib\features\booking\presentation
+.\mobile\customer_app\lib\features\booking\presentation\screens
+.\mobile\customer_app\lib\features\booking\presentation\widgets
+.\mobile\customer_app\lib\features\home
+.\mobile\customer_app\lib\features\home\application
+.\mobile\customer_app\lib\features\home\data
+.\mobile\customer_app\lib\features\home\domain
+.\mobile\customer_app\lib\features\home\presentation
+.\mobile\customer_app\lib\features\home\presentation\screens
+.\mobile\customer_app\lib\features\home\presentation\widgets
+.\mobile\customer_app\lib\features\location
+.\mobile\customer_app\lib\features\location\application
+.\mobile\customer_app\lib\features\location\data
+.\mobile\customer_app\lib\features\location\domain
+.\mobile\customer_app\lib\features\location\presentation
+.\mobile\customer_app\lib\features\location\presentation\widgets
+.\mobile\customer_app\lib\features\notifications
+.\mobile\customer_app\lib\features\notifications\data
+.\mobile\customer_app\lib\features\notifications\domain
+.\mobile\customer_app\lib\features\notifications\presentation
+.\mobile\customer_app\lib\features\notifications\presentation\screens
+.\mobile\customer_app\lib\features\profile
+.\mobile\customer_app\lib\features\profile\application
+.\mobile\customer_app\lib\features\profile\data
+.\mobile\customer_app\lib\features\profile\domain
+.\mobile\customer_app\lib\features\profile\presentation
+.\mobile\customer_app\lib\features\profile\presentation\screens
+.\mobile\customer_app\lib\features\profile\presentation\widgets
+.\mobile\customer_app\lib\features\salon
+.\mobile\customer_app\lib\features\salon\data
+.\mobile\customer_app\lib\features\salon\domain
+.\mobile\customer_app\lib\features\salon\presentation
+.\mobile\customer_app\lib\features\salon\presentation\screens
+.\mobile\customer_app\lib\features\salon\presentation\widgets
+.\mobile\customer_app\lib\features\specialist
+.\mobile\customer_app\lib\features\specialist\application
+.\mobile\customer_app\lib\features\specialist\data
+.\mobile\customer_app\lib\features\specialist\domain
+.\mobile\customer_app\lib\features\specialist\presentation
+.\mobile\customer_app\lib\features\specialist\presentation\screens
+.\mobile\customer_app\lib\features\support
+.\mobile\customer_app\lib\features\support\data
+.\mobile\customer_app\lib\features\support\presentation
+.\mobile\customer_app\lib\shared
+.\mobile\customer_app\lib\shared\widgets
+.\mobile\customer_app\scripts
+.\mobile\customer_app\test
+.\mobile\customer_app\web
+.\mobile\customer_app\web\icons
+.\mobile\customer_app\windows
+.\mobile\customer_app\windows\flutter
+.\mobile\customer_app\windows\flutter\ephemeral
+.\mobile\customer_app\windows\flutter\ephemeral\.plugin_symlinks
+.\mobile\customer_app\windows\flutter\ephemeral\.plugin_symlinks\flutter_secure_storage_windows
+.\mobile\customer_app\windows\flutter\ephemeral\.plugin_symlinks\geolocator_windows
+.\mobile\customer_app\windows\flutter\ephemeral\.plugin_symlinks\jni
+.\mobile\customer_app\windows\flutter\ephemeral\.plugin_symlinks\package_info_plus
+.\mobile\customer_app\windows\flutter\ephemeral\.plugin_symlinks\path_provider_windows
+.\mobile\customer_app\windows\flutter\ephemeral\.plugin_symlinks\shared_preferences_windows
+.\mobile\customer_app\windows\runner
+.\mobile\customer_app\windows\runner\resources
+.\mobile\salon_app
+.\mobile\salon_app\.dart_tool
+.\mobile\salon_app\build
+.\mobile\salon_app\lib
+.\mobile\salon_app\lib\core
+.\mobile\salon_app\lib\core\navigation
+.\mobile\salon_app\lib\core\network
+.\mobile\salon_app\lib\core\router
+.\mobile\salon_app\lib\features
+.\mobile\salon_app\lib\features\auth
+.\mobile\salon_app\lib\features\auth\application
+.\mobile\salon_app\lib\features\auth\data
+.\mobile\salon_app\lib\features\auth\domain
+.\mobile\salon_app\lib\features\auth\presentation
+.\mobile\salon_app\lib\features\auth\presentation\screens
+.\mobile\salon_app\lib\features\bookings
+.\mobile\salon_app\lib\features\bookings\data
+.\mobile\salon_app\lib\features\bookings\domain
+.\mobile\salon_app\lib\features\bookings\presentation
+.\mobile\salon_app\lib\features\bookings\presentation\screens
+.\mobile\salon_app\lib\features\bookings\presentation\widgets
+.\mobile\salon_app\lib\features\bookings\screens
+.\mobile\salon_app\lib\features\bookings\widgets
+.\mobile\salon_app\lib\features\dashboard
+.\mobile\salon_app\lib\features\dashboard\application
+.\mobile\salon_app\lib\features\dashboard\domain
+.\mobile\salon_app\lib\features\dashboard\presentation
+.\mobile\salon_app\lib\features\dashboard\presentation\screens
+.\mobile\salon_app\lib\features\dashboard\presentation\widgets
+.\mobile\salon_app\lib\features\finance
+.\mobile\salon_app\lib\features\finance\presentation
+.\mobile\salon_app\lib\features\finance\presentation\screens
+.\mobile\salon_app\lib\features\finance\presentation\widgets
+.\mobile\salon_app\lib\features\portfolio
+.\mobile\salon_app\lib\features\portfolio\data
+.\mobile\salon_app\lib\features\portfolio\domain
+.\mobile\salon_app\lib\features\portfolio\presentation
+.\mobile\salon_app\lib\features\portfolio\presentation\screens
+.\mobile\salon_app\lib\features\profile
+.\mobile\salon_app\lib\features\profile\presentation
+.\mobile\salon_app\lib\features\profile\presentation\screens
+.\mobile\salon_app\lib\features\salon
+.\mobile\salon_app\lib\features\salon\application
+.\mobile\salon_app\lib\features\salon\data
+.\mobile\salon_app\lib\features\salon\domain
+.\mobile\salon_app\lib\features\salon\presentation
+.\mobile\salon_app\lib\features\salon\presentation\screens
+.\mobile\salon_app\lib\features\salon\presentation\widgets
+.\mobile\salon_app\lib\features\schedule
+.\mobile\salon_app\lib\features\schedule\presentation
+.\mobile\salon_app\lib\features\schedule\presentation\screens
+.\mobile\salon_app\lib\features\services
+.\mobile\salon_app\lib\features\services\data
+.\mobile\salon_app\lib\features\services\domain
+.\mobile\salon_app\lib\features\services\presentation
+.\mobile\salon_app\lib\features\services\presentation\screens
+.\mobile\salon_app\lib\features\specialists
+.\mobile\salon_app\lib\features\specialists\data
+.\mobile\salon_app\lib\features\specialists\domain
+.\mobile\salon_app\lib\features\specialists\presentation
+.\mobile\salon_app\lib\features\specialists\presentation\screens
+.\mobile\salon_app\lib\features\specialists\presentation\widgets
+.\mobile\salon_app\lib\shared
+.\mobile\salon_app\lib\shared\widgets
+.\mobile\salon_app\test
+.\mobile\salon_app\web
+.\mobile\salon_app\web\icons
+.\mobile\shared
+.\mobile\shared\.dart_tool
+.\mobile\shared\assets
+.\mobile\shared\assets\fonts
+.\mobile\shared\assets\images
+.\mobile\shared\lib
+.\mobile\shared\lib\api
+.\mobile\shared\lib\app
+.\mobile\shared\lib\localization
+.\mobile\shared\lib\models
+.\mobile\shared\lib\theme
+.\mobile\shared\lib\utils
+.\mobile\shared\lib\widgets
+.\mobile\shared\test
+.\scripts
+.\web
+
+===== backend\Dockerfile =====
+
+# ---- Builder Stage ----
+FROM node:22-slim AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# ---- Runtime Stage ----
+FROM node:22-slim
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# کپی خروجی بیلد از مرحله قبل
+COPY --from=builder /app/dist ./dist
+# کپی کل node_modules (اختیاری: اگر package.json را از builder کپی نکنید)
+COPY --from=builder /app/node_modules ./node_modules
+
+EXPOSE 3000
+
+CMD ["node", "dist/main.js"]
+
+
+===== docker-compose.yml =====
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: boya_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: beauty
+      POSTGRES_PASSWORD: change-me
+      POSTGRES_DB: beauty_platform
+    command: ["postgres", "-c", "shared_buffers=1GB", "-c", "effective_cache_size=2GB", "-c", "work_mem=16MB", "-c", "maintenance_work_mem=128MB", "-c", "max_connections=50", "-c", "random_page_cost=1.1"]
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beauty -d beauty_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: boya_redis_dev
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
+
+
+
+===== docker-compose.staging.yml =====
+
+# Staging stack — SMS / OTP testing.
+#
+# Brings up Postgres 16 + Redis 7 + the NestJS backend (behind Caddy) with the
+# schema already migrated, so the stack is ready to send real Kavenegar SMS.
+#
+#   1. Put the staging secrets in a repo-root .env (it is gitignored, same as
+#      backend/.env):
+#
+#        KAVENEGAR_API_KEY=<real key>
+#        OTP_PEPPER=<random string>
+#        JWT_ACCESS_SECRET=<random string>
+#        JWT_REFRESH_SECRET=<random string>
+#
+#   2. docker compose -f docker-compose.staging.yml up -d --build
+#
+# Host ports are offset from the dev docker-compose.yml (5434/6381/3001) so
+# staging can run next to the local dev stack without clashing.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: boya_postgres_staging
+    restart: unless-stopped
+    # 4GB single-host budget: shared_buffers + effective_cache_size reserve ~1.5GB
+    # of the actual data; the container itself is capped at 1GB.
+    # Same tuning as dev/production: without these flags Postgres falls back to
+    # the 128MB shared_buffers default, which is too small for the RLS index
+    # plans the panel relies on.
+    command: ["postgres", "-c", "shared_buffers=1GB", "-c", "effective_cache_size=2GB", "-c", "work_mem=16MB", "-c", "maintenance_work_mem=128MB", "-c", "max_connections=50", "-c", "random_page_cost=1.1"]
+    mem_limit: 1024m
+    cpus: 1.5
+    environment:
+      POSTGRES_USER: beauty
+      POSTGRES_PASSWORD: change-me
+      POSTGRES_DB: beauty_platform
+    ports:
+      - "127.0.0.1:5434:5432" # localhost only; no external access to the data plane.
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beauty -d beauty_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: boya_redis_staging
+    restart: unless-stopped
+    mem_limit: 256m
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "127.0.0.1:6381:6379" # localhost only; no external access to the data plane.
+    volumes:
+      - redis_staging_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot: applies the TypeORM migration chain to the staging database. It
+  # runs in the builder stage because `npm run migration:run` needs the TS
+  # sources + ts-node, which the slim runtime image deliberately does not ship.
+  # data-source.migration.ts refuses to run as beauty_app, so the master user
+  # (beauty) is used here.
+  backend-migrate:
+    build:
+      context: ./backend
+      target: builder
+    container_name: boya_backend_migrate_staging
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_MIGRATION_HOST: postgres
+      DATABASE_MIGRATION_PORT: "5432"
+      DATABASE_MIGRATION_USER: beauty
+      DATABASE_MIGRATION_PASSWORD: change-me
+      DATABASE_MIGRATION_NAME: beauty_platform
+    command: ["npm", "run", "migration:run"]
+
+  backend:
+    build:
+      context: ./backend
+    container_name: boya_backend_staging
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend-migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: staging
+      PORT: "3000"
+      API_PREFIX: api/v1
+      # --- PostgreSQL (compose-internal network) ---
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USER: beauty
+      DATABASE_PASSWORD: change-me
+      DATABASE_NAME: beauty_platform
+      DATABASE_MIGRATION_USER: beauty
+      DATABASE_MIGRATION_PASSWORD: change-me
+      DATABASE_SSL: "false"
+      # --- Redis ---
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      # --- JWT (required) ---
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in .env}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      # --- SMS / OTP via Melipayamak (required for SMS testing) ---
+      MELIPAYAMAK_USERNAME: ${MELIPAYAMAK_USERNAME:?set MELIPAYAMAK_USERNAME in .env}
+      MELIPAYAMAK_PASSWORD: ${MELIPAYAMAK_PASSWORD:?set MELIPAYAMAK_PASSWORD in .env}
+      MELIPAYAMAK_SENDER: ${MELIPAYAMAK_SENDER:-}
+      MELIPAYAMAK_URL: ${MELIPAYAMAK_URL:-https://rest.payamak-panel.com/api/SendSMS/}
+      MELIPAYAMAK_OTP_BODY_ID: ${MELIPAYAMAK_OTP_BODY_ID:-}
+      MELIPAYAMAK_BOOKING_BODY_ID: ${MELIPAYAMAK_BOOKING_BODY_ID:-}
+      MELIPAYAMAK_INVITE_BODY_ID: ${MELIPAYAMAK_INVITE_BODY_ID:-}
+      MELIPAYAMAK_INVITE_OWNER_BODY_ID: ${MELIPAYAMAK_INVITE_OWNER_BODY_ID:-}
+      MELIPAYAMAK_INVITE_SPECIALIST_BODY_ID: ${MELIPAYAMAK_INVITE_SPECIALIST_BODY_ID:-}
+      INVITE_BASE_URL: ${INVITE_BASE_URL:-https://staging.boya.ir}
+      INVITE_EXPIRY_DAYS: ${INVITE_EXPIRY_DAYS:-7}
+      OTP_PEPPER: ${OTP_PEPPER:?set OTP_PEPPER in .env}
+      # false => real SMS is sent through Melipayamak (the point of staging).
+      # Set OTP_DEV_MODE=true in .env to log codes instead of sending them.
+      OTP_DEV_MODE: ${OTP_DEV_MODE:-false}
+      # --- Feature flags (Phase 1 showcase: payments off) ---
+      PAYMENTS_ENABLED: ${PAYMENTS_ENABLED:-false}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_CONNECT_CLIENT_ID: ${STRIPE_CONNECT_CLIENT_ID:-}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
+      NESHAN_API_KEY: ${NESHAN_API_KEY:-}
+      # Persistent volume for uploaded images (salon cover, specialist avatar,
+      # portfolio). Served statically at /uploads/. Staging mirrors production
+      # so the same directory layout is required.
+      UPLOAD_DIR: /app/uploads
+      # --- CORS (comma-separated browser origins) ---
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    volumes:
+      - uploads_data:/app/uploads
+    mem_limit: 256m
+    ports:
+      - "3001:3000" # direct API access for debugging (Caddy also proxies it)
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const n=require('net');n.connect(3000,()=>process.exit(0)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: boya_caddy_staging
+    restart: unless-stopped
+    mem_limit: 128m
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_staging_data:
+  redis_staging_data:
+  caddy_data:
+  caddy_config:
+  uploads_data:
+
+
+===== Caddyfile =====
+
+boya.bcshopir.ir {
+    encode zstd gzip
+
+    # API + Swagger + Uploads
+    handle /api/* {
+        reverse_proxy backend:3000
+    }
+    handle /docs* {
+        reverse_proxy backend:3000
+    }
+    handle /uploads/* {
+        reverse_proxy backend:3000
+    }
+
+    # Admin Panel
+    handle /admin {
+        redir * /admin/fa 308
+    }
+    handle /admin/ {
+        redir * /admin/fa 308
+    }
+    handle /admin* {
+        reverse_proxy admin:3001
+    }
+
+    # Customer Web App
+    handle_path /app/* {
+        header Permissions-Policy "geolocation=(self \"https://boya.bcshopir.ir\")"
+        reverse_proxy customer-web:80
+    }
+    handle /app {
+        header Permissions-Policy "geolocation=(self \"https://boya.bcshopir.ir\")"
+        redir * /app/ 308
+    }
+
+    # Salon Web App
+    handle_path /salon/* {
+        reverse_proxy salon-web:80
+    }
+    handle /salon {
+        redir * /salon/ 308
+    }
+
+    # Fallback
+    handle {
+        redir * /app/ 308
+    }
+}
+
+
+===== backend/.env.example (masked) =====
+
+# Copy to .env. Never commit real secrets.
+
+NODE_ENV=<REDACTED>
+PORT=<REDACTED>
+API_PREFIX=<REDACTED>
+
+# PostgreSQL 16 (docker-compose.yml — منبع واحد پورت)
+DATABASE_HOST=<REDACTED>
+DATABASE_PORT=<REDACTED>
+DATABASE_USER=<REDACTED>
+DATABASE_PASSWORD=<REDACTED>
+DATABASE_NAME=<REDACTED>
+DATABASE_SSL=<REDACTED>
+
+# Redis (docker-compose.yml — منبع واحد پورت)
+REDIS_HOST=<REDACTED>
+REDIS_PORT=<REDACTED>
+REDIS_PASSWORD=<REDACTED>
+
+# JWT — generate a long random string. Do not reuse across environments.
+JWT_ACCESS_SECRET=<REDACTED>
+JWT_ACCESS_TTL=<REDACTED>
+JWT_REFRESH_SECRET=<REDACTED>
+JWT_REFRESH_TTL=<REDACTED>
+
+# Stripe Connect — use test keys locally. Live keys stay in the secret store.
+STRIPE_SECRET_KEY=<REDACTED>
+STRIPE_WEBHOOK_SECRET=<REDACTED>
+STRIPE_CONNECT_CLIENT_ID=<REDACTED>
+
+# Phase 1 is a free showcase: online payments are OFF. The payment module ships
+# in the tree but every route answers 503 until this is set to true (Phase 2).
+PAYMENTS_ENABLED=<REDACTED>
+
+# Melipayamak SMS (https://www.melipayamak.com)
+# bodyId values are the numeric shared-service pattern codes approved in the
+# Melipayamak panel (کد عددی پترن). Leave a bodyId empty to skip that send.
+MELIPAYAMAK_USERNAME=<REDACTED>
+MELIPAYAMAK_PASSWORD=<REDACTED>
+# Sender number used only by the direct-SMS fallback (no pattern). Leave empty
+# to disable the fallback; the pattern API sends from the shared service number.
+MELIPAYAMAK_SENDER=<REDACTED>
+MELIPAYAMAK_URL=<REDACTED>
+MELIPAYAMAK_OTP_BODY_ID=<REDACTED>
+MELIPAYAMAK_BOOKING_BODY_ID=<REDACTED>
+# Invite deep link (ADR-010). The SMS carries `${INVITE_BASE_URL}?token=<64hex>`,
+# so with this unset the recipient gets only the bare token — nothing can open it.
+# Point it at the app the invitee uses: staging first, then the real domain.
+INVITE_BASE_URL=<REDACTED>
+# Invite patterns (bodyId). The generic one is required; the per-role overrides are
+# optional and fall back to it, so a single pattern is enough until owner and
+# specialist invites need different wording.
+MELIPAYAMAK_INVITE_BODY_ID=<REDACTED>
+MELIPAYAMAK_INVITE_OWNER_BODY_ID=<REDACTED>
+MELIPAYAMAK_INVITE_SPECIALIST_BODY_ID=<REDACTED>
+# Invites (ADR-010) — how long a salon staff invite stays redeemable, in days.
+INVITE_EXPIRY_DAYS=<REDACTED>
+OTP_PEPPER=<REDACTED>
+# Set to true in local dev to log OTP codes instead of sending SMS.
+OTP_DEV_MODE=<REDACTED>
+
+# FCM push (https://console.firebase.google.com) — Firebase console →
+# Project settings → Service accounts. Leave unset to disable push: the
+# reminder sweep keeps running on the in-app notification and SMS channels.
+FIREBASE_PROJECT_ID=<REDACTED>
+FIREBASE_CLIENT_EMAIL=<REDACTED>
+# Paste the private key with \n escapes; the value is unescaped at read time.
+FIREBASE_PRIVATE_KEY=<REDACTED>
+
+# Neshan Maps (server-side geocoding, if used)
+NESHAN_API_KEY=<REDACTED>
+
+# Uploaded images (cover, avatar, portfolio): the directory UploadService
+# writes into and the API serves statically at /uploads/. The default is
+# <backend cwd>/uploads; set it explicitly when a volume owns the directory.
+UPLOAD_DIR=<REDACTED>
+
+# Comma-separated browser origins allowed by CORS
+CORS_ORIGINS=<REDACTED>
+
+===== mobile\shared\pubspec.yaml =====
+
+
+name: boya_shared
+description: A starting point for Dart libraries or applications.
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.7.0 <4.0.0'
+  flutter: '>=3.29.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  parsi_datetime_picker: ^0.0.2
+  
+  retrofit: 4.6.0
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.9.0
+  dio: ^5.4.0
+  equatable: ^2.0.5
+  intl: 0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  retrofit_generator: ^9.7.0
+  freezed: ^3.1.0
+  json_serializable: ^6.8.0
+  build_runner: ^2.5.4
+
+dependency_overrides:
+  intl: 0.20.2
+
+# ✅ Vazirmatn fonts for brand consistency
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Vazirmatn
+      fonts:
+        - asset: assets/fonts/Vazirmatn-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Vazirmatn-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Vazirmatn-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Vazirmatn-Bold.ttf
+          weight: 700
+
+
+===== mobile\customer_app\pubspec.yaml =====
+
+name: customer_app
+description: Beauty Platform customer app.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.7.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  boya_shared:
+    path: ../shared
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.0.0
+  dio: ^5.11.1
+  shared_preferences: ^2.2.3
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  geolocator: ^14.0.3
+  flutter_secure_storage: ^11.2.0
+  neshan_maps_flutter: ^1.1.0
+  latlong2: ^0.10.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.15.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/faq.json
+
+# ✅ این بخش باید دقیقاً بدون فاصله در انتهای فایل باشد
+dependency_overrides:
+  intl: 0.20.2
+
+
+===== mobile\salon_app\pubspec.yaml =====
+
+name: salon_app
+description: Beauty Platform salon panel.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  boya_shared:
+    path: ../shared
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.0.0
+  flutter_localizations:
+    sdk: flutter
+  dio: ^5.4.0
+  shared_preferences: 2.5.3
+  flutter_secure_storage: ^9.2.4
+  url_launcher: ^6.3.1
+  fl_chart: 0.68.0
+  image_picker: 1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+dependency_overrides:
+  intl: 0.20.2
+
+flutter:
+  uses-material-design: true
+
+
+===== backend/src/modules (folders) =====
+
+accounting
+addresses
+admin
+auth
+booking
+cache
+common
+health
+location
+notification
+payment
+referral
+review
+salon
+service
+service-line
+specialist
+support
+tenant
+tickets
+upload
+user
+
+===== migrations in backend\src\database\migrations =====
+
+.gitkeep
+1729999999999-EnsureApplicationRole.ts
+1730000000000-CreateBookings.ts
+1730000000001-PerformanceIndexes.ts
+1730000000002-CreateTicketsModule.ts
+1730000000002-TenantUserProfile.ts
+1730000000003-ServiceLines.ts
+1730000000004-Transactions.ts
+1730000000005-Notifications.ts
+1730000000006-Referrals.ts
+1730000000007-MakeUserTenantNullable.ts
+1730000000008-CustomerLookupFunction.ts
+1730000000009-AddSalonFieldsAndCategories.ts
+1730000000010-AddCategoryEmoji.ts
+1730000000011-AddBookingReviewedStatus.ts
+1730000000012-AlignServiceAndSpecialistSchema.ts
+1730000000013-LookupFunctionReturnsTenantId.ts
+1730000000014-CustomerBookingsLookup.ts
+1730000000015-PublicSalonSpecialistsLookup.ts
+1730000000016-PublicSalonPortfolioLookup.ts
+1730000000017-SeedSpecialistPortfolioImages.ts
+1730000000018-ApprovalSchema.ts
+1730000000019-SeedExistingAsApproved.ts
+1730000000020-AdminApprovalAccess.ts
+1730000000021-PanelBookingsLookup.ts
+1730000000022-AdminDashboard.ts
+1730000000023-AdminTenants.ts
+1730000000024-AdminUsers.ts
+1730000000025-DeviceTokens.ts
+1730000000026-UnifyTenantGuc.ts
+1730000000027-UnifyTenantGuc.ts
+1730000000028-CustomerBookingTenantLookup.ts
+1730000000029-UserPhoneLookup.ts
+1730000000030-ReminderSweepsAsSecurityDefiner.ts
+1730000000031-RefreshTokens.ts
+1730000000032-InviteTokens.ts
+1730000000033-ProfileCompleted.ts
+1730000000034-AdminUserCreateDelete.ts
+1730000000035-AdminUserUpdateName.ts
+1730000000036-ArchiveTenantStatus.ts
+1730000000037-MobileService.ts
+1730000000038-ProvincesCities.ts
+1730000000039-SeedProvincesCities.ts
+1730000000040-BackfillTenantCities.ts
+1730000000041-SupportTickets.ts
+1792048339001-ExclusionConstraint.ts
+1792048339002-Indexes.ts
+1792048339003-RLSForTransactions.ts
+1792048339004-RLSForSpecialists.ts
+1792048339005-RLSForServices.ts
+1792048339006-AccountingLedgers.ts
+1792048339007-RemoveLookupTableRls.ts
+1792048339008-RLSAndIndexes.ts
+1792406647600-CreateScheduleBlocks.ts
+1792700000000-ScheduleBlocksForMobile.ts
+1792800000000-AddWholeSalonExclusionConstraint.ts
+1792800000000-ScheduleBlocksExclusionNulls.ts
+1792850000000-EnableRLSWithBeautyAppRole.ts
+1792900000000-CreateSpecialistServices.ts
+1792950000000-AddMissingTenantIdIndexes.ts
+1792960000000-CreateCustomerAddresses.ts
+1793000000000-AlignTicketTenantGuc.ts
+
+===== mobile/shared/lib files =====
+
+.\mobile\shared\lib\boya_shared.dart
+.\mobile\shared\lib\api\.gitkeep
+.\mobile\shared\lib\app\boya_app.dart
+.\mobile\shared\lib\localization\en.json
+.\mobile\shared\lib\localization\fa.json
+.\mobile\shared\lib\models\.gitkeep
+.\mobile\shared\lib\theme\boya_colors.dart
+.\mobile\shared\lib\theme\boya_theme.dart
+.\mobile\shared\lib\theme\boya_typography.dart
+.\mobile\shared\lib\utils\jalali_date_utils.dart
+.\mobile\shared\lib\utils\persian_number_utils.dart
+.\mobile\shared\lib\utils\text_direction_utils.dart
+.\mobile\shared\lib\widgets\.gitkeep
+.\mobile\shared\lib\widgets\boya_date_picker.dart
+.\mobile\shared\lib\widgets\boya_logo.dart

@@ -1,0 +1,6 @@
+{
+  "name": "BOYA — پلتفرم جامع خدمات و نوبت‌دهی زیبایی",
+  "description": "پلتفرم دو‌طرفه رزرو آنلاین سالن‌های زیبایی، متخصصین مستقل و خدمات در محل بویا",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
