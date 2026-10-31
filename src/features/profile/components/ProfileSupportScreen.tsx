@@ -12,7 +12,7 @@ export const ProfileSupportScreen: React.FC = () => {
   const { setAppMode, setShowSplashScreen, setSplashAppName } = useUIStore();
   const { logout, user } = useAuthStore();
   
-  const [activeTab, setActiveTab] = useState<'profile' | 'tickets' | 'addresses' | 'referral'>('tickets');
+  const [activeTab, setActiveTab] = useState<'profile' | 'tickets' | 'addresses' | 'referral' | 'faq' | 'guide'>('tickets');
   // ... rest of state
   const [tickets, setTickets] = useState<SupportTicket[]>(INITIAL_TICKETS);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
@@ -137,13 +137,63 @@ export const ProfileSupportScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex p-1 bg-white rounded-2xl border border-[#E7E2DA] shadow-sm">
-        {(['tickets', 'addresses', 'referral'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeTab === tab ? 'bg-[#173B3F] text-white shadow-sm' : 'text-[#6C6C6C] hover:text-[#173B3F]'}`}>
-            {tab === 'tickets' ? 'تیکت‌ها' : tab === 'addresses' ? 'آدرس‌ها' : 'کد معرف'}
+      <div className="flex p-1 bg-white rounded-2xl border border-[#E7E2DA] shadow-sm overflow-x-auto">
+        {(['tickets', 'faq', 'guide', 'addresses', 'referral'] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 min-w-[75px] py-2 text-xs font-bold rounded-xl transition-all ${activeTab === tab ? 'bg-[#173B3F] text-white shadow-sm' : 'text-[#6C6C6C] hover:text-[#173B3F]'}`}>
+            {tab === 'tickets' ? 'تیکت‌ها' : tab === 'faq' ? 'سوالات متداول' : tab === 'guide' ? 'راهنمای پروژه' : tab === 'addresses' ? 'آدرس‌ها' : 'کد معرف'}
           </button>
         ))}
       </div>
+
+      {activeTab === 'faq' && (
+        <div className="space-y-3">
+          <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] space-y-4 shadow-sm">
+            <h3 className="text-sm font-bold text-[#173B3F] font-serif">سوالات متداول کاربران (FAQ)</h3>
+            <div className="space-y-3">
+              <div className="p-3.5 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-1">
+                <h4 className="text-xs font-bold text-[#173B3F]">۱. چگونه می‌توانم در سامانه نوبت رزرو کنم؟</h4>
+                <p className="text-xs text-[#6C6C6C] leading-relaxed">از طریق بخش سالن‌ها یا جستجوی هوشمند، سالن و خدمت مدنظر را انتخاب کرده، متخصص و سانس ساعت آزاد را تعیین و نوبت خود را ثبت کنید.</p>
+              </div>
+              <div className="p-3.5 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-1">
+                <h4 className="text-xs font-bold text-[#173B3F]">۲. آیا پرداخت آنلاین در فاز ۱ الزامی است؟</h4>
+                <p className="text-xs text-[#6C6C6C] leading-relaxed">خیر، در فاز ۱ (ویترین رایگان) هزینه خدمات مستقیماً در محل سالن یا پس از دریافت خدمت سیار تسویه می‌گردد.</p>
+              </div>
+              <div className="p-3.5 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-1">
+                <h4 className="text-xs font-bold text-[#173B3F]">۳. چگونه می‌توانم به عنوان متخصص یا مدیر سالن فعالیت کنم؟</h4>
+                <p className="text-xs text-[#6C6C6C] leading-relaxed">با کلیک بر روی دکمه «پنل سالن» در بالای صفحه، می‌توانید به پنل مدیریت سالن و بیوتیشن‌ها دسترسی داشته باشید.</p>
+              </div>
+              <div className="p-3.5 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-1">
+                <h4 className="text-xs font-bold text-[#173B3F]">۴. چگونه کد رهگیری نوبت خود را پیگیری کنم؟</h4>
+                <p className="text-xs text-[#6C6C6C] leading-relaxed">تمامی نوبت‌های فعال و انجام‌شده در بخش «نوبت‌های من» قابل مشاهده و پیگیری هستند و هشدارهای تغییر وضعیت به صورت آنی نمایش داده می‌شوند.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'guide' && (
+        <div className="space-y-3">
+          <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] space-y-4 shadow-sm">
+            <h3 className="text-sm font-bold text-[#173B3F] font-serif">راهنمای جامع و مستندات پروژه بویا</h3>
+            <div className="space-y-3 text-xs text-[#6C6C6C] leading-relaxed">
+              <div className="p-3.5 bg-[#EAF2EF] rounded-2xl border border-[#6F9A8D]/30 space-y-1">
+                <h4 className="font-bold text-[#173B3F]">درباره پلتفرم زیبایی بویا</h4>
+                <p>بویا سامانه هوشمند اتصال مشتریان به سالن‌های زیبایی برتر، بیوتیشن‌های مستقل و متخصصین سیار در سراسر کشور است که با هدف ارتقای کیفیت خدمات و شفافیت تعرفه‌ها طراحی شده است.</p>
+              </div>
+              <div className="p-3.5 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-1">
+                <h4 className="font-bold text-[#173B3F]">ویژگی‌های کلیدی معماری سیستم:</h4>
+                <ul className="list-disc pr-4 space-y-1">
+                  <li><strong>فیلتر پیشرفته موقعیت مکانی:</strong> جستجوی بر اساس GPS و ۳۱ استان کشور.</li>
+                  <li><strong>مدیریت پیشرفته نوبت‌ها:</strong> امکان رزرو در تقویم روزهای آینده و انتخاب ساعات آزاد.</li>
+                  <li><strong>خدمات سیار (Mobile Service):</strong> اعزام متخصص به آدرس دلخواه مشتری با امکانات کامل.</li>
+                  <li><strong>ایزولاسیون نقش‌ها:</strong> پنل‌های مجزا و امن برای مدیران کل، مدیران سالن، مدیران لاین و متخصصین سیار.</li>
+                  <li><strong>یکپارچه‌سازی پایگاه‌داده:</strong> ذخیره‌سازی ابری روی PostgreSQL و سیستم ذخیره محلی با قابلیت همگام‌سازی کامل.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'tickets' && (
         <div className="space-y-4">

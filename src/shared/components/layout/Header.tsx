@@ -22,8 +22,7 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-30 bg-[#F7F3EE]/95 backdrop-blur-md border-b border-[#E7E2DA] transition-all" dir="rtl">
-      {/* Main Header Bar */}
-      {appMode !== 'admin_panel' && (
+      {/* Main Header Bar - Shown across all panels */}
         <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between">
           {/* Official Brand Identity */}
           <div className="flex items-center gap-2">
@@ -94,7 +93,6 @@ export const Header: React.FC = () => {
             </button>
           </div>
         </div>
-      )}
     </header>
   );
 };

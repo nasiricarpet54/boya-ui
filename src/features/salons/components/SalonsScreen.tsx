@@ -9,12 +9,15 @@ import {
   ChevronDown,
   RotateCcw,
   Car,
+  Map,
+  List,
 } from 'lucide-react';
 import { useSearch } from '@tanstack/react-router';
-import { SERVICE_LINES } from '../../../shared/data/marketplaceData';
+import { SERVICE_LINES, Salon } from '../../../shared/data/marketplaceData';
 import { IRAN_PROVINCES, CountyCity } from '../../../shared/data/iranLocations';
 import { calculateDistanceKm } from '../../../shared/utils/geoUtils';
 import { SalonCard } from '../../../shared/components/ui/SalonCard';
+import { SalonMap } from '../../../shared/components/ui/SalonMap';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { sortSalonsForSearchResults } from '../../../shared/utils/salonRanking';
 import { BeautyActivityIcon } from '../../../shared/components/ui/BeautyActivityIcon';
@@ -47,6 +50,7 @@ export const SalonsScreen: React.FC = () => {
   const [onlyMobileService, setOnlyMobileService] = useState<boolean>(false);
   const [onlyVipFilter, setOnlyVipFilter] = useState<boolean>(false);
   const [sortByOption, setSortByOption] = useState<'distance' | 'vip' | 'rating' | 'popular'>('distance');
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   const savedSalonIds: any[] = [];
 
@@ -93,7 +97,7 @@ export const SalonsScreen: React.FC = () => {
         return a.distanceKm - b.distanceKm;
       }
       if (sortByOption === 'rating') return Number(b.salon.rating) - Number(a.salon.rating);
-      return 0; // Simplified sorting for now
+      return 0;
     });
 
     return list;
@@ -126,6 +130,32 @@ export const SalonsScreen: React.FC = () => {
         <div>
           <h1 className="text-xl font-extrabold text-[#173B3F] font-serif">سالن‌ها و مراکز تخصصی</h1>
           <p className="text-xs text-[#6C6C6C] mt-0.5">فیلتر هوشمند بر اساس موقعیت GPS و ۳۱ استان کشور</p>
+        </div>
+
+        {/* View Mode Toggle: List vs Map */}
+        <div className="flex p-1 bg-white rounded-xl border border-[#E7E2DA] shadow-xs">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'list'
+                ? 'bg-[#173B3F] text-white shadow-xs'
+                : 'text-[#6C6C6C] hover:text-[#173B3F]'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" />
+            <span>لیست</span>
+          </button>
+          <button
+            onClick={() => setViewMode('map')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'map'
+                ? 'bg-[#173B3F] text-white shadow-xs'
+                : 'text-[#6C6C6C] hover:text-[#173B3F]'
+            }`}
+          >
+            <Map className="w-3.5 h-3.5" />
+            <span>نقشه</span>
+          </button>
         </div>
       </div>
 
@@ -185,23 +215,43 @@ export const SalonsScreen: React.FC = () => {
         })}
       </div>
 
-      <div className="space-y-4">
-        {processedSalons.length === 0 ? (
-          <div className="text-center py-10 bg-white rounded-3xl border border-[#E7E2DA]">سالنی یافت نشد.</div>
-        ) : (
-          processedSalons.map(({ salon, distanceKm }: any) => (
-            <SalonCard
-              key={salon.id}
-              salon={salon}
-              distanceKm={distanceKm}
-              isWishlisted={savedSalonIds.includes(salon.id)}
-              onToggleWishlist={() => handleToggleWishlistSalon(salon.id)}
-              onBookNow={openBookingModal}
-              onViewSpecialistPortfolio={openPortfolioModal}
-            />
-          ))
-        )}
-      </div>
+      {viewMode === 'map' ? (
+        <div className="space-y-4 animate-fadeIn">
+          <SalonMap
+            salons={processedSalons}
+            onBookNow={(salon) => {
+              const serv = salon.services?.[0];
+              const spec = salon.specialists?.[0];
+              const date = salon.availableSlots?.[0]?.date || 'شنبه ۵ آبان';
+              const time = salon.availableSlots?.[0]?.slots?.[0]?.time || '۱۱:۰۰';
+              if (serv && spec) {
+                openBookingModal(salon, serv, spec, date, time);
+              }
+            }}
+          />
+          <p className="text-[11px] text-center text-[#6C6C6C]">
+            روی نشانگرهای نقشه کلیک کنید تا اطلاعات سالن و دکمه رزرو نوبت نمایش داده شود.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4 animate-fadeIn">
+          {processedSalons.length === 0 ? (
+            <div className="text-center py-10 bg-white rounded-3xl border border-[#E7E2DA]">سالنی یافت نشد.</div>
+          ) : (
+            processedSalons.map(({ salon, distanceKm }: any) => (
+              <SalonCard
+                key={salon.id}
+                salon={salon}
+                distanceKm={distanceKm}
+                isWishlisted={savedSalonIds.includes(salon.id)}
+                onToggleWishlist={() => handleToggleWishlistSalon(salon.id)}
+                onBookNow={openBookingModal}
+                onViewSpecialistPortfolio={openPortfolioModal}
+              />
+            ))
+          )}
+        </div>
+      )}
 
     </div>
   );

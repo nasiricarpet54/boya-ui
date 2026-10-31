@@ -295,10 +295,19 @@ async function createServer() {
     }
   });
 
-  app.get('/api/bookings', requireAuth, async (req: AuthRequest, res) => {
+  app.get('/api/bookings', async (req: AuthRequest, res) => {
     try {
-      const dbBookings = await getBookingsForUser(req.dbUser);
-      res.json(dbBookings.length > 0 ? dbBookings : serverData.bookings);
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split('Bearer ')[1];
+        const phone = token.startsWith('phone_') ? token.replace('phone_', '') : token;
+        const dbUser = await getOrCreateUserByPhone(phone);
+        if (dbUser) {
+          const dbBookings = await getBookingsForUser(dbUser);
+          return res.json(dbBookings.length > 0 ? dbBookings : serverData.bookings);
+        }
+      }
+      res.json(serverData.bookings);
     } catch (err) {
       res.json(serverData.bookings);
     }

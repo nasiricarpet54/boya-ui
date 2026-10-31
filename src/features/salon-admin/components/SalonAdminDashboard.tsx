@@ -76,6 +76,7 @@ const DAYS_OF_WEEK = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنب
 export const SalonAdminDashboard: React.FC = () => {
   const { setAppMode, setShowSplashScreen, setSplashAppName } = useUIStore();
   const { user } = useAuthStore();
+  const { updateSalon } = useDataStore();
   const queryClient = useQueryClient();
 
   // Fetch real data
@@ -283,7 +284,11 @@ export const SalonAdminDashboard: React.FC = () => {
       imageUrl: newServiceImage,
     };
 
-    setSalonServices([...salonServices, newServ]);
+    const updatedServices = [...salonServices, newServ];
+    setSalonServices(updatedServices);
+    if (currentSalon?.id) {
+      updateSalon(currentSalon.id, { services: updatedServices });
+    }
     setIsAddingService(false);
     setNewServiceName('');
   };
@@ -318,6 +323,9 @@ export const SalonAdminDashboard: React.FC = () => {
       ...activeSpecialistView,
       portfolio: updatedPortfolio,
     });
+    if (currentSalon?.id) {
+      updateSalon(currentSalon.id, { specialists: updatedSpecialists });
+    }
 
     setIsAddingPortfolio(false);
     setNewPortfolioTitle('');
@@ -343,6 +351,9 @@ export const SalonAdminDashboard: React.FC = () => {
       ...activeSpecialistView,
       portfolio: updatedPortfolio,
     });
+    if (currentSalon?.id) {
+      updateSalon(currentSalon.id, { specialists: updatedSpecialists });
+    }
   };
 
   // Handler: Add Schedule Block (STRICT REQUIREMENT #3: Specialist blocks own slots)
@@ -369,6 +380,14 @@ export const SalonAdminDashboard: React.FC = () => {
     e.preventDefault();
     if (!editableSalonName.trim() || !editableSalonAddress.trim()) return;
 
+    if (currentSalon?.id) {
+      updateSalon(currentSalon.id, {
+        name: editableSalonName.trim(),
+        address: editableSalonAddress.trim(),
+        pendingApproval: true,
+      });
+    }
+
     setSalonEditSuccess(true);
     setTimeout(() => setSalonEditSuccess(false), 3500);
   };
@@ -389,6 +408,9 @@ export const SalonAdminDashboard: React.FC = () => {
       workingHours: specialistWorkingHours,
       workingDays: specialistWorkingDays,
     });
+    if (currentSalon?.id) {
+      updateSalon(currentSalon.id, { specialists: updated });
+    }
     setScheduleSuccessMsg(true);
     setTimeout(() => setScheduleSuccessMsg(false), 3000);
   };
@@ -404,7 +426,11 @@ export const SalonAdminDashboard: React.FC = () => {
   const handleAddGalleryImage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGalleryImageUrl.trim()) return;
-    setSalonGallery([newGalleryImageUrl.trim(), ...salonGallery]);
+    const updatedGallery = [newGalleryImageUrl.trim(), ...salonGallery];
+    setSalonGallery(updatedGallery);
+    if (currentSalon?.id) {
+      updateSalon(currentSalon.id, { gallery: updatedGallery });
+    }
     setNewGalleryImageUrl('');
     setNewGalleryImageTitle('');
     setIsAddingGalleryImage(false);

@@ -41,9 +41,11 @@ export const useBookings = () => {
           return data;
         }
       } catch (e) {
-        console.error('Fetch bookings error:', e);
+        // Fallback silently to local store bookings
       }
       return useDataStore.getState().bookings;
     },
+    retry: false,
+    staleTime: 1000 * 60 * 5,
   });
 };
