@@ -9,6 +9,7 @@ import { LocationSelectorModal } from '../components/modals/LocationSelectorModa
 import { useUIStore } from '../stores/uiStore';
 import { useModalStore } from '../stores/modalStore';
 import { useLocationStore } from '../stores/locationStore';
+import { useDataStore } from '../stores/dataStore';
 import { QuickServicesModal } from '../components/modals/QuickServicesModal';
 import { ProtectedRoute } from '../components/guards/ProtectedRoute';
 import { AuthModal } from '../components/modals/AuthModal';
@@ -29,6 +30,11 @@ const Root = () => {
   } = useModalStore();
   
   const locationState = useLocationStore();
+  const { fetchServerData } = useDataStore();
+
+  React.useEffect(() => {
+    fetchServerData();
+  }, [fetchServerData]);
 
   const handleConfirmBooking = (data: any) => {
     closeBookingModal();

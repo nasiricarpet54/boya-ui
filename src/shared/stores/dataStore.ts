@@ -54,23 +54,26 @@ export interface DataState {
   auditLogs: any[];
   notifications: PlatformNotification[];
   adminProfile: AdminProfileData;
+  isLoadingServerData: boolean;
+
+  fetchServerData: () => Promise<void>;
   setLatestBookingAlert: (alert: any) => void;
   clearLatestBookingAlert: () => void;
   setSalons: (salons: any[]) => void;
-  addSalon: (salon: any) => void;
-  updateSalon: (id: string | number, patch: any) => void;
-  deleteSalon: (id: string | number) => void;
+  addSalon: (salon: any) => Promise<void>;
+  updateSalon: (id: string | number, patch: any) => Promise<void>;
+  deleteSalon: (id: string | number) => Promise<void>;
   setUsers: (users: any[]) => void;
-  addUser: (user: any) => void;
-  updateUser: (id: string | number, patch: any) => void;
-  deleteUser: (id: string | number) => void;
+  addUser: (user: any) => Promise<void>;
+  updateUser: (id: string | number, patch: any) => Promise<void>;
+  deleteUser: (id: string | number) => Promise<void>;
   setTickets: (tickets: any[]) => void;
-  updateBookingStatus: (id: string | number, status: string) => void;
-  addNotification: (n: PlatformNotification) => void;
-  updateNotification: (id: string, patch: Partial<PlatformNotification>) => void;
-  toggleNotification: (id: string) => void;
-  deleteNotification: (id: string) => void;
-  updateAdminProfile: (patch: Partial<AdminProfileData>) => void;
+  updateBookingStatus: (id: string | number, status: string) => Promise<void>;
+  addNotification: (n: PlatformNotification) => Promise<void>;
+  updateNotification: (id: string, patch: Partial<PlatformNotification>) => Promise<void>;
+  toggleNotification: (id: string) => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  updateAdminProfile: (patch: Partial<AdminProfileData>) => Promise<void>;
 }
 
 const DEFAULT_NOTIFICATIONS: PlatformNotification[] = [
@@ -139,84 +142,178 @@ export const useDataStore = create<DataState>()(
       auditLogs: INITIAL_AUDIT_LOGS,
       notifications: DEFAULT_NOTIFICATIONS,
       adminProfile: DEFAULT_ADMIN_PROFILE,
+      isLoadingServerData: false,
+
+      fetchServerData: async () => {
+        try {
+          set({ isLoadingServerData: true });
+          const [salonsRes, usersRes, notifsRes, adminRes, bookingsRes] = await Promise.all([
+            api.get('/salons').catch(() => ({ data: null })),
+            api.get('/users').catch(() => ({ data: null })),
+            api.get('/notifications').catch(() => ({ data: null })),
+            api.get('/admin/profile').catch(() => ({ data: null })),
+            api.get('/bookings').catch(() => ({ data: null })),
+          ]);
+
+          set((state) => ({
+            salons: salonsRes.data && Array.isArray(salonsRes.data) && salonsRes.data.length > 0 ? salonsRes.data : state.salons,
+            users: usersRes.data && Array.isArray(usersRes.data) && usersRes.data.length > 0 ? usersRes.data : state.users,
+            notifications: notifsRes.data && Array.isArray(notifsRes.data) && notifsRes.data.length > 0 ? notifsRes.data : state.notifications,
+            adminProfile: adminRes.data ? adminRes.data : state.adminProfile,
+            bookings: bookingsRes.data && Array.isArray(bookingsRes.data) ? bookingsRes.data : state.bookings,
+          }));
+        } catch (err) {
+          console.error('[DATA STORE FETCH ERROR]', err);
+        } finally {
+          set({ isLoadingServerData: false });
+        }
+      },
+
       setLatestBookingAlert: (latestBookingAlert) => set({ latestBookingAlert }),
       clearLatestBookingAlert: () => set({ latestBookingAlert: null }),
       setSalons: (salons) => set({ salons }),
-      addSalon: (salon) => {
-        set((state) => ({ salons: [salon, ...state.salons] }));
-        api.post('/salons', salon).catch(() => {});
+
+      addSalon: async (salon) => {
+        try {
+          const { data } = await api.post('/salons', salon);
+          set((state) => ({ salons: [data || salon, ...state.salons] }));
+        } catch (err) {
+          console.error('Error adding salon:', err);
+          set((state) => ({ salons: [salon, ...state.salons] }));
+        }
       },
-      updateSalon: (id, patch) => {
+
+      updateSalon: async (id, patch) => {
         set((state) => ({
-          salons: state.salons.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+          salons: state.salons.map((s) => (String(s.id) === String(id) ? { ...s, ...patch } : s)),
         }));
-        api.patch(`/salons/${id}`, patch).catch(() => {});
+        try {
+          await api.patch(`/salons/${id}`, patch);
+        } catch (err) {
+          console.error('Error updating salon:', err);
+        }
       },
-      deleteSalon: (id) => {
+
+      deleteSalon: async (id) => {
         set((state) => ({
-          salons: state.salons.filter((s) => s.id !== id),
+          salons: state.salons.filter((s) => String(s.id) !== String(id)),
         }));
-        api.delete(`/salons/${id}`).catch(() => {});
+        try {
+          await api.delete(`/salons/${id}`);
+        } catch (err) {
+          console.error('Error deleting salon:', err);
+        }
       },
+
       setUsers: (users) => set({ users }),
-      addUser: (user) => {
-        set((state) => ({ users: [user, ...state.users] }));
-        api.post('/users', user).catch(() => {});
+
+      addUser: async (user) => {
+        try {
+          const { data } = await api.post('/users', user);
+          set((state) => ({ users: [data || user, ...state.users] }));
+        } catch (err) {
+          console.error('Error adding user:', err);
+          set((state) => ({ users: [user, ...state.users] }));
+        }
       },
-      updateUser: (id, patch) => {
+
+      updateUser: async (id, patch) => {
         set((state) => ({
-          users: state.users.map((u) => (u.id === id ? { ...u, ...patch } : u)),
+          users: state.users.map((u) => (String(u.id) === String(id) ? { ...u, ...patch } : u)),
         }));
-        api.patch(`/users/${id}`, patch).catch(() => {});
+        try {
+          await api.patch(`/users/${id}`, patch);
+        } catch (err) {
+          console.error('Error updating user:', err);
+        }
       },
-      deleteUser: (id) => {
+
+      deleteUser: async (id) => {
         set((state) => ({
-          users: state.users.filter((u) => u.id !== id),
+          users: state.users.filter((u) => String(u.id) !== String(id)),
         }));
-        api.delete(`/users/${id}`).catch(() => {});
+        try {
+          await api.delete(`/users/${id}`);
+        } catch (err) {
+          console.error('Error deleting user:', err);
+        }
       },
+
       setTickets: (tickets) => set({ tickets }),
-      updateBookingStatus: (id, status) => {
+
+      updateBookingStatus: async (id, status) => {
         set((state) => ({
-          bookings: state.bookings.map((b) => (b.id === id ? { ...b, status } : b)),
+          bookings: state.bookings.map((b) => (String(b.id) === String(id) ? { ...b, status } : b)),
         }));
-        api.patch(`/bookings/${id}/status`, { status }).catch(() => {});
+        try {
+          await api.patch(`/bookings/${id}/status`, { status });
+        } catch (err) {
+          console.error('Error updating booking status:', err);
+        }
       },
-      addNotification: (n) => {
+
+      addNotification: async (n) => {
         set((state) => ({
           notifications: [n, ...state.notifications],
         }));
-        api.post('/notifications', n).catch(() => {});
+        try {
+          await api.post('/notifications', n);
+        } catch (err) {
+          console.error('Error adding notification:', err);
+        }
       },
-      updateNotification: (id, patch) => {
+
+      updateNotification: async (id, patch) => {
         set((state) => ({
           notifications: state.notifications.map((n) => (n.id === id ? { ...n, ...patch } : n)),
         }));
-        api.patch(`/notifications/${id}`, patch).catch(() => {});
+        try {
+          await api.patch(`/notifications/${id}`, patch);
+        } catch (err) {
+          console.error('Error updating notification:', err);
+        }
       },
-      toggleNotification: (id) => {
-        set((state) => {
-          const updated = state.notifications.map((n) => (n.id === id ? { ...n, isActive: !n.isActive } : n));
-          const item = updated.find((n) => n.id === id);
-          if (item) api.patch(`/notifications/${id}`, { isActive: item.isActive }).catch(() => {});
-          return { notifications: updated };
-        });
+
+      toggleNotification: async (id) => {
+        const item = get().notifications.find((n) => n.id === id);
+        if (!item) return;
+        const newActiveState = !item.isActive;
+
+        set((state) => ({
+          notifications: state.notifications.map((n) => (n.id === id ? { ...n, isActive: newActiveState } : n)),
+        }));
+
+        try {
+          await api.patch(`/notifications/${id}`, { isActive: newActiveState });
+        } catch (err) {
+          console.error('Error toggling notification:', err);
+        }
       },
-      deleteNotification: (id) => {
+
+      deleteNotification: async (id) => {
         set((state) => ({
           notifications: state.notifications.filter((n) => n.id !== id),
         }));
-        api.delete(`/notifications/${id}`).catch(() => {});
+        try {
+          await api.delete(`/notifications/${id}`);
+        } catch (err) {
+          console.error('Error deleting notification:', err);
+        }
       },
-      updateAdminProfile: (patch) => {
+
+      updateAdminProfile: async (patch) => {
         set((state) => ({
           adminProfile: { ...state.adminProfile, ...patch },
         }));
-        api.patch('/admin/profile', patch).catch(() => {});
+        try {
+          await api.patch('/admin/profile', patch);
+        } catch (err) {
+          console.error('Error updating admin profile:', err);
+        }
       },
     }),
     {
-      name: 'boya-admin-data-storage-v2',
+      name: 'boya-admin-data-storage-v3',
       partialize: (state) => ({
         salons: state.salons,
         users: state.users,
