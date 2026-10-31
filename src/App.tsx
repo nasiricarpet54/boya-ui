@@ -84,6 +84,14 @@ export default function App() {
   const [users, setUsers] = useState<PlatformUser[]>(INITIAL_USERS);
   const [tickets, setTickets] = useState<SupportTicket[]>(INITIAL_TICKETS);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS);
+  const [latestBookingAlert, setLatestBookingAlert] = useState<{
+    id: string;
+    bookingId: string;
+    salonName: string;
+    serviceName: string;
+    status: 'confirmed' | 'completed' | 'cancelled' | 'pending';
+    time: string;
+  } | null>(null);
 
   // Real-time PostgreSQL Connection on Mount
   useEffect(() => {
@@ -217,16 +225,27 @@ export default function App() {
     bookingId: string,
     newStatus: 'confirmed' | 'completed' | 'cancelled'
   ) => {
+    const targetBooking = bookings.find((b) => b.id === bookingId);
     setBookings((prev) =>
       prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b))
     );
+    if (targetBooking) {
+      setLatestBookingAlert({
+        id: `alert-${Date.now()}`,
+        bookingId,
+        salonName: targetBooking.salonName,
+        serviceName: targetBooking.serviceName,
+        status: newStatus,
+        time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+      });
+    }
     logAction(
       'BOOKING_STATUS_UPDATED',
-      'مدیریت سالن گل سرخ',
+      'مدیریت سالن و متخصص',
       'salon_owner',
       `تغییر وضعیت نوبت ${bookingId} به ${newStatus}`
     );
-    showToast('وضعیت نوبت در پنل سالندار به‌روز شد.');
+    showToast('وضعیت نوبت در سامانه به‌روزرسانی شد.');
   };
 
   const handleUpdateSalon = (salonId: string, updates: Partial<Salon>) => {
@@ -542,6 +561,8 @@ export default function App() {
                       bookings={bookings}
                       onCancelBooking={handleCancelBooking}
                       onNavigateToSalons={() => setActiveTab('salons')}
+                      latestAlert={latestBookingAlert}
+                      onUpdateBookingStatus={handleUpdateBookingStatus}
                     />
                   )}
 
