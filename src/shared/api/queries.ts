@@ -1,12 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
 import api from './apiClient';
+import { useDataStore } from '../stores/dataStore';
 
 export const useSalons = () => {
   return useQuery({
     queryKey: ['salons'],
     queryFn: async () => {
-      const { data } = await api.get('/salons');
-      return data;
+      try {
+        const { data } = await api.get('/salons');
+        if (Array.isArray(data) && data.length > 0) {
+          useDataStore.getState().setSalons(data);
+          return data;
+        }
+      } catch (e) {
+        console.error('Fetch salons error:', e);
+      }
+      return useDataStore.getState().salons;
     },
   });
 };
@@ -26,8 +35,15 @@ export const useBookings = () => {
   return useQuery({
     queryKey: ['bookings'],
     queryFn: async () => {
-      const { data } = await api.get('/bookings');
-      return data;
+      try {
+        const { data } = await api.get('/bookings');
+        if (Array.isArray(data)) {
+          return data;
+        }
+      } catch (e) {
+        console.error('Fetch bookings error:', e);
+      }
+      return useDataStore.getState().bookings;
     },
   });
 };

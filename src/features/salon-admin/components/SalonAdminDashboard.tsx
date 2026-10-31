@@ -55,6 +55,7 @@ import { formatPrice, toPersianDigits } from '../../../shared/utils/persianUtils
 import { BeautyActivityIcon } from '../../../shared/components/ui/BeautyActivityIcon';
 import { SpecialistFinancialsView } from '../../../shared/components/ui/SpecialistFinancialsView';
 import { SafeHtml } from '../../../shared/components/ui/SafeHtml';
+import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
 
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useDataStore } from '../../../shared/stores/dataStore';
@@ -1195,7 +1196,7 @@ export const SalonAdminDashboard: React.FC = () => {
               {isAddingPortfolio && (
                 <form onSubmit={handleAddPortfolioItem} className="p-4 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-3">
                   <h4 className="text-xs font-bold text-[#173B3F]">بارگذاری عکس کار جدید در ژورنال شخصی</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <input
                       type="text"
                       required
@@ -1212,18 +1213,18 @@ export const SalonAdminDashboard: React.FC = () => {
                       onChange={(e) => setNewPortfolioCategory(e.target.value)}
                       className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs bg-white focus:border-[#173B3F] outline-none"
                     />
-                    <input
-                      type="url"
-                      required
-                      placeholder="آدرس تصویر (URL)"
-                      value={newPortfolioUrl}
-                      onChange={(e) => setNewPortfolioUrl(e.target.value)}
-                      className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs bg-white focus:border-[#173B3F] outline-none font-mono"
-                    />
                   </div>
 
+                  <ImageFileUploader
+                    label="آپلود عکس کار یا گرفتن تصویر با دوربین"
+                    subLabel="فایل‌های تصویری با فشرده‌سازی خودکار و کاهش حجم WebP روی سرور ثبت می‌شوند"
+                    value={newPortfolioUrl}
+                    onChange={(url) => setNewPortfolioUrl(url)}
+                    allowCamera={true}
+                  />
+
                   <div>
-                    <span className="text-[11px] text-[#6C6C6C] block mb-1.5">یا انتخاب از تصاویر آماده باکیفیت:</span>
+                    <span className="text-[11px] text-[#6C6C6C] block mb-1.5">یا انتخاب از نمونه‌کارهای ژورنالی:</span>
                     <div className="flex gap-2 overflow-x-auto pb-1">
                       {PRESET_SERVICE_PHOTOS.map((preset) => (
                         <button
@@ -1978,23 +1979,23 @@ export const SalonAdminDashboard: React.FC = () => {
               {isAddingGalleryImage && (
                 <form onSubmit={handleAddGalleryImage} className="p-4 bg-white rounded-3xl border border-[#173B3F] space-y-3 shadow-xs">
                   <h4 className="text-xs font-bold text-[#173B3F]">ثبت عکس جدید از سالن و تجهیزات</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
                     <input
                       type="text"
                       placeholder="عنوان یا بخش سالن (مثال: سوئیت VIP عروس و فیشیال)"
                       value={newGalleryImageTitle}
                       onChange={(e) => setNewGalleryImageTitle(e.target.value)}
-                      className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
-                    />
-                    <input
-                      type="url"
-                      required
-                      placeholder="آدرس اینترنتی تصویر (URL)"
-                      value={newGalleryImageUrl}
-                      onChange={(e) => setNewGalleryImageUrl(e.target.value)}
-                      className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none font-mono"
+                      className="w-full h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
                     />
                   </div>
+
+                  <ImageFileUploader
+                    label="تصویر فضا، تجهیزات یا دکوراسیون سالن"
+                    subLabel="فایل خود را از حافظه لوکال انتخاب کنید یا با دوربین عکاسی بگیرید"
+                    value={newGalleryImageUrl}
+                    onChange={(url) => setNewGalleryImageUrl(url)}
+                    allowCamera={true}
+                  />
                   <div className="flex gap-2">
                     <button
                       type="submit"
@@ -2108,9 +2109,17 @@ export const SalonAdminDashboard: React.FC = () => {
                       <option value="massage_spa">اسپا و ماساژ</option>
                     </select>
 
-                    <div className="sm:col-span-2">
-                      <span className="text-[11px] font-semibold text-[#1C1C1C] block mb-1">
-                        انتخاب تصویر پیش‌نمایش خدمت:
+                    <div className="sm:col-span-2 space-y-2">
+                      <ImageFileUploader
+                        label="تصویر کاور یا نتیجه خدمت"
+                        subLabel="بارگذاری عکس از لوکال یا دوربین عکاسی"
+                        value={newServiceImage}
+                        onChange={(url) => setNewServiceImage(url)}
+                        allowCamera={true}
+                      />
+
+                      <span className="text-[11px] font-semibold text-[#6C6C6C] block">
+                        یا انتخاب سریع از عکس‌های ژورنالی:
                       </span>
                       <div className="flex gap-2 overflow-x-auto pb-1">
                         {PRESET_SERVICE_PHOTOS.map((preset) => (

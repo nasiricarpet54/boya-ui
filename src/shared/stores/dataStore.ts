@@ -1,5 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import {
+  INITIAL_SALONS,
+  INITIAL_USERS,
+  INITIAL_BOOKINGS,
+  INITIAL_TICKETS,
+  INITIAL_AUDIT_LOGS,
+} from '../data/marketplaceData';
+import api from '../api/apiClient';
 
 export interface PlatformNotification {
   id: string;
@@ -122,56 +130,99 @@ const DEFAULT_ADMIN_PROFILE: AdminProfileData = {
 
 export const useDataStore = create<DataState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       latestBookingAlert: null,
-      salons: [],
-      bookings: [],
-      users: [],
-      tickets: [],
-      auditLogs: [],
+      salons: INITIAL_SALONS,
+      bookings: INITIAL_BOOKINGS,
+      users: INITIAL_USERS,
+      tickets: INITIAL_TICKETS,
+      auditLogs: INITIAL_AUDIT_LOGS,
       notifications: DEFAULT_NOTIFICATIONS,
       adminProfile: DEFAULT_ADMIN_PROFILE,
       setLatestBookingAlert: (latestBookingAlert) => set({ latestBookingAlert }),
       clearLatestBookingAlert: () => set({ latestBookingAlert: null }),
       setSalons: (salons) => set({ salons }),
-      addSalon: (salon) => set((state) => ({ salons: [salon, ...state.salons] })),
-      updateSalon: (id, patch) => set((state) => ({
-        salons: state.salons.map((s) => (s.id === id ? { ...s, ...patch } : s)),
-      })),
-      deleteSalon: (id) => set((state) => ({
-        salons: state.salons.filter((s) => s.id !== id),
-      })),
+      addSalon: (salon) => {
+        set((state) => ({ salons: [salon, ...state.salons] }));
+        api.post('/salons', salon).catch(() => {});
+      },
+      updateSalon: (id, patch) => {
+        set((state) => ({
+          salons: state.salons.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+        }));
+        api.patch(`/salons/${id}`, patch).catch(() => {});
+      },
+      deleteSalon: (id) => {
+        set((state) => ({
+          salons: state.salons.filter((s) => s.id !== id),
+        }));
+        api.delete(`/salons/${id}`).catch(() => {});
+      },
       setUsers: (users) => set({ users }),
-      addUser: (user) => set((state) => ({ users: [user, ...state.users] })),
-      updateUser: (id, patch) => set((state) => ({
-        users: state.users.map((u) => (u.id === id ? { ...u, ...patch } : u)),
-      })),
-      deleteUser: (id) => set((state) => ({
-        users: state.users.filter((u) => u.id !== id),
-      })),
+      addUser: (user) => {
+        set((state) => ({ users: [user, ...state.users] }));
+        api.post('/users', user).catch(() => {});
+      },
+      updateUser: (id, patch) => {
+        set((state) => ({
+          users: state.users.map((u) => (u.id === id ? { ...u, ...patch } : u)),
+        }));
+        api.patch(`/users/${id}`, patch).catch(() => {});
+      },
+      deleteUser: (id) => {
+        set((state) => ({
+          users: state.users.filter((u) => u.id !== id),
+        }));
+        api.delete(`/users/${id}`).catch(() => {});
+      },
       setTickets: (tickets) => set({ tickets }),
-      updateBookingStatus: (id, status) => set((state) => ({
-        bookings: state.bookings.map((b) => (b.id === id ? { ...b, status } : b)),
-      })),
-      addNotification: (n) => set((state) => ({
-        notifications: [n, ...state.notifications],
-      })),
-      updateNotification: (id, patch) => set((state) => ({
-        notifications: state.notifications.map((n) => (n.id === id ? { ...n, ...patch } : n)),
-      })),
-      toggleNotification: (id) => set((state) => ({
-        notifications: state.notifications.map((n) => (n.id === id ? { ...n, isActive: !n.isActive } : n)),
-      })),
-      deleteNotification: (id) => set((state) => ({
-        notifications: state.notifications.filter((n) => n.id !== id),
-      })),
-      updateAdminProfile: (patch) => set((state) => ({
-        adminProfile: { ...state.adminProfile, ...patch },
-      })),
+      updateBookingStatus: (id, status) => {
+        set((state) => ({
+          bookings: state.bookings.map((b) => (b.id === id ? { ...b, status } : b)),
+        }));
+        api.patch(`/bookings/${id}/status`, { status }).catch(() => {});
+      },
+      addNotification: (n) => {
+        set((state) => ({
+          notifications: [n, ...state.notifications],
+        }));
+        api.post('/notifications', n).catch(() => {});
+      },
+      updateNotification: (id, patch) => {
+        set((state) => ({
+          notifications: state.notifications.map((n) => (n.id === id ? { ...n, ...patch } : n)),
+        }));
+        api.patch(`/notifications/${id}`, patch).catch(() => {});
+      },
+      toggleNotification: (id) => {
+        set((state) => {
+          const updated = state.notifications.map((n) => (n.id === id ? { ...n, isActive: !n.isActive } : n));
+          const item = updated.find((n) => n.id === id);
+          if (item) api.patch(`/notifications/${id}`, { isActive: item.isActive }).catch(() => {});
+          return { notifications: updated };
+        });
+      },
+      deleteNotification: (id) => {
+        set((state) => ({
+          notifications: state.notifications.filter((n) => n.id !== id),
+        }));
+        api.delete(`/notifications/${id}`).catch(() => {});
+      },
+      updateAdminProfile: (patch) => {
+        set((state) => ({
+          adminProfile: { ...state.adminProfile, ...patch },
+        }));
+        api.patch('/admin/profile', patch).catch(() => {});
+      },
     }),
     {
-      name: 'boya-admin-data-storage',
+      name: 'boya-admin-data-storage-v2',
       partialize: (state) => ({
+        salons: state.salons,
+        users: state.users,
+        bookings: state.bookings,
+        tickets: state.tickets,
+        auditLogs: state.auditLogs,
         notifications: state.notifications,
         adminProfile: state.adminProfile,
       }),

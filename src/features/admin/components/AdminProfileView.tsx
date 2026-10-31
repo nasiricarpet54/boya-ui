@@ -20,6 +20,7 @@ import { useDataStore, AdminProfileData } from '../../../shared/stores/dataStore
 import { useAuthStore } from '../../../shared/stores/authStore';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import api from '../../../shared/api/apiClient';
+import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
 
 const AVATAR_PRESETS = [
   { id: 'av-1', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80', label: 'عکس ۱' },
@@ -180,16 +181,11 @@ export const AdminProfileView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#6C6C6C] block mb-1">
-                  یا لینک تصویر سفارشی (URL):
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/admin-avatar.jpg"
+                <ImageFileUploader
+                  label="بارگذاری تصویر پروفایل جدید (از لوکال / دوربین):"
+                  subLabel="تبدیل و فشرده‌سازی خودکار به WebP بدون افت کیفیت"
                   value={formData.avatarUrl}
-                  onChange={(e) => handleChange('avatarUrl', e.target.value)}
-                  dir="ltr"
-                  className="w-full h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs font-mono text-left focus:border-[#173B3F] outline-none"
+                  onChange={(url) => handleChange('avatarUrl', url)}
                 />
               </div>
             </div>

@@ -4,6 +4,7 @@ import { useDataStore } from '../../../shared/stores/dataStore';
 import { IRAN_PROVINCES } from '../../../shared/data/iranLocations';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { Salon } from '../../../shared/data/marketplaceData';
+import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
 
 export const AdminTenantsView: React.FC = () => {
   const { salons, addSalon, updateSalon, deleteSalon } = useDataStore();
@@ -61,8 +62,8 @@ export const AdminTenantsView: React.FC = () => {
     setCity(s.city);
     setDistrict(s.district || '');
     setAddress(s.address);
-    setIsVip(s.isVip);
-    setIsMobileServiceActive(s.isMobileServiceActive);
+    setIsVip(!!s.isVip);
+    setIsMobileServiceActive(!!s.isMobileServiceActive);
     setCoverImage(s.coverImage || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80');
     setIsAddModalOpen(true);
   };
@@ -133,9 +134,19 @@ export const AdminTenantsView: React.FC = () => {
             portfolio: [],
           },
         ],
+        latitude: 35.6892,
+        longitude: 51.389,
+        instagram: '@boya_salon',
+        gallery: [coverImage],
+        workingHours: 'همه روزه ۹ الی ۲۰',
+        workingDays: ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه'],
+        cancellationPolicy: 'لغو نوبت تا ۲۴ ساعت قبل بدون جریمه امکان‌پذیر است.',
+        depositPercentage: 20,
         availableSlots: [
           {
             date: '۱۴۰۳/۰۸/۱۲',
+            dayName: 'شنبه',
+            dayNumber: '۱۲',
             slots: [
               { time: '۱۰:۰۰', booked: false },
               { time: '۱۲:۰۰', booked: false },
@@ -426,13 +437,11 @@ export const AdminTenantsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-[#1C1C1C] block mb-1">لینک تصویر کاور سالن (URL):</label>
-                <input
-                  type="url"
+                <ImageFileUploader
+                  label="تصویر کاور سالن (لوکال / دوربین):"
+                  subLabel="فشرده‌سازی خودکار به فرمت کم‌حجم WebP بدون افت کیفیت"
                   value={coverImage}
-                  onChange={(e) => setCoverImage(e.target.value)}
-                  dir="ltr"
-                  className="w-full h-10 px-3 rounded-xl border border-[#E7E2DA] font-mono text-left focus:border-[#173B3F] outline-none"
+                  onChange={setCoverImage}
                 />
               </div>
 

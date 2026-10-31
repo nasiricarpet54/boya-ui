@@ -73,9 +73,12 @@ export interface Salon {
   isMobileServiceActive: boolean;
   workingHours: string;
   ownerName: string;
-  ownerPhone: string;
-  createdAt: string;
-  status: 'active' | 'pending' | 'suspended';
+  ownerPhone?: string;
+  createdAt?: string;
+  status?: 'active' | 'pending' | 'suspended';
+  workingDays?: string[];
+  cancellationPolicy?: string;
+  depositPercentage?: number;
   // VIP & Search Ranking Management
   isVip?: boolean;
   displayPriority?: number; // 1, 2, 3... (lower number = higher placement in search)
@@ -140,10 +143,13 @@ export interface SupportTicket {
 export interface PlatformUser {
   id: string;
   name: string;
+  fullName?: string;
   phone: string;
-  role: 'super_admin' | 'salon_owner' | 'specialist' | 'customer';
+  email?: string;
+  role: 'super_admin' | 'salon_admin' | 'salon_owner' | 'specialist' | 'line_manager' | 'salon_specialist' | 'mobile_specialist' | 'customer' | string;
   tenantId?: string;
   tenantName?: string;
+  salonId?: string;
   status: 'active' | 'suspended';
   createdAt: string;
   avatar?: string;

@@ -22,8 +22,15 @@ const PORT = process.env.PORT || 3000;
 
 async function createServer() {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: '25mb' }));
+  app.use(express.urlencoded({ limit: '25mb', extended: true }));
   app.use(cookieParser());
+
+  const uploadsDir = path.resolve(__dirname, 'public/uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use('/uploads', express.static(uploadsDir));
 
   // Security Headers
   app.use((req, res, next) => {
@@ -40,6 +47,42 @@ async function createServer() {
   };
 
   // --- API Routes ---
+
+  // Upload Compressed Image or Document File
+  app.post('/api/upload', (req, res) => {
+    try {
+      const { fileData } = req.body;
+      if (!fileData) {
+        return res.status(400).json({ error: 'محتوای فایل دریافت نشد' });
+      }
+
+      const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        return res.json({ url: fileData });
+      }
+
+      const mimeType = matches[1];
+      const extension = mimeType.includes('webp')
+        ? 'webp'
+        : mimeType.includes('pdf')
+        ? 'pdf'
+        : mimeType.includes('png')
+        ? 'png'
+        : 'jpg';
+
+      const buffer = Buffer.from(matches[2], 'base64');
+      const savedFileName = `file_${Date.now()}_${Math.floor(Math.random() * 1000)}.${extension}`;
+      const savePath = path.join(uploadsDir, savedFileName);
+
+      fs.writeFileSync(savePath, buffer);
+      console.log(`[FILE UPLOAD LOG] Saved file: ${savedFileName} (${Math.round(buffer.length / 1024)} KB)`);
+
+      res.json({ url: `/uploads/${savedFileName}` });
+    } catch (err) {
+      console.error('Upload Error:', err);
+      res.status(500).json({ error: 'خطا در ذخیره‌سازی فایل روی سرور' });
+    }
+  });
 
   // Phone OTP Auth
   app.post('/api/auth/send-otp', async (req, res) => {
@@ -84,23 +127,145 @@ async function createServer() {
   });
 
   // Salons & Services
-  app.get('/api/salons', async (req, res) => {
+  // Persistent Server DB State
+  let serverData = loadServerData();
+
+  // --- Salons CRUD ---
+  app.get('/api/salons', (req, res) => {
+    res.json(serverData.salons);
+  });
+
+  app.post('/api/salons', (req, res) => {
     try {
-      const allSalons = await db.query.salons.findMany({
-        with: {
-          services: true,
-          specialists: {
-            with: {
-              user: true,
-              portfolio: true
-            }
-          }
-        }
-      });
-      res.json(allSalons);
+      const newSalon = req.body;
+      if (!newSalon.id) {
+        newSalon.id = `salon-${Date.now()}`;
+      }
+      serverData.salons = [newSalon, ...serverData.salons];
+      saveServerData(serverData);
+      res.status(201).json(newSalon);
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Failed to fetch salons' });
+      res.status(500).json({ error: 'خطا در ثبت سالن جدید روی سرور' });
+    }
+  });
+
+  app.patch('/api/salons/:id', (req, res) => {
+    try {
+      const salonId = req.params.id;
+      const patch = req.body;
+      serverData.salons = serverData.salons.map((s) => (String(s.id) === String(salonId) ? { ...s, ...patch } : s));
+      saveServerData(serverData);
+      res.json({ success: true, salonId });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در ویرایش اطلاعات سالن' });
+    }
+  });
+
+  app.delete('/api/salons/:id', (req, res) => {
+    try {
+      const salonId = req.params.id;
+      serverData.salons = serverData.salons.filter((s) => String(s.id) !== String(salonId));
+      saveServerData(serverData);
+      res.json({ success: true, deletedId: salonId });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در حذف سالن' });
+    }
+  });
+
+  // --- Platform Users CRUD ---
+  app.get('/api/users', (req, res) => {
+    res.json(serverData.users);
+  });
+
+  app.post('/api/users', (req, res) => {
+    try {
+      const newUser = req.body;
+      if (!newUser.id) {
+        newUser.id = `usr-${Date.now()}`;
+      }
+      serverData.users = [newUser, ...serverData.users];
+      saveServerData(serverData);
+      res.status(201).json(newUser);
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در ثبت کاربر جدید' });
+    }
+  });
+
+  app.patch('/api/users/:id', (req, res) => {
+    try {
+      const userId = req.params.id;
+      const patch = req.body;
+      serverData.users = serverData.users.map((u) => (String(u.id) === String(userId) ? { ...u, ...patch } : u));
+      saveServerData(serverData);
+      res.json({ success: true, userId });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در ویرایش کاربر' });
+    }
+  });
+
+  app.delete('/api/users/:id', (req, res) => {
+    try {
+      const userId = req.params.id;
+      serverData.users = serverData.users.filter((u) => String(u.id) !== String(userId));
+      saveServerData(serverData);
+      res.json({ success: true, deletedId: userId });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در حذف کاربر' });
+    }
+  });
+
+  // --- Super Admin Profile ---
+  app.get('/api/admin/profile', (req, res) => {
+    res.json(serverData.adminProfile);
+  });
+
+  app.patch('/api/admin/profile', (req, res) => {
+    try {
+      const patch = req.body;
+      serverData.adminProfile = { ...serverData.adminProfile, ...patch };
+      saveServerData(serverData);
+      res.json(serverData.adminProfile);
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در ذخیره‌سازی اطلاعات پروفایل ادمین' });
+    }
+  });
+
+  // --- Notifications CRUD ---
+  app.get('/api/notifications', (req, res) => {
+    res.json(serverData.notifications);
+  });
+
+  app.post('/api/notifications', (req, res) => {
+    try {
+      const notif = req.body;
+      serverData.notifications = [notif, ...serverData.notifications];
+      saveServerData(serverData);
+      res.status(201).json(notif);
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در ثبت اعلان جدید' });
+    }
+  });
+
+  app.patch('/api/notifications/:id', (req, res) => {
+    try {
+      const id = req.params.id;
+      const patch = req.body;
+      serverData.notifications = serverData.notifications.map((n) => (n.id === id ? { ...n, ...patch } : n));
+      saveServerData(serverData);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در تغییر اعلان' });
+    }
+  });
+
+  app.delete('/api/notifications/:id', (req, res) => {
+    try {
+      const id = req.params.id;
+      serverData.notifications = serverData.notifications.filter((n) => n.id !== id);
+      saveServerData(serverData);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در حذف اعلان' });
     }
   });
 
@@ -117,6 +282,9 @@ async function createServer() {
         ...req.body,
         customerId: req.dbUser.id,
       });
+
+      serverData.bookings = [booking, ...serverData.bookings];
+      saveServerData(serverData);
       
       await sendMeliPayamakSms(req.dbUser.phone || '09120000000', `نوبت شما در سامانه بویا ثبت شد. کد رهگیری: ${booking.trackingCode}`);
       
@@ -128,11 +296,10 @@ async function createServer() {
 
   app.get('/api/bookings', requireAuth, async (req: AuthRequest, res) => {
     try {
-      const bookings = await getBookingsForUser(req.dbUser);
-      res.json(bookings);
+      const dbBookings = await getBookingsForUser(req.dbUser);
+      res.json(dbBookings.length > 0 ? dbBookings : serverData.bookings);
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Failed to fetch bookings' });
+      res.json(serverData.bookings);
     }
   });
 
@@ -141,6 +308,9 @@ async function createServer() {
       const { status } = req.body;
       const updated = await updateBookingStatus(Number(req.params.id), status);
       
+      serverData.bookings = serverData.bookings.map((b) => (String(b.id) === String(req.params.id) ? { ...b, status } : b));
+      saveServerData(serverData);
+
       await sendMeliPayamakSms(req.dbUser.phone || '09120000000', `وضعیت نوبت شما به ${status} تغییر یافت.`);
       
       res.json(updated);
