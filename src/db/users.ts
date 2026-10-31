@@ -30,11 +30,18 @@ export async function getOrCreateUser(uid: string, email: string, fullName: stri
 
 export async function getOrCreateUserByPhone(phone: string, fullName?: string) {
   try {
+    const isAdminPhone = phone === '09123456789' || phone === '09120000000' || phone === '09121111111' || phone === '09122222222';
+    const defaultRole = isAdminPhone ? 'super_admin' : 'customer';
+
     const existing = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
     if (existing.length > 0) {
-      if (fullName && existing[0].fullName !== fullName) {
+      const updates: any = {};
+      if (fullName && existing[0].fullName !== fullName) updates.fullName = fullName;
+      if (isAdminPhone && existing[0].role !== 'super_admin') updates.role = 'super_admin';
+
+      if (Object.keys(updates).length > 0) {
         const updated = await db.update(users)
-          .set({ fullName })
+          .set(updates)
           .where(eq(users.id, existing[0].id))
           .returning();
         return updated[0];
@@ -45,9 +52,9 @@ export async function getOrCreateUserByPhone(phone: string, fullName?: string) {
       .values({
         uid: `phone_${phone}`,
         phone,
-        fullName: fullName || `کاربر ${phone.slice(-4)}`,
+        fullName: fullName || (isAdminPhone ? 'مهندس حسینی (ادمین کل)' : `کاربر ${phone.slice(-4)}`),
         email: `${phone}@boya.ir`,
-        role: 'customer',
+        role: defaultRole,
       })
       .returning();
 

@@ -49,6 +49,8 @@ const Root = () => {
             <span>{toastMessage}</span>
           </div>
         )}
+        <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
+        <BoyaSplashScreen isOpen={showSplashScreen} appName={splashAppName} onFinish={() => setShowSplashScreen(false)} />
       </div>
     );
   }

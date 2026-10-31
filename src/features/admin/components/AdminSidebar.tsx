@@ -13,6 +13,8 @@ import {
   Store,
   UserCheck,
   Crown,
+  Bell,
+  UserCog,
 } from 'lucide-react';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { BoyaLogo } from '../../../shared/components/ui/BoyaLogo';
@@ -22,11 +24,13 @@ export type AdminTab =
   | 'approvals'
   | 'tenants'
   | 'search_ranking'
+  | 'notifications'
   | 'users'
   | 'specialists'
   | 'support'
   | 'audit_logs'
-  | 'settings';
+  | 'settings'
+  | 'admin_profile';
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -34,6 +38,7 @@ interface AdminSidebarProps {
   pendingApprovalsCount: number;
   openTicketsCount: number;
   vipSalonsCount?: number;
+  activeNotificationsCount?: number;
   onSwitchToCustomerApp: () => void;
   onSwitchToSalonApp: () => void;
 }
@@ -44,11 +49,19 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   pendingApprovalsCount,
   openTicketsCount,
   vipSalonsCount = 0,
+  activeNotificationsCount = 0,
   onSwitchToCustomerApp,
   onSwitchToSalonApp,
 }) => {
   const menuItems: { id: AdminTab; label: string; icon: React.ElementType; badge?: number; badgeColor?: string }[] = [
     { id: 'dashboard', label: 'پیشخوان نظارتی کل', icon: LayoutDashboard },
+    {
+      id: 'notifications',
+      label: 'اعلانات و پیام‌های تبلیغاتی',
+      icon: Bell,
+      badge: activeNotificationsCount,
+      badgeColor: 'bg-[#D9A2B0] text-[#173B3F] font-bold',
+    },
     {
       id: 'approvals',
       label: 'تایید مدارک و سالن‌ها',
@@ -75,6 +88,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     },
     { id: 'audit_logs', label: 'لاگ‌های امنیتی و RLS', icon: ShieldAlert },
     { id: 'settings', label: 'تنظیمات و درگاه پیامک', icon: Settings },
+    { id: 'admin_profile', label: 'اطلاعات ادمین اصلی', icon: UserCog },
   ];
 
   return (
