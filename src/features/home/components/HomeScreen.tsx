@@ -56,7 +56,7 @@ export const HomeScreen: React.FC = () => {
 
   // Search results sorted with VIP salons first
   const filteredSalons = useMemo(() => {
-    const list = salons.filter((salon) => {
+    const list = salons.filter((salon: any) => {
       if (selectedProvince && selectedProvince !== 'همه') {
         if (!salon.province.includes(selectedProvince)) {
           return false;
@@ -72,8 +72,8 @@ export const HomeScreen: React.FC = () => {
         const q = searchQuery.toLowerCase().trim();
         const matchName = salon.name.toLowerCase().includes(q);
         const matchDistrict = salon.district.toLowerCase().includes(q);
-        const matchService = salon.services.some((s) => s.name.toLowerCase().includes(q));
-        const matchSpecialist = salon.specialists.some((sp) => sp.name.toLowerCase().includes(q));
+        const matchService = salon.services.some((s: any) => s.name.toLowerCase().includes(q));
+        const matchSpecialist = salon.specialists.some((sp: any) => sp.name.toLowerCase().includes(q));
         if (!matchName && !matchDistrict && !matchService && !matchSpecialist) return false;
       }
       return true;

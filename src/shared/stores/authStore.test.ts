@@ -14,7 +14,7 @@ describe('authStore', () => {
   });
 
   it('should set auth data correctly', () => {
-    const user = { id: '1', name: 'Test User', role: 'customer' as const, phone: '09123456789' };
+    const user: any = { id: 1, uid: '1', fullName: 'Test User', email: 'test@example.com', role: 'customer' as const, phone: '09123456789' };
     const token = 'fake-token';
     
     useAuthStore.getState().setAuth(user, token);
@@ -26,7 +26,7 @@ describe('authStore', () => {
   });
 
   it('should clear auth data correctly', () => {
-    const user = { id: '1', name: 'Test User', role: 'customer' as const, phone: '09123456789' };
+    const user: any = { id: 1, uid: '1', fullName: 'Test User', email: 'test@example.com', role: 'customer' as const, phone: '09123456789' };
     useAuthStore.getState().setAuth(user, 'token');
     
     useAuthStore.getState().clearAuth();

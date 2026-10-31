@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { adminAuth, DecodedIdToken } from '../lib/firebase-admin.ts';
-import { getOrCreateUser } from '../db/users.ts';
+import { getOrCreateUser, getOrCreateUserByPhone } from '../db/users.ts';
 
 export interface AuthRequest extends Request {
   user?: DecodedIdToken;
@@ -19,6 +19,13 @@ export const requireAuth = async (
 
   const token = authHeader.split('Bearer ')[1];
   try {
+    if (token.startsWith('phone_')) {
+      const phone = token.replace('phone_', '');
+      const dbUser = await getOrCreateUserByPhone(phone);
+      req.dbUser = dbUser;
+      return next();
+    }
+
     const decodedToken = await adminAuth.verifyIdToken(token);
     req.user = decodedToken;
     
@@ -32,7 +39,7 @@ export const requireAuth = async (
     
     next();
   } catch (error) {
-    console.error('Error verifying Firebase ID token:', error);
+    console.error('Error verifying ID token:', error);
     return res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 };

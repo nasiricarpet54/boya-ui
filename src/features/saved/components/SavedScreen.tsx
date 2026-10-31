@@ -3,6 +3,8 @@ import { Heart } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { SalonCard } from '../../../shared/components/ui/SalonCard';
 import { useSalons } from '../../../shared/api/queries';
+import { useModalStore } from '../../../shared/stores/modalStore';
+import { useUIStore } from '../../../shared/stores/uiStore';
 
 export const SavedScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -37,7 +39,7 @@ export const SavedScreen: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {savedSalons.map((salon) => (
+          {savedSalons.map((salon: any) => (
             <SalonCard
               key={salon.id}
               salon={salon}

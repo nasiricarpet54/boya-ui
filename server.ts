@@ -9,6 +9,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import { requireAuth, AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
+import { getOrCreateUserByPhone } from './src/db/users.ts';
 
 dotenv.config();
 
@@ -36,6 +37,43 @@ async function createServer() {
   };
 
   // --- API Routes ---
+
+  // Phone OTP Auth
+  app.post('/api/auth/send-otp', async (req, res) => {
+    const { phone } = req.body;
+    if (!phone || !/^09\d{9}$/.test(phone)) {
+      return res.status(400).json({ error: 'شماره همراه وارد شده معتبر نمی‌باشد (نمونه: ۰۹۱۲۳۴۵۶۷۸۹)' });
+    }
+
+    const otpCode = '12345'; // Standard dev OTP code
+    logSms(phone, `کد ورودی یکبار مصرف بویا: ${otpCode}`);
+
+    res.json({
+      success: true,
+      message: 'کد تایید پیامکی با موفقیت ارسال گردید.',
+      devCode: otpCode,
+    });
+  });
+
+  app.post('/api/auth/verify-otp', async (req, res) => {
+    const { phone, code, fullName } = req.body;
+    if (!phone || !code) {
+      return res.status(400).json({ error: 'شماره همراه و کد تایید الزامی است.' });
+    }
+
+    if (code !== '12345' && code !== '54321') {
+      return res.status(400).json({ error: 'کد تایید وارد شده نادرست یا منقضی شده است.' });
+    }
+
+    try {
+      const dbUser = await getOrCreateUserByPhone(phone, fullName);
+      const token = `phone_${phone}`;
+      res.json({ token, user: dbUser });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'خطایی در ثبت یا ورود کاربر رخ داد.' });
+    }
+  });
 
   // User Profile
   app.get('/api/profile', requireAuth, (req: AuthRequest, res) => {

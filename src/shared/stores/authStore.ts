@@ -1,6 +1,4 @@
 import { create } from 'zustand';
-import { auth, googleAuthProvider } from '../../lib/firebase.ts';
-import { signInWithPopup, signOut } from 'firebase/auth';
 
 export type UserRole = 'customer' | 'salon_specialist' | 'mobile_specialist' | 'line_manager' | 'salon_admin' | 'super_admin';
 
@@ -23,7 +21,8 @@ interface AuthState {
   
   setAuth: (user: User, accessToken: string) => void;
   clearAuth: () => void;
-  login: () => Promise<void>;
+  sendOtp: (phone: string) => Promise<{ success: boolean; message: string; devCode?: string }>;
+  loginWithPhone: (phone: string, code: string, fullName?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -36,33 +35,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setAuth: (user, accessToken) => set({ user, accessToken, isAuthenticated: true, isLoading: false }),
   clearAuth: () => set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false }),
 
-  login: async () => {
+  sendOtp: async (phone: string) => {
     set({ isLoading: true });
     try {
-      const result = await signInWithPopup(auth, googleAuthProvider);
-      const token = await result.user.getIdToken();
-      
-      // Fetch DB user profile
-      const response = await fetch('/api/profile', {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
       });
-      
-      if (!response.ok) throw new Error('Failed to fetch profile');
-      
-      const dbUser = await response.json();
-      get().setAuth(dbUser, token);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'ارسال کد تایید پیامکی ناموفق بود.');
+      }
+      return data;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  loginWithPhone: async (phone: string, code: string, fullName?: string) => {
+    set({ isLoading: true });
+    try {
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, code, fullName }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'کد تایید معتبر نمی‌باشد.');
+      }
+      get().setAuth(data.user, data.token);
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Phone login failed:', error);
       get().clearAuth();
       throw error;
+    } finally {
+      set({ isLoading: false });
     }
   },
   
   logout: async () => {
-    try {
-      await signOut(auth);
-    } finally {
-      get().clearAuth();
-    }
+    get().clearAuth();
   },
 }));
