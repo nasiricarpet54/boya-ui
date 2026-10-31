@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Search, X, MapPin, Sparkles, Filter, Car } from 'lucide-react';
+import { Search, X, MapPin, Sparkles, Filter, Car, Crown } from 'lucide-react';
 import { SALONS, SERVICE_LINES, Salon, SalonService, Specialist } from '../data/marketplaceData';
 import { SalonCard } from './SalonCard';
 import { toPersianDigits } from '../utils/persianUtils';
+import { sortSalonsForSearchResults } from '../utils/salonRanking';
+import { BeautyActivityIcon } from './BeautyActivityIcon';
 
 interface SalonsScreenProps {
+  salons?: Salon[];
   initialServiceLine?: string;
   onBookSalon: (salon: Salon, service: SalonService, specialist: Specialist, date: string, time: string) => void;
   onViewSpecialistPortfolio: (specialist: Specialist, salon: Salon) => void;
@@ -14,6 +17,7 @@ interface SalonsScreenProps {
 }
 
 export const SalonsScreen: React.FC<SalonsScreenProps> = ({
+  salons = SALONS,
   initialServiceLine = 'all',
   onBookSalon,
   onViewSpecialistPortfolio,
@@ -24,11 +28,17 @@ export const SalonsScreen: React.FC<SalonsScreenProps> = ({
   const [selectedServiceLine, setSelectedServiceLine] = useState<string>(initialServiceLine);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [onlyMobileService, setOnlyMobileService] = useState<boolean>(false);
+  const [onlyVipFilter, setOnlyVipFilter] = useState<boolean>(false);
 
   const filteredSalons = useMemo(() => {
-    return SALONS.filter((salon) => {
+    const list = salons.filter((salon) => {
       // City filter
       if (selectedCity !== 'همه' && !salon.province.includes(selectedCity) && !salon.city.includes(selectedCity)) {
+        return false;
+      }
+
+      // VIP filter if toggled
+      if (onlyVipFilter && !salon.isVip) {
         return false;
       }
 
@@ -64,16 +74,19 @@ export const SalonsScreen: React.FC<SalonsScreenProps> = ({
 
       return true;
     });
-  }, [selectedCity, selectedServiceLine, searchQuery, onlyMobileService]);
+
+    // Sort with VIP salons strictly displayed first according to priority
+    return sortSalonsForSearchResults(list);
+  }, [salons, selectedCity, selectedServiceLine, searchQuery, onlyMobileService, onlyVipFilter]);
 
   return (
     <div className="space-y-5 pb-24">
       {/* Title */}
       <div className="px-1">
-        <h1 className="text-xl font-extrabold text-[#1A2942] font-serif">
+        <h1 className="text-xl font-extrabold text-[#173B3F] font-serif">
           سالن‌ها و مراکز تخصصی زیبایی
         </h1>
-        <p className="text-xs text-[#64748B] mt-0.5">
+        <p className="text-xs text-[#6C6C6C] mt-0.5">
           رزرو مستقیم با برترین بیوتیشن‌ها و سالن‌های مورد تایید بویا
         </p>
       </div>
@@ -81,18 +94,18 @@ export const SalonsScreen: React.FC<SalonsScreenProps> = ({
       {/* Search Input Bar (48px height conforming to spec) */}
       <div className="relative">
         <div className="relative flex items-center">
-          <Search className="absolute right-4 w-4 h-4 text-[#C59B27] pointer-events-none" />
+          <Search className="absolute right-4 w-4 h-4 text-[#173B3F] pointer-events-none" />
           <input
             type="text"
             placeholder="جستجوی نام سالن، متخصص، خدمت (کراتین، فیشیال، ناخن...)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 pr-11 pl-11 rounded-2xl bg-white border border-[#E2E8F0] text-xs text-[#1A2942] placeholder:text-[#64748B] focus:border-[#C59B27] focus:ring-1 focus:ring-[#C59B27] outline-none transition-all shadow-sm"
+            className="w-full h-12 pr-11 pl-11 rounded-2xl bg-white border border-[#E7E2DA] text-xs text-[#1C1C1C] placeholder:text-[#6C6C6C] focus:border-[#173B3F] focus:ring-1 focus:ring-[#173B3F] outline-none transition-all shadow-sm"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute left-4 w-5 h-5 rounded-full bg-[#FAF7F2] flex items-center justify-center text-[#64748B] hover:text-[#1A2942]"
+              className="absolute left-4 w-5 h-5 rounded-full bg-[#E8F0EF] flex items-center justify-center text-[#173B3F] hover:bg-[#173B3F] hover:text-white transition-colors"
             >
               <X className="w-3 h-3" />
             </button>
@@ -100,7 +113,7 @@ export const SalonsScreen: React.FC<SalonsScreenProps> = ({
         </div>
       </div>
 
-      {/* Service Line Chips (36px height pill radius) */}
+      {/* Service Line Chips with Specialized Beauty Activity Icons */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {SERVICE_LINES.map((line) => {
           const isActive = selectedServiceLine === line.id;
@@ -108,13 +121,13 @@ export const SalonsScreen: React.FC<SalonsScreenProps> = ({
             <button
               key={line.id}
               onClick={() => setSelectedServiceLine(line.id)}
-              className={`h-9 px-4 rounded-full text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 ${
+              className={`h-11 px-3.5 rounded-2xl text-xs font-semibold shrink-0 transition-all flex items-center gap-2 border shadow-sm ${
                 isActive
-                  ? 'bg-[#1A2942] text-white border border-[#1A2942]'
-                  : 'bg-white text-[#64748B] border border-[#E2E8F0] hover:border-[#C59B27]'
+                  ? 'bg-[#173B3F] text-white border-[#173B3F] shadow-md shadow-[#173B3F]/20'
+                  : 'bg-white text-[#1C1C1C] border-[#E7E2DA] hover:border-[#173B3F]'
               }`}
             >
-              <span>{line.emoji}</span>
+              <BeautyActivityIcon activityId={line.id} size="sm" isActive={isActive} />
               <span>{line.name}</span>
             </button>
           );
@@ -122,31 +135,45 @@ export const SalonsScreen: React.FC<SalonsScreenProps> = ({
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex items-center justify-between gap-2 px-1 text-xs">
-        <button
-          onClick={() => setOnlyMobileService(!onlyMobileService)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
-            onlyMobileService
-              ? 'border-[#C59B27] bg-[#FAF3E7] text-[#1A2942] font-semibold'
-              : 'border-[#E2E8F0] bg-white text-[#64748B]'
-          }`}
-        >
-          <Car className="w-3.5 h-3.5 text-[#C59B27]" />
-          <span>پذیرش خدمات در محل (Mobile Service)</span>
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setOnlyVipFilter(!onlyVipFilter)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
+              onlyVipFilter
+                ? 'border-[#C99558] bg-[#FBF4EC] text-[#8C5526] font-bold shadow-xs'
+                : 'border-[#E7E2DA] bg-white text-[#6C6C6C] hover:border-[#C99558]'
+            }`}
+          >
+            <Crown className="w-3.5 h-3.5 text-[#C99558]" />
+            <span>فقط سالن‌های VIP</span>
+          </button>
 
-        <span className="text-xs text-[#64748B]">
-          {toPersianDigits(filteredSalons.length)} سالن فعال در {selectedCity}
+          <button
+            onClick={() => setOnlyMobileService(!onlyMobileService)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
+              onlyMobileService
+                ? 'border-[#173B3F] bg-[#E8F0EF] text-[#173B3F] font-bold'
+                : 'border-[#E7E2DA] bg-white text-[#6C6C6C] hover:border-[#173B3F]'
+            }`}
+          >
+            <Car className="w-3.5 h-3.5 text-[#173B3F]" />
+            <span>خدمات در محل</span>
+          </button>
+        </div>
+
+        <span className="text-[11px] text-[#6C6C6C]">
+          {toPersianDigits(filteredSalons.length)} سالن در {selectedCity} (اولویت با VIP)
         </span>
       </div>
 
       {/* Salons List */}
       {filteredSalons.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-[#EEDCC5] p-6 space-y-3">
-          <p className="text-sm font-bold text-[#1A2942]">
+        <div className="text-center py-16 bg-white rounded-3xl border border-[#E7E2DA] p-6 space-y-3">
+          <p className="text-sm font-bold text-[#1C1C1C]">
             سالنی مطابق با معیارهای جستجوی شما یافت نشد
           </p>
-          <p className="text-xs text-[#64748B]">
+          <p className="text-xs text-[#6C6C6C]">
             لطفاً فیلتر لاین یا شهر را تغییر دهید یا عبارت دیگری را جستجو فرمایید.
           </p>
           <button
@@ -154,8 +181,9 @@ export const SalonsScreen: React.FC<SalonsScreenProps> = ({
               setSelectedServiceLine('all');
               setSearchQuery('');
               setOnlyMobileService(false);
+              setOnlyVipFilter(false);
             }}
-            className="px-5 py-2 rounded-full bg-[#FAF3E7] border border-[#EEDCC5] text-xs font-bold text-[#1A2942] hover:bg-[#C59B27]"
+            className="px-5 py-2.5 rounded-full bg-[#E8F0EF] border border-[#173B3F]/20 text-xs font-bold text-[#173B3F] hover:bg-[#173B3F] hover:text-white transition-all shadow-sm"
           >
             مشاهده همه سالن‌ها
           </button>

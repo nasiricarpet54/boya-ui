@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { SALONS, Salon, SalonService, Specialist, Booking } from '../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../utils/persianUtils';
+import { BeautyActivityIcon } from './BeautyActivityIcon';
 
 interface SalonAdminDashboardProps {
   onSwitchToCustomerApp: () => void;
@@ -89,30 +90,30 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
 
   return (
     <div className="space-y-5 pb-24 animate-fadeIn">
-      {/* Salon Identification Card */}
-      <div className="bg-[#1A2942] text-white rounded-3xl p-5 border border-[#C59B27]/40 shadow-lg relative overflow-hidden">
+      {/* Salon Identification Card with Official Deep Petrol Theme */}
+      <div className="bg-[#173B3F] text-white rounded-3xl p-5 border border-[#6F9A8D]/40 shadow-lg relative overflow-hidden">
         <div className="flex items-start justify-between relative z-10">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold text-[#10B981] bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/40 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-[#10B981]" />
+              <span className="text-[10px] font-bold text-[#E8F0EF] bg-[#0F3232] px-2 py-0.5 rounded-full border border-[#6F9A8D]/40 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-[#6F9A8D]" />
                 <span>سالندار تایید شده (Approved Tenant)</span>
               </span>
-              <span className="text-[10px] font-mono text-[#FECE57]">
+              <span className="text-[10px] font-mono text-[#D9A2B0]">
                 شناسه: {currentSalon.tenantId}
               </span>
             </div>
             <h1 className="text-lg font-bold font-serif text-white">
               {currentSalon.name}
             </h1>
-            <p className="text-xs text-[#D6E3FF] mt-0.5">
+            <p className="text-xs text-[#E8F0EF] mt-0.5">
               {currentSalon.province}، {currentSalon.district} — {currentSalon.address}
             </p>
           </div>
 
           <button
             onClick={onSwitchToCustomerApp}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#C59B27] hover:bg-[#B8860B] text-[#1A2942] text-xs font-bold transition-all shadow-sm shrink-0"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#D9A2B0] hover:bg-[#E6B5C0] text-[#173B3F] text-xs font-bold transition-all shadow-sm shrink-0"
           >
             <UserCheck className="w-3.5 h-3.5" />
             <span>مشاهده ویترین مشتری</span>
@@ -121,33 +122,33 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-4 mt-4 border-t border-white/10 text-xs">
-          <div className="bg-white/5 p-2.5 rounded-xl border border-white/10">
-            <span className="text-[10px] text-[#A0AEC0] block">نوبت‌های جاری:</span>
-            <span className="text-sm font-bold text-[#FECE57]">{toPersianDigits(todayBookingsCount)} نوبت</span>
+          <div className="bg-white/5 p-2.5 rounded-2xl border border-white/10">
+            <span className="text-[10px] text-[#E8F0EF]/80 block">نوبت‌های جاری:</span>
+            <span className="text-sm font-bold text-[#D9A2B0]">{toPersianDigits(todayBookingsCount)} نوبت</span>
           </div>
-          <div className="bg-white/5 p-2.5 rounded-xl border border-white/10">
-            <span className="text-[10px] text-[#A0AEC0] block">برآورد درآمد:</span>
+          <div className="bg-white/5 p-2.5 rounded-2xl border border-white/10">
+            <span className="text-[10px] text-[#E8F0EF]/80 block">برآورد درآمد:</span>
             <span className="text-sm font-bold text-white">{formatPrice(totalRevenue)}</span>
           </div>
-          <div className="bg-white/5 p-2.5 rounded-xl border border-white/10">
-            <span className="text-[10px] text-[#A0AEC0] block">کادر متخصصین:</span>
+          <div className="bg-white/5 p-2.5 rounded-2xl border border-white/10">
+            <span className="text-[10px] text-[#E8F0EF]/80 block">کادر متخصصین:</span>
             <span className="text-sm font-bold text-white">{toPersianDigits(currentSalon.specialists.length)} نفر</span>
           </div>
-          <div className="bg-white/5 p-2.5 rounded-xl border border-white/10">
-            <span className="text-[10px] text-[#A0AEC0] block">امتیاز سالن:</span>
-            <span className="text-sm font-bold text-[#10B981]">{toPersianDigits(currentSalon.rating.toFixed(2))} ★</span>
+          <div className="bg-white/5 p-2.5 rounded-2xl border border-white/10">
+            <span className="text-[10px] text-[#E8F0EF]/80 block">امتیاز سالن:</span>
+            <span className="text-sm font-bold text-[#6F9A8D]">{toPersianDigits(currentSalon.rating.toFixed(2))} ★</span>
           </div>
         </div>
       </div>
 
       {/* Segmented Controls */}
-      <div className="flex p-1 bg-white rounded-2xl border border-[#E2E8F0]">
+      <div className="flex p-1 bg-white rounded-2xl border border-[#E7E2DA] shadow-sm">
         <button
           onClick={() => setSalonTab('schedule')}
           className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
             salonTab === 'schedule'
-              ? 'bg-[#1A2942] text-white shadow-sm'
-              : 'text-[#64748B] hover:text-[#1A2942]'
+              ? 'bg-[#173B3F] text-white shadow-sm'
+              : 'text-[#6C6C6C] hover:text-[#173B3F]'
           }`}
         >
           نوبت‌های ثبت شده ({toPersianDigits(bookings.length)})
@@ -156,8 +157,8 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
           onClick={() => setSalonTab('blocks')}
           className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
             salonTab === 'blocks'
-              ? 'bg-[#1A2942] text-white shadow-sm'
-              : 'text-[#64748B] hover:text-[#1A2942]'
+              ? 'bg-[#173B3F] text-white shadow-sm'
+              : 'text-[#6C6C6C] hover:text-[#173B3F]'
           }`}
         >
           مسدودسازی سانس‌ها
@@ -166,8 +167,8 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
           onClick={() => setSalonTab('services')}
           className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
             salonTab === 'services'
-              ? 'bg-[#1A2942] text-white shadow-sm'
-              : 'text-[#64748B] hover:text-[#1A2942]'
+              ? 'bg-[#173B3F] text-white shadow-sm'
+              : 'text-[#6C6C6C] hover:text-[#173B3F]'
           }`}
         >
           مدیریت خدمات و قیمت‌ها
@@ -176,8 +177,8 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
           onClick={() => setSalonTab('specialists')}
           className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
             salonTab === 'specialists'
-              ? 'bg-[#1A2942] text-white shadow-sm'
-              : 'text-[#64748B] hover:text-[#1A2942]'
+              ? 'bg-[#173B3F] text-white shadow-sm'
+              : 'text-[#6C6C6C] hover:text-[#173B3F]'
           }`}
         >
           پرسنل و نمونه‌کارها
@@ -188,10 +189,10 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
       {salonTab === 'schedule' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-bold text-[#1A2942]">
+            <h3 className="text-sm font-bold text-[#173B3F]">
               نوبت‌های مشتریان (ورودی از اپلیکیشن مشتری بویا):
             </h3>
-            <span className="text-[11px] text-[#64748B]">
+            <span className="text-[11px] text-[#6C6C6C]">
               به‌روزرسانی لحظه‌ای
             </span>
           </div>
@@ -200,35 +201,38 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
             {bookings.map((bkg) => (
               <div
                 key={bkg.id}
-                className="bg-white rounded-2xl p-4 border border-[#EEDCC5] space-y-3 shadow-sm hover:border-[#C59B27] transition-all"
+                className="bg-white rounded-2xl p-4 border border-[#E7E2DA] space-y-3 shadow-sm hover:border-[#173B3F] transition-all"
               >
                 <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[#1A2942]">
-                        {bkg.customerName}
-                      </span>
-                      <span className="text-[11px] font-mono text-[#64748B]">
-                        ({toPersianDigits(bkg.customerPhone)})
-                      </span>
-                      {bkg.isMobileBooking && (
-                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                          خدمت در محل مشتری
+                  <div className="flex items-center gap-2.5">
+                    <BeautyActivityIcon activityId={bkg.serviceLineId} size="sm" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#1C1C1C]">
+                          {bkg.customerName}
                         </span>
-                      )}
+                        <span className="text-[11px] font-mono text-[#6C6C6C]">
+                          ({toPersianDigits(bkg.customerPhone)})
+                        </span>
+                        {bkg.isMobileBooking && (
+                          <span className="text-[10px] font-bold text-[#173B3F] bg-[#E8F0EF] px-2 py-0.5 rounded-full border border-[#173B3F]/20">
+                            خدمت در محل مشتری
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-[#173B3F] block mt-0.5">
+                        {bkg.serviceName} با متخصص {bkg.specialistName}
+                      </span>
                     </div>
-                    <span className="text-xs font-bold text-[#775A00] block mt-1">
-                      {bkg.serviceName} با متخصص {bkg.specialistName}
-                    </span>
                   </div>
 
                   <span
                     className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                       bkg.status === 'confirmed'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        ? 'bg-[#EAF2EF] text-[#2E5E52] border border-[#6F9A8D]/40'
                         : bkg.status === 'completed'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'bg-rose-50 text-rose-700 border border-rose-200'
+                        ? 'bg-[#EDF4F5] text-[#24545F] border border-[#5E8B95]/40'
+                        : 'bg-[#F8ECEE] text-[#B35D67] border border-[#B35D67]/40'
                     }`}
                   >
                     {bkg.status === 'confirmed'
@@ -239,30 +243,30 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
                   </span>
                 </div>
 
-                <div className="bg-[#FAF7F2] p-2.5 rounded-xl border border-[#F2EDE5] text-xs flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-[#C59B27]" />
+                <div className="bg-[#FAF7F2] p-2.5 rounded-xl border border-[#E7E2DA] text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[#1C1C1C]">
+                    <Clock className="w-3.5 h-3.5 text-[#173B3F]" />
                     <span>
                       {bkg.date} - ساعت {toPersianDigits(bkg.time)}
                     </span>
                   </div>
-                  <span className="font-bold text-[#1A2942]">
+                  <span className="font-bold text-[#173B3F]">
                     مبلغ: {formatPrice(bkg.price)}
                   </span>
                 </div>
 
                 {bkg.notes && (
-                  <p className="text-[11px] text-[#64748B] italic">
+                  <p className="text-[11px] text-[#6C6C6C] italic">
                     ملاحظات مشتری: {bkg.notes}
                   </p>
                 )}
 
                 {/* Status action buttons */}
-                <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#F2EDE5]">
+                <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#E7E2DA]/60">
                   {bkg.status !== 'completed' && (
                     <button
                       onClick={() => onUpdateBookingStatus(bkg.id, 'completed')}
-                      className="px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+                      className="px-3.5 py-1 rounded-full bg-[#6F9A8D] hover:bg-[#5a8075] text-white text-xs font-bold shadow-xs"
                     >
                       تکمیل خدمت
                     </button>
@@ -270,7 +274,7 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
                   {bkg.status !== 'cancelled' && (
                     <button
                       onClick={() => onUpdateBookingStatus(bkg.id, 'cancelled')}
-                      className="px-3 py-1 rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200 text-xs font-semibold"
+                      className="px-3.5 py-1 rounded-full bg-[#F8ECEE] text-[#B35D67] hover:bg-[#f2dde0] text-xs font-semibold"
                     >
                       ثبت عدم حضور / لغو
                     </button>
@@ -285,11 +289,11 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
       {/* TAB 2: Schedule Blocks (قفل کردن سانس‌ها) */}
       {salonTab === 'blocks' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-3xl p-5 border border-[#EEDCC5] space-y-3">
-            <h3 className="text-sm font-bold text-[#1A2942]">
+          <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] space-y-3 shadow-sm">
+            <h3 className="text-sm font-bold text-[#173B3F]">
               مسدودسازی سانس‌ها (Schedule Blocks)
             </h3>
-            <p className="text-xs text-[#64748B] leading-relaxed">
+            <p className="text-xs text-[#6C6C6C] leading-relaxed">
               برای جلوگیری از تداخل نوبت (Double-booking)، می‌توانید سانس‌های استراحت، مرخصی متخصصین یا وقت‌های پرشده حضوری را قفل کنید.
             </p>
 
@@ -299,26 +303,26 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
                 placeholder="تاریخ (مثال: دوشنبه ۷ آبان)"
                 value={newBlockDate}
                 onChange={(e) => setNewBlockDate(e.target.value)}
-                className="h-10 px-3 rounded-xl border border-[#E2E8F0] text-xs text-[#1A2942] focus:border-[#C59B27] outline-none"
+                className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] outline-none"
               />
               <input
                 type="text"
                 placeholder="بازه زمانی (مثال: ۱۴:۰۰ الی ۱۵:۳۰)"
                 value={newBlockTime}
                 onChange={(e) => setNewBlockTime(e.target.value)}
-                className="h-10 px-3 rounded-xl border border-[#E2E8F0] text-xs text-[#1A2942] focus:border-[#C59B27] outline-none"
+                className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] outline-none"
               />
               <input
                 type="text"
                 placeholder="علت مسدودسازی"
                 value={newBlockReason}
                 onChange={(e) => setNewBlockReason(e.target.value)}
-                className="h-10 px-3 rounded-xl border border-[#E2E8F0] text-xs text-[#1A2942] focus:border-[#C59B27] outline-none"
+                className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] outline-none"
               />
               <div className="sm:col-span-3">
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-full bg-[#1A2942] text-white text-xs font-semibold hover:bg-[#04142C]"
+                  className="px-5 py-2.5 rounded-full bg-[#173B3F] text-white text-xs font-bold hover:bg-[#0F3232] shadow-sm"
                 >
                   افزودن بلاک زمانی به تقویم
                 </button>
@@ -330,17 +334,17 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
             {scheduleBlocks.map((blk) => (
               <div
                 key={blk.id}
-                className="p-3 bg-white rounded-2xl border border-[#EEDCC5] flex items-center justify-between text-xs"
+                className="p-3 bg-white rounded-2xl border border-[#E7E2DA] flex items-center justify-between text-xs shadow-xs"
               >
                 <div>
-                  <span className="font-bold text-[#1A2942] block">
+                  <span className="font-bold text-[#173B3F] block">
                     {blk.date} — {toPersianDigits(blk.time)}
                   </span>
-                  <span className="text-[11px] text-[#64748B]">علت: {blk.reason}</span>
+                  <span className="text-[11px] text-[#6C6C6C]">علت: {blk.reason}</span>
                 </div>
                 <button
                   onClick={() => setScheduleBlocks(scheduleBlocks.filter((b) => b.id !== blk.id))}
-                  className="text-xs text-rose-600 hover:text-rose-800 font-semibold"
+                  className="text-xs text-[#B35D67] hover:underline font-bold"
                 >
                   حذف بلاک
                 </button>
@@ -354,22 +358,22 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
       {salonTab === 'services' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-bold text-[#1A2942]">
+            <h3 className="text-sm font-bold text-[#173B3F]">
               لیست خدمات و نرخ‌نامه مصوب سالن:
             </h3>
             <button
               onClick={() => setIsAddingService(!isAddingService)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#C59B27] text-[#1A2942] text-xs font-bold hover:bg-[#B8860B]"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#173B3F] text-white text-xs font-bold hover:bg-[#0F3232] shadow-sm"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 text-[#D9A2B0]" />
               <span>تعریف خدمت جدید</span>
             </button>
           </div>
 
           {/* Add Service Form */}
           {isAddingService && (
-            <form onSubmit={handleAddService} className="p-4 bg-white rounded-3xl border border-[#C59B27] space-y-3">
-              <h4 className="text-xs font-bold text-[#1A2942]">فرم تعریف خدمت جدید در پلتفرم بویا</h4>
+            <form onSubmit={handleAddService} className="p-4 bg-white rounded-3xl border border-[#173B3F] space-y-3 shadow-sm">
+              <h4 className="text-xs font-bold text-[#173B3F]">فرم تعریف خدمت جدید در پلتفرم بویا</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   type="text"
@@ -377,7 +381,7 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
                   placeholder="نام خدمت (مثال: شینیون خطی ژورنالی)"
                   value={newServiceName}
                   onChange={(e) => setNewServiceName(e.target.value)}
-                  className="h-10 px-3 rounded-xl border border-[#E2E8F0] text-xs focus:border-[#C59B27] outline-none"
+                  className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
                 />
                 <input
                   type="number"
@@ -385,7 +389,7 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
                   placeholder="قیمت به تومان"
                   value={newServicePrice}
                   onChange={(e) => setNewServicePrice(Number(e.target.value))}
-                  className="h-10 px-3 rounded-xl border border-[#E2E8F0] text-xs focus:border-[#C59B27] outline-none"
+                  className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
                 />
                 <input
                   type="number"
@@ -393,15 +397,15 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
                   placeholder="مدت زمان (دقیقه)"
                   value={newServiceDuration}
                   onChange={(e) => setNewServiceDuration(Number(e.target.value))}
-                  className="h-10 px-3 rounded-xl border border-[#E2E8F0] text-xs focus:border-[#C59B27] outline-none"
+                  className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
                 />
-                <div className="flex items-center gap-2 text-xs text-[#1A2942]">
+                <div className="flex items-center gap-2 text-xs text-[#1C1C1C]">
                   <input
                     type="checkbox"
                     id="mobileServiceCheck"
                     checked={newServiceMobile}
                     onChange={(e) => setNewServiceMobile(e.target.checked)}
-                    className="accent-[#C59B27] w-4 h-4"
+                    className="accent-[#173B3F] w-4 h-4"
                   />
                   <label htmlFor="mobileServiceCheck">قابل ارائه در محل مشتری (Mobile Service)</label>
                 </div>
@@ -409,14 +413,14 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-full bg-[#1A2942] text-white text-xs font-bold"
+                  className="px-4 py-2 rounded-full bg-[#173B3F] text-white text-xs font-bold hover:bg-[#0F3232]"
                 >
                   ثبت و انتشار در ویترین
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsAddingService(false)}
-                  className="px-4 py-2 rounded-full border border-slate-200 text-xs"
+                  className="px-4 py-2 rounded-full border border-slate-200 text-xs text-[#6C6C6C]"
                 >
                   انصراف
                 </button>
@@ -424,31 +428,34 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
             </form>
           )}
 
-          {/* Services list */}
+          {/* Services list with BeautyActivityIcon */}
           <div className="space-y-2.5">
             {salonServices.map((serv) => (
               <div
                 key={serv.id}
-                className="p-3.5 bg-white rounded-2xl border border-[#EEDCC5] flex items-center justify-between text-xs"
+                className="p-3.5 bg-white rounded-2xl border border-[#E7E2DA] flex items-center justify-between text-xs shadow-xs hover:border-[#173B3F] transition-all"
               >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#1A2942]">{serv.name}</span>
-                    {serv.isMobileAvailable && (
-                      <span className="text-[9px] bg-blue-50 text-blue-700 px-1.5 py-0.2 rounded-full font-semibold">
-                        سیار
-                      </span>
-                    )}
+                <div className="flex items-center gap-3">
+                  <BeautyActivityIcon activityId={serv.serviceLineId} size="sm" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#1C1C1C]">{serv.name}</span>
+                      {serv.isMobileAvailable && (
+                        <span className="text-[9px] bg-[#E8F0EF] text-[#173B3F] px-1.5 py-0.2 rounded-full font-bold">
+                          سیار
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-[#6C6C6C] block mt-0.5">
+                      مدت انجام: {toPersianDigits(serv.durationMinutes)} دقیقه • {serv.description}
+                    </span>
                   </div>
-                  <span className="text-[11px] text-[#64748B] block mt-0.5">
-                    مدت انجام: {toPersianDigits(serv.durationMinutes)} دقیقه • {serv.description}
-                  </span>
                 </div>
                 <div className="text-left">
-                  <span className="text-xs font-bold text-[#775A00] block">
+                  <span className="text-xs font-bold text-[#173B3F] block">
                     {formatPrice(serv.price)}
                   </span>
-                  <span className="text-[10px] text-emerald-700">فعال در ویترین</span>
+                  <span className="text-[10px] text-[#2E5E52] font-semibold">فعال در ویترین</span>
                 </div>
               </div>
             ))}
@@ -459,7 +466,7 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
       {/* TAB 4: Specialists & Portfolio */}
       {salonTab === 'specialists' && (
         <div className="space-y-4">
-          <h3 className="text-sm font-bold text-[#1A2942] px-1">
+          <h3 className="text-sm font-bold text-[#173B3F] px-1">
             کادر بیوتیشن‌ها و متخصصین فعال سالن:
           </h3>
 
@@ -467,21 +474,21 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
             {currentSalon.specialists.map((spec) => (
               <div
                 key={spec.id}
-                className="bg-white rounded-2xl p-4 border border-[#EEDCC5] space-y-3"
+                className="bg-white rounded-2xl p-4 border border-[#E7E2DA] space-y-3 shadow-xs"
               >
                 <div className="flex items-center gap-3">
                   <img
                     src={spec.avatar}
                     alt={spec.name}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-[#C59B27]"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-[#D9A2B0]"
                   />
                   <div>
-                    <h4 className="text-xs font-bold text-[#1A2942] flex items-center gap-1">
+                    <h4 className="text-xs font-bold text-[#1C1C1C] flex items-center gap-1">
                       <span>{spec.name}</span>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#6F9A8D]" />
                     </h4>
-                    <span className="text-[11px] text-[#775A00]">{spec.role}</span>
-                    <span className="text-[10px] text-[#64748B] block">
+                    <span className="text-[11px] text-[#173B3F] font-bold">{spec.role}</span>
+                    <span className="text-[10px] text-[#6C6C6C] block">
                       {toPersianDigits(spec.experienceYears)} سال سابقه • رضایت: {toPersianDigits(spec.rating.toFixed(2))}
                     </span>
                   </div>
@@ -489,12 +496,12 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
 
                 {/* Portfolio previews */}
                 <div>
-                  <span className="text-[11px] font-semibold text-[#1A2942] block mb-1">
+                  <span className="text-[11px] font-semibold text-[#1C1C1C] block mb-1">
                     نمونه‌کارهای فعال در پروفایل:
                   </span>
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {spec.portfolio.map((p) => (
-                      <div key={p.id} className="w-20 h-20 rounded-xl overflow-hidden border shrink-0">
+                      <div key={p.id} className="w-20 h-20 rounded-xl overflow-hidden border border-[#E7E2DA] shrink-0">
                         <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
                       </div>
                     ))}

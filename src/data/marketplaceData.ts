@@ -1,7 +1,7 @@
 /**
- * BOYA Platform Data Models & Datasets
- * Based on BOYA Architecture: NestJS + TypeORM multi-tenant schema with
- * tenants (salons), specialists, service lines, bookings, reviews and support tickets.
+ * BOYA Comprehensive Beauty Platform Data Models & State
+ * Reflecting the NestJS Backend, Flutter Mobile Apps (Customer & Salon),
+ * and Next.js 14 Web Admin Panel.
  */
 
 export interface ServiceLine {
@@ -20,7 +20,7 @@ export interface SalonService {
   durationMinutes: number;
   price: number;
   description: string;
-  isMobileAvailable?: boolean; // قابلیت ارائه در محل مشتری (ADR Mobile Service)
+  isMobileAvailable?: boolean;
 }
 
 export interface SpecialistPortfolio {
@@ -43,13 +43,14 @@ export interface Specialist {
   experienceYears: number;
   specialtyLine: string;
   bio: string;
-  isMobileSpecialist: boolean; // متخصص سیار / در محل
+  isMobileSpecialist: boolean;
+  phone: string;
   portfolio: SpecialistPortfolio[];
 }
 
 export interface Salon {
   id: string;
-  tenantId: string; // Multi-tenant ID (RLS tenant_id)
+  tenantId: string; // Multi-tenant RLS tenant_id
   name: string;
   enName: string;
   province: string;
@@ -65,12 +66,21 @@ export interface Salon {
   coverImage: string;
   gallery: string[];
   isApproved: boolean; // Admin approval status
-  isMobileServiceActive: boolean; // خدمات در منزل / محل مشتری
+  isMobileServiceActive: boolean;
   workingHours: string;
+  ownerName: string;
+  ownerPhone: string;
+  createdAt: string;
+  status: 'active' | 'pending' | 'suspended';
+  // VIP & Search Ranking Management
+  isVip?: boolean;
+  displayPriority?: number; // 1, 2, 3... (lower number = higher placement in search)
+  vipBadgeLabel?: string; // e.g. "سالن برگزیده VIP", "همکار طلایی بویا"
+  vipExpiryDate?: string;
   services: SalonService[];
   specialists: Specialist[];
   availableSlots: {
-    date: string; // e.g. "شنبه ۵ آبان"
+    date: string;
     dayName: string;
     dayNumber: string;
     slots: {
@@ -83,7 +93,7 @@ export interface Salon {
 
 export interface Booking {
   id: string;
-  trackingCode: string; // ملی‌پیامک OTP / پیامک رهگیری
+  trackingCode: string;
   tenantId: string;
   salonName: string;
   salonAddress: string;
@@ -99,7 +109,7 @@ export interface Booking {
   customerName: string;
   customerPhone: string;
   notes?: string;
-  isMobileBooking: boolean; // رزرو در محل مشتری
+  isMobileBooking: boolean;
   customerAddress?: string;
   status: 'confirmed' | 'completed' | 'cancelled' | 'pending';
   createdAt: string;
@@ -108,50 +118,86 @@ export interface Booking {
 export interface SupportTicket {
   id: string;
   title: string;
+  userName: string;
+  userPhone: string;
+  userRole: 'customer' | 'salon_owner' | 'specialist';
   category: 'booking' | 'salon' | 'specialist' | 'account' | 'payment';
   status: 'open' | 'in_progress' | 'resolved';
   lastReply: string;
   createdAt: string;
   messages: {
-    sender: 'user' | 'support';
+    sender: 'user' | 'support' | 'admin';
+    senderName: string;
     text: string;
     time: string;
   }[];
 }
 
-// Service Lines (دسته‌بندی‌های اصلی خدمات زیبایی بویا مطابق با مایگریشن 1730000000003-ServiceLines)
+export interface PlatformUser {
+  id: string;
+  name: string;
+  phone: string;
+  role: 'super_admin' | 'salon_owner' | 'specialist' | 'customer';
+  tenantId?: string;
+  tenantName?: string;
+  status: 'active' | 'suspended';
+  createdAt: string;
+  avatar?: string;
+}
+
+export interface AuditLogItem {
+  id: string;
+  action: string;
+  actorName: string;
+  actorRole: string;
+  details: string;
+  ipAddress: string;
+  timestamp: string;
+  level: 'info' | 'warning' | 'security';
+}
+
+export interface ScheduleBlockItem {
+  id: string;
+  salonId: string;
+  date: string;
+  timeRange: string;
+  reason: string;
+}
+
+// ------------------- INITIAL DATA -------------------
+
 export const SERVICE_LINES: ServiceLine[] = [
   {
     id: 'all',
     name: 'همه خدمات',
     enName: 'All Services',
     emoji: '✨',
-    description: 'تمامی خدمات و سالن‌های زیبایی فعال',
-    color: '#C59B27',
+    description: 'تمامی لاین‌های خدمات زیبایی فعال در پلتفرم بویا',
+    color: '#173B3F',
   },
   {
     id: 'hair',
     name: 'مو و استایل',
     enName: 'Hair & Styling',
     emoji: '💇‍♀️',
-    description: 'کوتاهی، رنگ و بالیاژ، کراتین و احیای ابریشمی، شینیون',
-    color: '#D4A574',
+    description: 'کوتاهی، رنگ و بالیاژ، کراتین و احیا، شینیون ژورنالی',
+    color: '#173B3F',
   },
   {
     id: 'nail',
     name: 'ناخن و اسپا دست',
     enName: 'Nails & Spa',
     emoji: '💅',
-    description: 'کاشت ژل و پودر، لمینت، ژلیش، مانیکور روسی و پدیکور',
-    color: '#B8860B',
+    description: 'کاشت ژل و پودر، لمینت ناخن، مانیکور روسی و پدیکور VIP',
+    color: '#D9A2B0',
   },
   {
     id: 'eyelash_eyebrow',
     name: 'مژه و ابرو',
     enName: 'Lashes & Brows',
     emoji: '👁️',
-    description: 'اکستنشن مژه اسپایکی و مگاوالیوم، فیبروز، لیفت و لمینت',
-    color: '#1A2942',
+    description: 'اکستنشن مژه اسپایکی، فیبروز و میکروبلیدینگ، لیفت و لمینت',
+    color: '#173B3F',
   },
   {
     id: 'skincare',
@@ -159,36 +205,35 @@ export const SERVICE_LINES: ServiceLine[] = [
     enName: 'Skincare & Facial',
     emoji: '🫧',
     description: 'پاکسازی عمقی، هیدرافیشیال، پیلینگ، مزوتراپی و جوانسازی',
-    color: '#10B981',
+    color: '#6F9A8D',
   },
   {
     id: 'makeup',
     name: 'میکاپ و چهره',
     enName: 'Makeup & Bridal',
     emoji: '💄',
-    description: 'میکاپ تخصصی عروس، گریم سینمایی و کانتورینگ چهره',
-    color: '#E11D48',
+    description: 'میکاپ تخصصی عروس، گریم سینمایی و کانتورینگ متناسب چهره',
+    color: '#D9A2B0',
   },
   {
     id: 'massage_spa',
     name: 'اسپا و ماساژ',
     enName: 'Spa & Wellness',
     emoji: '🕯️',
-    description: 'ماساژ ریلکسی، سنگ داغ، آروماتراپی و حمام سنتی',
-    color: '#775A00',
+    description: 'ماساژ ریلکسی، سنگ داغ، آروماتراپی و حمام سنتی ایرانی',
+    color: '#5E8B95',
   },
   {
     id: 'mobile_service',
     name: 'خدمات در محل',
     enName: 'At-Home Services',
     emoji: '🚗',
-    description: 'اعزام متخصص تایید شده به منزل یا محل مورد نظر شما',
-    color: '#04142C',
+    description: 'اعزام متخصص مجهز با تجهیزات بهداشتی به آدرس مشتری',
+    color: '#C99558',
   },
 ];
 
-// Salons / Tenants (مطابق با دیتابیس Multi-tenant پلتفرم بویا)
-export const SALONS: Salon[] = [
+export const INITIAL_SALONS: Salon[] = [
   {
     id: 'salon-1',
     tenantId: 'tnt-tehran-elahiyeh-01',
@@ -207,11 +252,18 @@ export const SALONS: Salon[] = [
     isApproved: true,
     isMobileServiceActive: true,
     workingHours: 'همه روزه ۹:۰۰ الی ۲۱:۰۰ (با تعیین وقت قبلی)',
+    ownerName: 'خانم گلناز فرهمند',
+    ownerPhone: '۰۹۱۲۱۱۱۴۴۵۵',
+    createdAt: '۱۴۰۳/۰۴/۱۵',
+    status: 'active',
+    isVip: true,
+    displayPriority: 1,
+    vipBadgeLabel: 'سالن برگزیده VIP',
+    vipExpiryDate: '۱۴۰۳/۱۲/۲۹',
     coverImage: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1000&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1000&q=80',
       'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?auto=format&fit=crop&w=1000&q=80',
-      'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1000&q=80',
     ],
     services: [
       {
@@ -220,7 +272,7 @@ export const SALONS: Salon[] = [
         name: 'کراتین و احیای پروتئینه نانو ابریشمی',
         durationMinutes: 120,
         price: 3800000,
-        description: 'صافی و احیای ۱۰۰٪ بدون فرمالدئید با روغن کندر و خاویار، مناسب موهای آسیب‌دیده و دکلره شده',
+        description: 'صافی و احیای ۱۰۰٪ بدون فرمالدئید با روغن کندر و خاویار، مناسب موهای آسیب‌دیده',
         isMobileAvailable: true,
       },
       {
@@ -229,7 +281,7 @@ export const SALONS: Salon[] = [
         name: 'هیدرافیشیال کلینیکال و اکسیژن‌تراپی طلا',
         durationMinutes: 90,
         price: 2600000,
-        description: 'پاکسازی چندمرحله‌ای، تخلیه کمدون با اولتراسونیک، تزریق سرم زعفران و ماسک ورق طلای ۲۴ عیار',
+        description: 'پاکسازی چندمرحله‌ای، تخلیه کمدون با اولتراسونیک، تزریق سرم زعفران و ماسک طلا',
         isMobileAvailable: false,
       },
       {
@@ -238,7 +290,7 @@ export const SALONS: Salon[] = [
         name: 'کاشت ناخن با پودر روسی و ژلیش کهکشانی',
         durationMinutes: 90,
         price: 1100000,
-        description: 'فرم‌دهی طبیعی، مانیکور دقیق روسی با سرسوهان الماسه و لاک‌ژل شاین با ماندگاری ۴۵ روزه',
+        description: 'فرم‌دهی طبیعی، مانیکور دقیق روسی با سرسوهان الماسه و لاک‌ژل شاین با ماندگاری بالا',
         isMobileAvailable: true,
       },
       {
@@ -264,7 +316,8 @@ export const SALONS: Salon[] = [
         experienceYears: 12,
         specialtyLine: 'skincare',
         isMobileSpecialist: false,
-        bio: 'دارای مدرک بین‌المللی بیوتی تراپیست از آکادمی ژنو و مدرس فیشیال‌های جوانساز در دربار زیبایی',
+        phone: '۰۹۱۲۳۴۵۱۱۲۰',
+        bio: 'دارای مدرک بین‌المللی بیوتی تراپیست از آکادمی ژنو و مدرس فیشیال‌های جوانساز',
         portfolio: [
           {
             id: 'port-1',
@@ -294,7 +347,8 @@ export const SALONS: Salon[] = [
         experienceYears: 10,
         specialtyLine: 'hair',
         isMobileSpecialist: true,
-        bio: 'متخصص ژورنال‌خوانی و تکنیک‌های آمبره روسی، بالیاژ خطی و پروتئین‌تراپی ساقه‌های آسیب‌دیده',
+        phone: '۰۹۱۲۴۵۶۷۷۸۸',
+        bio: 'متخصص ژورنال‌خوانی و تکنیک‌های آمبره روسی، بالیاژ خطی و بوتاکس مو',
         portfolio: [
           {
             id: 'port-3',
@@ -363,6 +417,12 @@ export const SALONS: Salon[] = [
     isApproved: true,
     isMobileServiceActive: false,
     workingHours: 'شنبه تا پنجشنبه ۱۰:۰۰ الی ۲۰:۰۰',
+    ownerName: 'دکتر صبا معتمدی',
+    ownerPhone: '۰۹۱۲۲۲۳۳۴۴۵',
+    createdAt: '۱۴۰۳/۰۵/۱۰',
+    status: 'active',
+    isVip: false,
+    displayPriority: 10,
     coverImage: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1000&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1000&q=80',
@@ -386,15 +446,6 @@ export const SALONS: Salon[] = [
         description: 'تزریق گاز دی‌اکسید کربن پزشکی برای تحریک گردش خون و رفع تیرگی گودی زیر چشم',
         isMobileAvailable: false,
       },
-      {
-        id: 'serv-203',
-        serviceLineId: 'makeup',
-        name: 'میکاپ لایت اروپایی و گریم VIP با برندهای ارگانیک',
-        durationMinutes: 75,
-        price: 2400000,
-        description: 'کانتورینگ متناسب با ساختار چهره، فیکس ۲۴ ساعته ضدتعریق و مژه دانه‌ای طبیعی',
-        isMobileAvailable: false,
-      },
     ],
     specialists: [
       {
@@ -409,7 +460,8 @@ export const SALONS: Salon[] = [
         experienceYears: 16,
         specialtyLine: 'skincare',
         isMobileSpecialist: false,
-        bio: 'بیش از ۱۵ سال تجربه در حوزه جوان‌سازی بالینی و اصلاح مشکلات ساختاری پوست و لک‌های مقاوم',
+        phone: '۰۹۱۲۹۹۸۸۷۷۶',
+        bio: 'بیش از ۱۵ سال تجربه در جوان‌سازی بالینی و اصلاح مشکلات ساختاری پوست و لک‌های مقاوم',
         portfolio: [
           {
             id: 'port-4',
@@ -463,6 +515,14 @@ export const SALONS: Salon[] = [
     isApproved: true,
     isMobileServiceActive: true,
     workingHours: 'همه روزه ۱۰:۰۰ الی ۲۲:۰۰',
+    ownerName: 'آقای بهزاد شایان',
+    ownerPhone: '۰۹۱۷۱۱۱۲۲۳۳',
+    createdAt: '۱۴۰۳/۰۶/۰۱',
+    status: 'active',
+    isVip: true,
+    displayPriority: 2,
+    vipBadgeLabel: 'همکار طلایی بویا',
+    vipExpiryDate: '۱۴۰۴/۰۱/۱۵',
     coverImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80',
@@ -483,16 +543,7 @@ export const SALONS: Salon[] = [
         name: 'ماساژ ریلکسی با روغن گرم بهارنارنج و سنگ داغ',
         durationMinutes: 75,
         price: 2300000,
-        description: 'ماساژ عضلانی کل بدن با سنگ‌های آتشفشانی داغ و روغن خالص بهارنارنج باغات شیراز',
-        isMobileAvailable: true,
-      },
-      {
-        id: 'serv-303',
-        serviceLineId: 'hair',
-        name: 'کوپ ژورنالی و براشینگ مجلسی با دیفیوزر',
-        durationMinutes: 60,
-        price: 850000,
-        description: 'کوتاهی لایه‌ای متناسب با فرم گردن و صورت، پیتاژ دقیق و استایل نهایی با سرم ضدوز',
+        description: 'ماساژ عضلانی کل بدن با سنگ‌های آتشفشانی داغ و روغن خالص بهارنارنج شیراز',
         isMobileAvailable: true,
       },
     ],
@@ -509,6 +560,7 @@ export const SALONS: Salon[] = [
         experienceYears: 11,
         specialtyLine: 'massage_spa',
         isMobileSpecialist: true,
+        phone: '۰۹۱۷۸۸۸۵۵۴۴',
         bio: 'متخصص آیین‌های آرامش‌بخش حمام سنتی و استفاده از اسانس‌های اسنشیال روغنی دردهای عضلانی',
         portfolio: [
           {
@@ -534,9 +586,79 @@ export const SALONS: Salon[] = [
       },
     ],
   },
+  {
+    id: 'salon-4',
+    tenantId: 'tnt-isfahan-mardavij-04',
+    name: 'عمارت و استودیو زیبایی پرنسس اصفهان',
+    enName: 'Princess Luxury Studio Isfahan',
+    province: 'اصفهان',
+    city: 'اصفهان',
+    district: 'مرداویج',
+    address: 'خیابان مرداویج، ملاصدرا، پلاک ۲۴',
+    latitude: 32.6184,
+    longitude: 51.6687,
+    phone: '۰۳۱-۳۶۶۶۷۷۸۸',
+    instagram: '@princess.isfahan.beautyluxe',
+    rating: 4.89,
+    reviewsCount: 112,
+    isApproved: false, // In Approvals Queue!
+    isMobileServiceActive: true,
+    workingHours: 'همه روزه ۱۰:۰۰ الی ۲۰:۰۰',
+    ownerName: 'مهتاب صفوی',
+    ownerPhone: '۰۹۱۳۴۴۴۵۵۶۶',
+    createdAt: '۱۴۰۳/۰۷/۲۸',
+    status: 'pending',
+    isVip: false,
+    displayPriority: 20,
+    coverImage: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1000&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1000&q=80',
+    ],
+    services: [
+      {
+        id: 'serv-401',
+        serviceLineId: 'hair',
+        name: 'شینیون و استایلینگ عروس کلاسیک و اروپایی',
+        durationMinutes: 90,
+        price: 2200000,
+        description: 'شینیون‌های خطی ماندگار با متریال ضد رطوبت و نصب تور و تاج اختصاصی',
+        isMobileAvailable: true,
+      },
+    ],
+    specialists: [
+      {
+        id: 'spec-5',
+        salonId: 'salon-4',
+        name: 'مهسا نوریان',
+        role: 'استایلیست ارشد شینیون و بافت ژورنالی',
+        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+        verified: false,
+        rating: 4.85,
+        reviewsCount: 48,
+        experienceYears: 8,
+        specialtyLine: 'hair',
+        isMobileSpecialist: true,
+        phone: '۰۹۱۳۷۷۷۸۸۹۹',
+        bio: 'مدرس تخصصی شینیون و استایل مو در آکادمی‌های معتبر اصفهان',
+        portfolio: [],
+      },
+    ],
+    availableSlots: [
+      {
+        date: 'شنبه ۵ آبان',
+        dayName: 'شنبه',
+        dayNumber: '۰۵',
+        slots: [
+          { time: '۱۰:۰۰', booked: false, specialistId: 'spec-5' },
+          { time: '۱۳:۰۰', booked: false, specialistId: 'spec-5' },
+        ],
+      },
+    ],
+  },
 ];
 
-// Initial mock bookings
+export const SALONS = INITIAL_SALONS;
+
 export const INITIAL_BOOKINGS: Booking[] = [
   {
     id: 'bkg-101',
@@ -560,13 +682,38 @@ export const INITIAL_BOOKINGS: Booking[] = [
     status: 'confirmed',
     createdAt: '۱۴۰۳/۰۸/۰۲',
   },
+  {
+    id: 'bkg-102',
+    trackingCode: 'BY-552190',
+    tenantId: 'tnt-tehran-elahiyeh-01',
+    salonName: 'سالن زیبایی و عمارت گل سرخ',
+    salonAddress: 'تهران، الهیه، خیابان فرشته، بن‌بست نیلوفر، پلاک ۱۲',
+    serviceId: 'serv-101',
+    serviceName: 'کراتین و احیای پروتئینه نانو ابریشمی',
+    serviceLineId: 'hair',
+    specialistId: 'spec-2',
+    specialistName: 'نازنین رادمنش',
+    date: 'شنبه ۵ آبان',
+    time: '۱۶:۰۰',
+    durationMinutes: 120,
+    price: 3800000,
+    customerName: 'نگار رضوی',
+    customerPhone: '۰۹۱۲۹۹۹۸۸۷۷',
+    notes: 'موهای تا روی شانه، دکلره شده',
+    isMobileBooking: true,
+    customerAddress: 'تهران، زعفرانیه، خیابان آصف، برج آسمان',
+    status: 'confirmed',
+    createdAt: '۱۴۰۳/۰۸/۰۱',
+  },
 ];
 
-// Initial mock support tickets (مطابق با ماژول SupportTickets در backend)
 export const INITIAL_TICKETS: SupportTicket[] = [
   {
     id: 'tkt-401',
-    title: 'تغییر زمان نوبت هیدرافیشیال روز یکشنبه',
+    title: 'درخواست تغییر سانس نوبت فیشیال روز یکشنبه',
+    userName: 'شادی بهرامی',
+    userPhone: '۰۹۱۲۳۴۵۶۷۸۹',
+    userRole: 'customer',
     category: 'booking',
     status: 'resolved',
     lastReply: 'نوبت شما با موفقیت به ساعت ۱۴:۳۰ منتقل گردید.',
@@ -574,11 +721,13 @@ export const INITIAL_TICKETS: SupportTicket[] = [
     messages: [
       {
         sender: 'user',
+        senderName: 'شادی بهرامی',
         text: 'سلام، امکان دارد ساعت نوبت یکشنبه من را از ساعت ۱۱ به ۱۴:۳۰ تغییر دهید؟',
         time: '۱۰:۳۰',
       },
       {
         sender: 'support',
+        senderName: 'پشتیبانی فنی بویا',
         text: 'سلام سرکار خانم بهرامی. با سالن گل سرخ هماهنگ شد و اسلات ۱۴:۳۰ با خانم شمس‌آرا برای شما ثبت گردید.',
         time: '۱۱:۰۵',
       },
@@ -586,22 +735,130 @@ export const INITIAL_TICKETS: SupportTicket[] = [
   },
   {
     id: 'tkt-402',
-    title: 'سوال درباره خدمات در محل برای ۵ نفر (پکیج ساقدوش)',
-    category: 'specialist',
+    title: 'درخواست راهنمایی جهت فعال‌سازی درگاه زرین‌پال در فاز ۲',
+    userName: 'گلناز فرهمند',
+    userPhone: '۰۹۱۲۱۱۱۴۴۵۵',
+    userRole: 'salon_owner',
+    category: 'payment',
     status: 'in_progress',
-    lastReply: 'در حال بررسی رزرو تیم استایلیست سیار برای تاریخ پنجشنبه هستیم.',
-    createdAt: 'امروز',
+    lastReply: 'مدارک پایانه پذیرندگی سالن شما در دست استعلام بانکی است.',
+    createdAt: 'دیروز',
     messages: [
       {
         sender: 'user',
-        text: 'برای مراسم نامزدی آیا متخصصین رنگ و میکاپ به منزل ما در نیاوران اعزام می‌شوند؟',
-        time: '۰۹:۱۵',
+        senderName: 'سالندار: گل سرخ الهیه',
+        text: 'با سلام، برای فعال‌سازی پرداخت آنلاین Zarinpal چه مدارک صنفی باید در پنل بارگذاری کنیم؟',
+        time: '۱۴:۲۰',
       },
       {
-        sender: 'support',
-        text: 'بله، لاین Mobile Service بویا با کادر مجهز در منزل شما حاضر خواهد شد. جزییات پکیج در دست ارسال است.',
-        time: '۰۹:۴۰',
+        sender: 'admin',
+        senderName: 'مدیر کل سامانه (Admin)',
+        text: 'سلام و احترام. در فاز ۱ پلتفرم ویترین رایگان است. جهت آماده‌سازی فاز ۲، تصویر پروانه کسب معتبر سالن را در بخش مدارک بارگذاری فرمایید.',
+        time: '۱۵:۰۰',
       },
     ],
+  },
+];
+
+export const INITIAL_USERS: PlatformUser[] = [
+  {
+    id: 'usr-1',
+    name: 'مهندس حسینی (مدیر کل بویا)',
+    phone: '۰۹۱۲۰۰۰۱۱۰۰',
+    role: 'super_admin',
+    status: 'active',
+    createdAt: '۱۴۰۲/۱۱/۰۱',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'usr-2',
+    name: 'گلناز فرهمند',
+    phone: '۰۹۱۲۱۱۱۴۴۵۵',
+    role: 'salon_owner',
+    tenantId: 'tnt-tehran-elahiyeh-01',
+    tenantName: 'سالن زیبایی و عمارت گل سرخ',
+    status: 'active',
+    createdAt: '۱۴۰۳/۰۴/۱۵',
+  },
+  {
+    id: 'usr-3',
+    name: 'دکتر صبا معتمدی',
+    phone: '۰۹۱۲۲۲۳۳۴۴۵',
+    role: 'salon_owner',
+    tenantId: 'tnt-tehran-zaferanieh-02',
+    tenantName: 'کلینیک پوست و لیزر صبا',
+    status: 'active',
+    createdAt: '۱۴۰۳/۰۵/۱۰',
+  },
+  {
+    id: 'usr-4',
+    name: 'مریم شمس‌آرا',
+    phone: '۰۹۱۲۳۴۵۱۱۲۰',
+    role: 'specialist',
+    tenantId: 'tnt-tehran-elahiyeh-01',
+    tenantName: 'سالن زیبایی و عمارت گل سرخ',
+    status: 'active',
+    createdAt: '۱۴۰۳/۰۴/۲۰',
+  },
+  {
+    id: 'usr-5',
+    name: 'شادی بهرامی',
+    phone: '۰۹۱۲۳۴۵۶۷۸۹',
+    role: 'customer',
+    status: 'active',
+    createdAt: '۱۴۰۳/۰۶/۱۲',
+  },
+  {
+    id: 'usr-6',
+    name: 'مهتاب صفوی (متقاضی جدید سالن)',
+    phone: '۰۹۱۳۴۴۴۵۵۶۶',
+    role: 'salon_owner',
+    tenantId: 'tnt-isfahan-mardavij-04',
+    tenantName: 'عمارت پرنسس اصفهان',
+    status: 'active',
+    createdAt: '۱۴۰۳/۰۷/۲۸',
+  },
+];
+
+export const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
+  {
+    id: 'log-101',
+    action: 'BOOKING_CREATED_SMS_SENT',
+    actorName: 'سیستم ملی‌پیامک (Melipayamak API)',
+    actorRole: 'system',
+    details: 'پیامک تایید نوبت با کد رهگیری BY-883921 با موفقیت به شماره ۰۹۱۲۳۴۵۶۷۸۹ تحویل شد.',
+    ipAddress: '185.143.232.10',
+    timestamp: '۱۰ دقیقه پیش',
+    level: 'info',
+  },
+  {
+    id: 'log-102',
+    action: 'TENANT_ONBOARDING_SUBMITTED',
+    actorName: 'مهتاب صفوی',
+    actorRole: 'salon_owner',
+    details: 'ثبت پرونده سالن جدید «عمارت پرنسس اصفهان» جهت بررسی و تایید مدارک در صف مدیریت.',
+    ipAddress: '5.200.14.92',
+    timestamp: '۴۵ دقیقه پیش',
+    level: 'warning',
+  },
+  {
+    id: 'log-103',
+    action: 'RLS_SECURITY_AUDIT_VERIFIED',
+    actorName: 'NestJS RLS Guard (ADR-001)',
+    actorRole: 'security_definer',
+    details: 'تطابق کامل GUC app.current_tenant_id روی جداول رزروها و متخصصین با کاربر beauty_app.',
+    ipAddress: '127.0.0.1 (Docker Network)',
+    timestamp: '۲ ساعت پیش',
+    level: 'security',
+  },
+  {
+    id: 'log-104',
+    action: 'SPECIALIST_INVITE_TOKEN_GENERATED',
+    actorName: 'گلناز فرهمند (مدیر سالن گل سرخ)',
+    actorRole: 'salon_owner',
+    details: 'تولید توکن دعوت متخصص جدید با الگوریتم SHA-256 و انقضای ۷ روزه (ADR-010).',
+    ipAddress: '2.144.18.73',
+    timestamp: '۴ ساعت پیش',
+    level: 'info',
   },
 ];
