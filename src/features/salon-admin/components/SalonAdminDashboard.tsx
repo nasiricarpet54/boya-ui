@@ -191,18 +191,24 @@ export const SalonAdminDashboard: React.FC = () => {
     setSpecialistsList(currentSalon.specialists);
   }, [currentSalon]);
 
-  // When active specialist changes, sync their specific schedule
+  const isSpecialistRole = user?.role === 'salon_specialist' || user?.role === 'mobile_specialist' || user?.role === 'line_manager';
+
+  // Lock specialist view when logged in as a specialist
   useEffect(() => {
-    if (activeSpecialistView) {
-      if (activeSpecialistView.workingHours) {
-        setSpecialistWorkingHours(activeSpecialistView.workingHours);
+    if (isSpecialistRole && specialistsList.length > 0) {
+      const mySpec = specialistsList.find(
+        (s: any) =>
+          s.user?.id === user?.id ||
+          s.user?.phone === user?.phone ||
+          s.id === user?.uid ||
+          s.specialtyLine === user?.managedLine
+      ) || specialistsList[0];
+
+      if (!activeSpecialistView || activeSpecialistView.id !== mySpec.id) {
+        setActiveSpecialistView(mySpec);
       }
-      if (activeSpecialistView.workingDays && activeSpecialistView.workingDays.length > 0) {
-        setSpecialistWorkingDays(activeSpecialistView.workingDays);
-      }
-      setNewServiceLineId(activeSpecialistView.specialtyLine);
     }
-  }, [activeSpecialistView]);
+  }, [isSpecialistRole, specialistsList, user, activeSpecialistView]);
 
   const handleSelectSalon = (salonId: string) => {
     setSelectedSalonId(salonId);
@@ -445,106 +451,116 @@ export const SalonAdminDashboard: React.FC = () => {
     <div className="space-y-5 pb-24 animate-fadeIn">
       {/* ========================================================
           ROLE SWITCHER & CONTEXT HEADER
-          Allows switching between Salon Owner and Specialists
+          Allows switching between Salon Owner and Specialists (Only for Salon Admin / Testing)
       ======================================================== */}
-      <div className="bg-white rounded-3xl p-4 border border-[#E7E2DA] shadow-xs space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-[#173B3F]" />
-            <span className="text-xs font-bold text-[#173B3F]">انتخاب سالن آزمایشی:</span>
-            <select
-              value={selectedSalonId}
-              onChange={(e) => handleSelectSalon(e.target.value)}
-              className="text-xs font-bold bg-[#FAF7F2] border border-[#E7E2DA] text-[#173B3F] rounded-xl px-2.5 py-1.5 outline-none focus:border-[#173B3F]"
-            >
-              {salonsData.map((s: any) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.district || s.city}) {s.isVip ? '★ VIP' : ''}
-                </option>
-              ))}
-            </select>
+      {!isSpecialistRole && (
+        <div className="bg-white rounded-3xl p-4 border border-[#E7E2DA] shadow-xs space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-[#173B3F]" />
+              <span className="text-xs font-bold text-[#173B3F]">انتخاب سالن آزمایشی:</span>
+              <select
+                value={selectedSalonId}
+                onChange={(e) => handleSelectSalon(e.target.value)}
+                className="text-xs font-bold bg-[#FAF7F2] border border-[#E7E2DA] text-[#173B3F] rounded-xl px-2.5 py-1.5 outline-none focus:border-[#173B3F]"
+              >
+                {salonsData.map((s: any) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.district || s.city}) {s.isVip ? '★ VIP' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onSwitchToCustomerApp}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D9A2B0] hover:bg-[#E6B5C0] text-[#173B3F] text-xs font-bold transition-all shadow-xs"
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>مشاهده ویترین مشتری بویا</span>
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onSwitchToCustomerApp}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D9A2B0] hover:bg-[#E6B5C0] text-[#173B3F] text-xs font-bold transition-all shadow-xs"
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>مشاهده ویترین مشتری بویا</span>
-            </button>
+          {/* Dynamic Role Selector */}
+          <div className="pt-2 border-t border-[#E7E2DA] flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#173B3F]" />
+              <span className="text-xs font-bold text-[#173B3F]">نقش فعال در این پنل:</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Salon Manager Role */}
+              <button
+                onClick={() => setActiveSpecialistView(null)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
+                  activeSpecialistView === null
+                    ? 'bg-[#173B3F] text-white border-[#173B3F] shadow-xs'
+                    : 'bg-[#FAF7F2] text-[#1C1C1C] border-[#E7E2DA] hover:border-[#173B3F]'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>مدیر سالن (مدیریت کل)</span>
+              </button>
+
+              {/* Specialist Roles in this Salon */}
+              {specialistsList.map((spec) => {
+                const badge = getSpecialistTypeBadge(spec);
+                const isSelected = activeSpecialistView?.id === spec.id;
+                return (
+                  <button
+                    key={spec.id}
+                    onClick={() => setActiveSpecialistView(spec)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-[#173B3F] text-white border-[#173B3F] shadow-xs'
+                        : 'bg-white text-[#1C1C1C] border-[#E7E2DA] hover:border-[#173B3F]'
+                    }`}
+                  >
+                    <img src={spec.avatarUrl || 'https://via.placeholder.com/150'} alt={spec.user?.fullName} className="w-4 h-4 rounded-full object-cover" />
+                    <span>{spec.user?.fullName}</span>
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded-md ${badge.color}`}>
+                      {spec.isMobileActive
+                        ? 'سیار'
+                        : 'سالن'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
-
-        {/* Dynamic Role Selector */}
-        <div className="pt-2 border-t border-[#E7E2DA] flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-[#173B3F]" />
-            <span className="text-xs font-bold text-[#173B3F]">نقش فعال در این پنل:</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Salon Manager Role */}
-            <button
-              onClick={() => setActiveSpecialistView(null)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
-                activeSpecialistView === null
-                  ? 'bg-[#173B3F] text-white border-[#173B3F] shadow-xs'
-                  : 'bg-[#FAF7F2] text-[#1C1C1C] border-[#E7E2DA] hover:border-[#173B3F]'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>مدیر سالن (مدیریت کل)</span>
-            </button>
-
-            {/* Specialist Roles in this Salon */}
-            {specialistsList.map((spec) => {
-              const badge = getSpecialistTypeBadge(spec);
-              const isSelected = activeSpecialistView?.id === spec.id;
-              return (
-                <button
-                  key={spec.id}
-                  onClick={() => setActiveSpecialistView(spec)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 ${
-                    isSelected
-                      ? 'bg-[#173B3F] text-white border-[#173B3F] shadow-xs'
-                      : 'bg-white text-[#1C1C1C] border-[#E7E2DA] hover:border-[#173B3F]'
-                  }`}
-                >
-                  <img src={spec.avatarUrl || 'https://via.placeholder.com/150'} alt={spec.user?.fullName} className="w-4 h-4 rounded-full object-cover" />
-                  <span>{spec.user?.fullName}</span>
-                  <span className={`text-[9px] px-1.5 py-0.2 rounded-md ${badge.color}`}>
-                    {spec.isMobileActive
-                      ? 'سیار'
-                      : 'سالن'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* ========================================================
           CASE 1: DEDICATED SPECIALIST PANEL (ISOLATED VIEW)
-          Strictly implements user rules 1 to 8
+          Strictly implements user isolation rules
       ======================================================== */}
       {activeSpecialistView ? (
         <div className="space-y-4 animate-fadeIn">
           {/* Top Return Banner */}
           <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#E7E2DA] shadow-xs">
-            <button
-              onClick={() => setActiveSpecialistView(null)}
-              className="flex items-center gap-1.5 text-xs font-bold text-[#173B3F] hover:text-[#0F3232]"
-            >
-              <ArrowRight className="w-4 h-4" />
-              <span>بازگشت به نمای مدیریت کل سالن</span>
-            </button>
+            {!isSpecialistRole ? (
+              <button
+                onClick={() => setActiveSpecialistView(null)}
+                className="flex items-center gap-1.5 text-xs font-bold text-[#173B3F] hover:text-[#0F3232]"
+              >
+                <ArrowRight className="w-4 h-4" />
+                <span>بازگشت به نمای مدیریت کل سالن</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-[#173B3F]">
+                  خوش آمدید، {activeSpecialistView?.user?.fullName || user?.fullName}
+                </span>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold text-[#2E5E52] bg-[#EAF2EF] px-3 py-1 rounded-full border border-[#6F9A8D]/30 flex items-center gap-1.5">
                 <Lock className="w-3 h-3 text-[#2E5E52]" />
-                <span>پنل اختصاصی و ایزوله بیوتیشن</span>
+                <span>پنل اختصاصی و کاملاً ایزوله بیوتیشن</span>
               </span>
             </div>
           </div>

@@ -53,21 +53,47 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    const isSuperAdmin = user.role === 'super_admin';
+    const isSpecialist = user.role === 'salon_specialist' || user.role === 'mobile_specialist' || user.role === 'line_manager';
+    const isSalonAdmin = user.role === 'salon_admin';
+
     return (
-      <div className="p-8 text-center bg-white rounded-3xl border border-[#E7E2DA] shadow-sm m-4" dir="rtl">
-        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+      <div className="p-8 text-center bg-white rounded-3xl border border-[#E7E2DA] shadow-sm m-4 max-w-md mx-auto" dir="rtl">
+        <div className="w-16 h-16 bg-amber-50 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
         </div>
-        <h2 className="text-xl font-bold text-[#173B3F] mb-2">سطح دسترسی محدود</h2>
-        <p className="text-xs text-[#6C6C6C] mb-6">حساب کاربری شما ({user.fullName}) نقش لازم برای این بخش را ندارد. می‌توانید با دسترسی ادمین کل وارد شوید.</p>
-        <button 
-          onClick={handleQuickAdminLogin}
-          className="bg-[#173B3F] text-white px-8 py-3 rounded-2xl font-bold text-xs shadow-md hover:bg-[#122e31] transition-all cursor-pointer"
-        >
-          ورود با دسترسی ادمین کل
-        </button>
+        <h2 className="text-xl font-bold text-[#173B3F] mb-2">سطح دسترسی ایزوله شده</h2>
+        <p className="text-xs text-[#6C6C6C] mb-6 leading-relaxed">
+          {isSuperAdmin && 'ادمین اصلی طبق قوانین امنیتی سیستم، فقط در پنل اختصاصی ادمین کل (/admin) به تمامی اطلاعات دسترسی دارد.'}
+          {isSpecialist && 'متخصصین محترم فقط به پنل اختصاصی خدمات، نوبت‌ها و تقویم کاری خود در بخش /salon-admin دسترسی دارند.'}
+          {isSalonAdmin && 'مدیران سالن فقط به پنل مدیریت سالن و کادر پرسنل خود در بخش /salon-admin دسترسی دارند.'}
+          {!isSuperAdmin && !isSpecialist && !isSalonAdmin && 'حساب کاربری مشتریان به پنل‌های مدیریتی دسترسی ندارد.'}
+        </p>
+
+        {isSuperAdmin ? (
+          <a 
+            href="/admin"
+            className="inline-block bg-[#173B3F] text-white px-8 py-3 rounded-2xl font-bold text-xs shadow-md hover:bg-[#122e31] transition-all cursor-pointer"
+          >
+            ورود به پنل اختصاصی ادمین کل
+          </a>
+        ) : isSpecialist || isSalonAdmin ? (
+          <a 
+            href="/salon-admin"
+            className="inline-block bg-[#173B3F] text-white px-8 py-3 rounded-2xl font-bold text-xs shadow-md hover:bg-[#122e31] transition-all cursor-pointer"
+          >
+            ورود به پنل اختصاصی
+          </a>
+        ) : (
+          <a 
+            href="/"
+            className="inline-block bg-[#173B3F] text-white px-8 py-3 rounded-2xl font-bold text-xs shadow-md hover:bg-[#122e31] transition-all cursor-pointer"
+          >
+            بازگشت به برنامه مشتریان
+          </a>
+        )}
       </div>
     );
   }
