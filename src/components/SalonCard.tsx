@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star, MapPin, CheckCircle2, ChevronLeft, Clock, Calendar, Car, Eye, Phone, Crown, Heart, Navigation } from 'lucide-react';
+import { Star, MapPin, CheckCircle2, ChevronLeft, Clock, Calendar, Car, Eye, Phone, Crown, Heart, Navigation, X, Layers, Sparkles } from 'lucide-react';
 import { Salon, SalonService, Specialist } from '../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../utils/persianUtils';
 import { formatDistancePersian } from '../utils/geoUtils';
@@ -26,6 +26,7 @@ export const SalonCard: React.FC<SalonCardProps> = ({
   const [selectedSpecialistIndex, setSelectedSpecialistIndex] = useState<number>(0);
   const [selectedDateIndex, setSelectedDateIndex] = useState<number>(0);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
+  const [isQuickServicesModalOpen, setIsQuickServicesModalOpen] = useState<boolean>(false);
 
   const currentService = salon.services[selectedServiceIndex] || salon.services[0];
   const currentSpecialist = salon.specialists[selectedSpecialistIndex] || salon.specialists[0];
@@ -188,9 +189,20 @@ export const SalonCard: React.FC<SalonCardProps> = ({
 
         {/* Services Selectable Tabs with Activity Icon */}
         <div>
-          <span className="text-xs font-bold text-[#173B3F] block mb-2">
-            خدمات و لاین‌های سالن:
-          </span>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-[#173B3F] block">
+              خدمات و لاین‌های سالن ({toPersianDigits(salon.services.length)}):
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsQuickServicesModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7F2] hover:bg-[#EAF2EF] text-[#173B3F] hover:text-[#0F3232] text-[11px] font-bold border border-[#E7E2DA] hover:border-[#173B3F] transition-all shadow-xs"
+              title="مشاهده سریع لیست خدمات این سالن"
+            >
+              <Layers className="w-3.5 h-3.5 text-[#D9A2B0]" />
+              <span>مشاهده سریع خدمات</span>
+            </button>
+          </div>
           <div className="space-y-2">
             {salon.services.map((serv, idx) => {
               const isSelected = selectedServiceIndex === idx;
@@ -319,23 +331,162 @@ export const SalonCard: React.FC<SalonCardProps> = ({
         </div>
 
         {/* Address and action footer */}
-        <div className="pt-3 flex items-center justify-between border-t border-[#E7E2DA]">
+        <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#E7E2DA]">
           <div>
-            <span className="text-[11px] text-[#6C6C6C] block">مبلغ خدمت در سالن:</span>
+            <span className="text-[11px] text-[#6C6C6C] block">مبلغ خدمت انتخابی:</span>
             <span className="text-base font-black text-[#173B3F]">
               {formatPrice(currentService.price)}
             </span>
           </div>
 
-          <button
-            onClick={handleBooking}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#173B3F] hover:bg-[#0F3232] active:bg-[#0B2626] text-white font-bold text-xs transition-all shadow-md shadow-[#173B3F]/20"
-          >
-            <span>رزرو نوبت قطعی</span>
-            <ChevronLeft className="w-4 h-4 text-[#D9A2B0]" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsQuickServicesModalOpen(true)}
+              className="px-3.5 py-2.5 rounded-full bg-[#FAF7F2] hover:bg-[#EAF2EF] text-[#173B3F] font-bold text-xs border border-[#E7E2DA] hover:border-[#173B3F] transition-all flex items-center gap-1.5 shadow-xs"
+              title="مشاهده سریع خدمات این سالن"
+            >
+              <Layers className="w-3.5 h-3.5 text-[#D9A2B0]" />
+              <span>مشاهده سریع خدمات</span>
+            </button>
+
+            <button
+              onClick={handleBooking}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#173B3F] hover:bg-[#0F3232] active:bg-[#0B2626] text-white font-bold text-xs transition-all shadow-md shadow-[#173B3F]/20"
+            >
+              <span>رزرو نوبت قطعی</span>
+              <ChevronLeft className="w-4 h-4 text-[#D9A2B0]" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* QUICK SERVICES PREVIEW MODAL */}
+      {isQuickServicesModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setIsQuickServicesModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] overflow-hidden shadow-2xl border border-[#E7E2DA] flex flex-col animate-bounceIn text-right"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 bg-[#173B3F] text-white flex items-center justify-between border-b border-[#D9A2B0]/30 shrink-0">
+              <div className="flex items-center gap-3">
+                <img
+                  src={salon.coverImage}
+                  alt={salon.name}
+                  className="w-12 h-12 rounded-2xl object-cover border-2 border-[#D9A2B0] shrink-0"
+                />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="text-sm font-bold font-serif text-white">{salon.name}</h4>
+                    {salon.isVip && (
+                      <span className="text-[9px] bg-[#D9A2B0] text-[#173B3F] px-1.5 py-0.2 rounded-md font-bold">
+                        VIP
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-[#E8F0EF] flex items-center gap-1 mt-0.5">
+                    <Sparkles className="w-3 h-3 text-[#D9A2B0]" />
+                    <span>فهرست و نرخ‌نامه خدمات اصلی سالن</span>
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsQuickServicesModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Services List */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-3 divide-y divide-[#E7E2DA]/60">
+              <div className="flex items-center justify-between text-xs text-[#6C6C6C] pb-1">
+                <span>تعداد خدمات مصوب: {toPersianDigits(salon.services.length)} سرویس</span>
+                <span>همگام با تعرفه پلتفرم بویا</span>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                {salon.services.map((serv, idx) => (
+                  <div
+                    key={serv.id}
+                    className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#E7E2DA] hover:border-[#173B3F] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+                  >
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={serv.imageUrl || salon.coverImage}
+                        alt={serv.name}
+                        className="w-14 h-14 rounded-xl object-cover border border-[#E7E2DA] shrink-0 mt-0.5"
+                      />
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <BeautyActivityIcon activityId={serv.serviceLineId} size="sm" />
+                          <h5 className="text-xs font-bold text-[#1C1C1C]">{serv.name}</h5>
+                          {serv.isMobileAvailable && (
+                            <span className="text-[9px] bg-[#FAF7F2] text-[#C99558] border border-[#C99558]/30 px-1.5 py-0.2 rounded-md font-bold flex items-center gap-0.5">
+                              <Car className="w-2.5 h-2.5" />
+                              <span>سیار</span>
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[#6C6C6C] leading-relaxed line-clamp-2">
+                          {serv.description}
+                        </p>
+                        <div className="flex items-center gap-2 text-[10px] text-[#6C6C6C]">
+                          <Clock className="w-3 h-3 text-[#173B3F]" />
+                          <span>مدت زمان: {toPersianDigits(serv.durationMinutes)} دقیقه</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-[#E7E2DA] gap-2 shrink-0">
+                      <div className="text-left sm:text-right">
+                        <span className="text-xs font-black text-[#173B3F] block">
+                          {formatPrice(serv.price)}
+                        </span>
+                        <span className="text-[9px] text-[#2E5E52] bg-[#EAF2EF] px-1.5 py-0.2 rounded-md font-semibold inline-block">
+                          تایید شده
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedServiceIndex(idx);
+                          setIsQuickServicesModalOpen(false);
+                        }}
+                        className="px-3.5 py-1.5 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white text-[11px] font-bold shadow-xs transition-all flex items-center gap-1"
+                      >
+                        <span>انتخاب این خدمت</span>
+                        <ChevronLeft className="w-3 h-3 text-[#D9A2B0]" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3.5 bg-[#FAF7F2] border-t border-[#E7E2DA] flex items-center justify-between shrink-0">
+              <span className="text-xs text-[#6C6C6C]">
+                با انتخاب هر خدمت، فرم رزرو همان خدمت در کارت سالن آماده می‌شود.
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsQuickServicesModalOpen(false)}
+                className="px-4 py-1.5 rounded-full bg-white border border-[#E7E2DA] hover:border-[#173B3F] text-xs font-bold text-[#173B3F] shadow-xs"
+              >
+                بستن پنجره
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
