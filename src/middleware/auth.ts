@@ -1,9 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { adminAuth, DecodedIdToken } from '../lib/firebase-admin.ts';
-import { getOrCreateUser, getOrCreateUserByPhone } from '../db/users.ts';
+import type { Request, Response, NextFunction } from 'express';
+import { getOrCreateUserByPhone } from '../db/users.ts';
 
 export interface AuthRequest extends Request {
-  user?: DecodedIdToken;
   dbUser?: any;
 }
 
@@ -14,40 +12,28 @@ export const requireAuth = async (
 ) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+    return res.status(401).json({ error: 'خطای احراز هویت: توکن دریافت نشد' });
   }
 
   const token = authHeader.split('Bearer ')[1];
   try {
-    if (token.startsWith('phone_')) {
-      const phone = token.replace('phone_', '');
-      const dbUser = await getOrCreateUserByPhone(phone);
-      req.dbUser = dbUser;
-      return next();
+    const phone = token.startsWith('phone_') ? token.replace('phone_', '') : token;
+    const dbUser = await getOrCreateUserByPhone(phone);
+    if (!dbUser) {
+      return res.status(401).json({ error: 'خطای احراز هویت: کاربر یافت نشد' });
     }
-
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    req.user = decodedToken;
-    
-    // Link to DB user
-    const dbUser = await getOrCreateUser(
-      decodedToken.uid, 
-      decodedToken.email || '', 
-      decodedToken.name || 'Anonymous'
-    );
     req.dbUser = dbUser;
-    
     next();
   } catch (error) {
-    console.error('Error verifying ID token:', error);
-    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    console.error('Error verifying auth token:', error);
+    return res.status(401).json({ error: 'خطای احراز هویت: توکن نامعتبر است' });
   }
 };
 
 export const requireRole = (roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.dbUser || !roles.includes(req.dbUser.role)) {
-      return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
+      return res.status(403).json({ error: 'خطای سطح دسترسی: شما مجاز به انجام این عملیات نمی‌باشید' });
     }
     next();
   };

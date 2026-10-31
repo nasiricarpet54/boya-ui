@@ -20,9 +20,9 @@ export const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const pendingApprovalsCount = salons.filter((s) => !s.isApproved).length;
-  const openTicketsCount = tickets.filter((t) => t.status === 'open' || t.status === 'in_progress').length;
-  const vipSalonsCount = salons.filter((s) => s.isVip).length;
+  const pendingApprovalsCount = (salons || []).filter((s: any) => !s.isApproved).length;
+  const openTicketsCount = (tickets || []).filter((t: any) => t.status === 'open' || t.status === 'in_progress').length;
+  const vipSalonsCount = (salons || []).filter((s: any) => s.isVip).length;
 
   const onSwitchToCustomerApp = () => {
     setSplashAppName('ورود به اپلیکیشن هوشمند مشتریان بویا');

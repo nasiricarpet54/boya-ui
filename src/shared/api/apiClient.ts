@@ -1,15 +1,14 @@
 import axios from 'axios';
-import { auth } from '../../lib/firebase.ts';
+import { useAuthStore } from '../stores/authStore';
 
 const api = axios.create({
   baseURL: '/api',
 });
 
-// Request interceptor: Attach fresh Firebase ID token
+// Request interceptor: Attach Auth token
 api.interceptors.request.use(async (config) => {
-  const user = auth.currentUser;
-  if (user) {
-    const token = await user.getIdToken();
+  const token = useAuthStore.getState().accessToken;
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;

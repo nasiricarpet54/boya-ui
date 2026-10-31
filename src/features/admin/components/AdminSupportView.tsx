@@ -53,7 +53,7 @@ export const AdminSupportView: React.FC = () => {
             <>
               <div className="border-b pb-3 mb-3 font-bold text-sm">{activeTicket.title}</div>
               <div className="flex-1 overflow-y-auto space-y-3 mb-4 max-h-[300px] p-1">
-                {activeTicket.messages.map((m, i) => (
+                {activeTicket.messages.map((m: any, i: number) => (
                   <div key={i} className={`p-3 rounded-2xl text-xs max-w-[85%] ${m.sender === 'admin' ? 'mr-auto bg-[#1A2942] text-white' : 'ml-auto bg-gray-100'}`}>
                     <p>{m.text}</p>
                   </div>

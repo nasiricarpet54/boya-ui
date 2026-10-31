@@ -6,10 +6,13 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { requireAuth, AuthRequest } from './src/middleware/auth.ts';
+import { requireAuth, type AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
+import { users } from './src/db/schema.ts';
+import { eq } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { getOrCreateUserByPhone } from './src/db/users.ts';
+import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
 
 dotenv.config();
 
@@ -46,11 +49,11 @@ async function createServer() {
     }
 
     const otpCode = '12345'; // Standard dev OTP code
-    logSms(phone, `کد ورودی یکبار مصرف بویا: ${otpCode}`);
+    await sendMeliPayamakSms(phone, `کد ورودی یکبار مصرف پلتفرم زیبایی بویا: ${otpCode}`);
 
     res.json({
       success: true,
-      message: 'کد تایید پیامکی با موفقیت ارسال گردید.',
+      message: 'کد تایید پیامکی از طریق سامانه ملی پیامک ارسال گردید.',
       devCode: otpCode,
     });
   });
@@ -104,12 +107,18 @@ async function createServer() {
   // Bookings
   app.post('/api/bookings', requireAuth, async (req: AuthRequest, res) => {
     try {
+      if (req.body.customerName && req.dbUser?.id) {
+        await db.update(users)
+          .set({ fullName: req.body.customerName })
+          .where(eq(users.id, req.dbUser.id));
+      }
+
       const booking = await createBooking({
         ...req.body,
         customerId: req.dbUser.id,
       });
       
-      logSms(req.dbUser.phone || '09120000000', `نوبت شما در سامانه بویا ثبت شد. کد رهگیری: ${booking.trackingCode}`);
+      await sendMeliPayamakSms(req.dbUser.phone || '09120000000', `نوبت شما در سامانه بویا ثبت شد. کد رهگیری: ${booking.trackingCode}`);
       
       res.status(201).json(booking);
     } catch (err: any) {
@@ -132,7 +141,7 @@ async function createServer() {
       const { status } = req.body;
       const updated = await updateBookingStatus(Number(req.params.id), status);
       
-      logSms(req.dbUser.phone || '09120000000', `وضعیت نوبت شما به ${status} تغییر یافت.`);
+      await sendMeliPayamakSms(req.dbUser.phone || '09120000000', `وضعیت نوبت شما به ${status} تغییر یافت.`);
       
       res.json(updated);
     } catch (err) {

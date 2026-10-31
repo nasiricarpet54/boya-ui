@@ -9,8 +9,8 @@ export const AdminSpecialistsView: React.FC = () => {
   const [mobileOnly, setMobileOnly] = useState(false);
 
   const allSpecialists: { specialist: Specialist; salon: Salon }[] = [];
-  salons.forEach((sal) => {
-    sal.specialists.forEach((sp) => {
+  salons.forEach((sal: any) => {
+    sal.specialists.forEach((sp: any) => {
       allSpecialists.push({ specialist: sp, salon: sal });
     });
   });
@@ -18,9 +18,9 @@ export const AdminSpecialistsView: React.FC = () => {
   const filtered = allSpecialists.filter(item => !mobileOnly || item.specialist.isMobileSpecialist);
 
   const onToggleSpecialistVerified = (id: string) => {
-    setSalons(salons.map(sal => ({
+    setSalons(salons.map((sal: any) => ({
       ...sal,
-      specialists: sal.specialists.map(sp => sp.id === id ? { ...sp, verified: !sp.verified } : sp)
+      specialists: sal.specialists.map((sp: any) => sp.id === id ? { ...sp, verified: !sp.verified } : sp)
     })));
   };
 

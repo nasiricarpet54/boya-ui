@@ -62,6 +62,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         specialistId: specialist.id,
         date,
         time,
+        customerName: data.customerName,
         isMobileBooking: isMobileService,
         customerAddress: data.customerAddress,
         notes: data.notes,

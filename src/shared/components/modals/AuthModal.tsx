@@ -12,7 +12,6 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [fullName, setFullName] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [devOtpCode, setDevOtpCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +65,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     }
 
     try {
-      await loginWithPhone(phoneNumber.trim(), otpCode.trim(), fullName.trim() || undefined);
+      await loginWithPhone(phoneNumber.trim(), otpCode.trim());
       onSuccess?.();
       onClose();
     } catch (err: any) {
@@ -105,10 +104,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           </div>
 
           <h2 className="text-xl font-bold text-[#173B3F] text-center mb-1 font-serif">
-            ورود و ثبت‌نام در بویا
+            ورود به بویا
           </h2>
           <p className="text-center text-[#6C6C6C] text-xs mb-6">
-            تنها شیوه ورود و ثبت‌نام سریع با شماره تلفن همراه
+            ورود سریع سالن‌داران، متخصصین و مشتریان با شماره همراه
           </p>
 
           {error && (
@@ -132,19 +131,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   dir="ltr"
                   className="w-full h-12 px-4 rounded-2xl bg-white border border-[#E7E2DA] text-sm text-[#1C1C1C] font-mono tracking-wider focus:border-[#173B3F] focus:ring-2 focus:ring-[#173B3F]/20 outline-none text-left transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#1C1C1C] block mb-1.5">
-                  نام و نام خانوادگی (جهت ثبت در فاکتور نوبت):
-                </label>
-                <input
-                  type="text"
-                  placeholder="مثال: مریم محمدی"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full h-12 px-4 rounded-2xl bg-white border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] focus:ring-2 focus:ring-[#173B3F]/20 outline-none transition-all"
                 />
               </div>
 
@@ -225,7 +211,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 {isLoading ? (
                   <Loader2 className="w-5 h-5 animate-spin text-[#D9A2B0]" />
                 ) : (
-                  <span>ورود قطعی به حساب کاربر</span>
+                  <span>ورود قطعی به حساب</span>
                 )}
               </button>
             </form>
