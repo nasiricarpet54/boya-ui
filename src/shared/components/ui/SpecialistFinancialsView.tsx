@@ -26,8 +26,8 @@ import {
   Receipt,
   Download
 } from 'lucide-react';
-import { Specialist, Booking } from '../../../shared/data/marketplaceData';
-import { formatPrice, toPersianDigits } from '../../../shared/utils/persianUtils';
+import { Specialist, Booking } from '../../data/marketplaceData';
+import { formatPrice, toPersianDigits } from '../../utils/persianUtils';
 
 interface SpecialistFinancialsViewProps {
   specialist: Specialist;

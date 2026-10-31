@@ -49,15 +49,10 @@ import {
 } from '../../../shared/data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../../../shared/utils/persianUtils';
 import { BeautyActivityIcon } from '../../../shared/components/ui/BeautyActivityIcon';
-import { SpecialistFinancialsView } from '../../specialist/components/SpecialistFinancialsView';
+import { SpecialistFinancialsView } from '../../../shared/components/ui/SpecialistFinancialsView';
 
-interface SalonAdminDashboardProps {
-  onSwitchToCustomerApp: () => void;
-  bookings: Booking[];
-  onUpdateBookingStatus: (bookingId: string, newStatus: 'confirmed' | 'completed' | 'cancelled') => void;
-  onUpdateSalon?: (salonId: string, updates: Partial<Salon>) => void;
-  salons?: Salon[];
-}
+import { useUIStore } from '../../../shared/stores/uiStore';
+import { useDataStore } from '../../../shared/stores/dataStore';
 
 // Preset beauty images for quick service & portfolio creation
 const PRESET_SERVICE_PHOTOS = [
@@ -72,13 +67,18 @@ const PRESET_SERVICE_PHOTOS = [
 
 const DAYS_OF_WEEK = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
 
-export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
-  onSwitchToCustomerApp,
-  bookings,
-  onUpdateBookingStatus,
-  onUpdateSalon,
-  salons = SALONS,
-}) => {
+export const SalonAdminDashboard: React.FC = () => {
+  const { setAppMode, setShowSplashScreen, setSplashAppName } = useUIStore();
+  const { salons, bookings, updateBookingStatus, updateSalon } = useDataStore();
+
+  const onSwitchToCustomerApp = () => {
+    setSplashAppName('ورود به اپلیکیشن هوشمند مشتریان بویا');
+    setShowSplashScreen(true);
+    setAppMode('customer');
+  };
+
+  const onUpdateBookingStatus = updateBookingStatus;
+  const onUpdateSalon = updateSalon;
   // Active test salon selection
   const [selectedSalonId, setSelectedSalonId] = useState<string>(salons[0]?.id || 'salon-1');
   const currentSalon = salons.find((s) => s.id === selectedSalonId) || salons[0] || SALONS[0];

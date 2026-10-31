@@ -11,14 +11,14 @@ import {
   ChevronDown,
   Sparkles,
 } from 'lucide-react';
-import { IRAN_PROVINCES, GPS_PRESETS, Province, CountyCity } from '../../../shared/data/iranLocations';
+import { IRAN_PROVINCES, GPS_PRESETS, Province, CountyCity } from '../../data/iranLocations';
 import {
   CustomerLocationState,
   requestBrowserGeolocation,
   findNearestIranianRegion,
   formatDistancePersian,
-} from '../../../shared/utils/geoUtils';
-import { toPersianDigits } from '../../../shared/utils/persianUtils';
+} from '../../utils/geoUtils';
+import { toPersianDigits } from '../../utils/persianUtils';
 
 interface LocationSelectorModalProps {
   isOpen: boolean;

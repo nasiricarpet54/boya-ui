@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, CheckCircle2, MapPin, User, Car, ShieldCheck, Sparkles, Phone } from 'lucide-react';
-import { Salon, SalonService, Specialist } from '../../../shared/data/marketplaceData';
-import { formatPrice, toPersianDigits } from '../../../shared/utils/persianUtils';
-import { BeautyActivityIcon } from '../../../shared/components/ui/BeautyActivityIcon';
-import { BoyaLogo } from '../../../shared/components/ui/BoyaLogo';
+import { Salon, SalonService, Specialist } from '../../data/marketplaceData';
+import { formatPrice, toPersianDigits } from '../../utils/persianUtils';
+import { BeautyActivityIcon } from '../../components/ui/BeautyActivityIcon';
+import { BoyaLogo } from '../../components/ui/BoyaLogo';
 
 interface BookingModalProps {
   isOpen: boolean;

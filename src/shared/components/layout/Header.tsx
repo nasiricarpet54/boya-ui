@@ -1,55 +1,56 @@
 import React from 'react';
-import { Smartphone, Monitor, MapPin, Store, UserCheck, ShieldCheck, Bell, Navigation } from 'lucide-react';
+import { Smartphone, Monitor, MapPin, Store, UserCheck, ShieldCheck } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import { toPersianDigits } from '../../utils/persianUtils';
 import { BoyaLogo } from '../ui/BoyaLogo';
+import { useUIStore, AppExperienceMode } from '../../stores/uiStore';
+import { useLocationStore } from '../../stores/locationStore';
+import { useDataStore } from '../../stores/dataStore';
 
-export type AppExperienceMode = 'customer' | 'salon_panel' | 'admin_panel';
+export const Header: React.FC = () => {
+  const navigate = useNavigate();
+  const { 
+    appMode, 
+    setAppMode, 
+    isMobileFrame, 
+    setIsMobileFrame, 
+    setIsLocationModalOpen,
+    setSplashAppName,
+    setShowSplashScreen
+  } = useUIStore();
+  
+  const { selectedCity, selectedProvince, customerLocation } = useLocationStore();
+  const { salons } = useDataStore();
 
-interface HeaderProps {
-  appMode: AppExperienceMode;
-  onToggleAppMode: (mode: AppExperienceMode) => void;
-  selectedCity: string;
-  onSelectCity: (city: string) => void;
-  selectedProvince?: string;
-  onOpenLocationModal?: () => void;
-  hasGpsActive?: boolean;
-  isMobileFrame: boolean;
-  onToggleFrame: () => void;
-  activeBookingsCount: number;
-  pendingApprovalsCount: number;
-  liveBackendStatus?: { isConnected: boolean; latencyMs: number };
-}
+  const pendingApprovalsCount = salons.filter((s) => !s.isApproved).length;
+  const hasGpsActive = !!customerLocation.coords;
 
-export const Header: React.FC<HeaderProps> = ({
-  appMode,
-  onToggleAppMode,
-  selectedCity,
-  onSelectCity,
-  selectedProvince = 'تهران',
-  onOpenLocationModal,
-  hasGpsActive = false,
-  isMobileFrame,
-  onToggleFrame,
-  activeBookingsCount,
-  pendingApprovalsCount,
-  liveBackendStatus,
-}) => {
+  const handleSwitchAppMode = (mode: AppExperienceMode) => {
+    const names: Record<AppExperienceMode, string> = {
+      customer: 'ورود به اپلیکیشن هوشمند مشتریان بویا',
+      salon_panel: 'ورود به پنل جامع سالندار و متخصصین بویا',
+      admin_panel: 'ورود به سامانه نظارتی ادمین کل (Super Admin)',
+    };
+    
+    setSplashAppName(names[mode]);
+    setShowSplashScreen(true);
+    setAppMode(mode);
+    
+    // Navigate based on mode
+    if (mode === 'customer') navigate({ to: '/' });
+    else if (mode === 'salon_panel') navigate({ to: '/salon-admin' });
+    else if (mode === 'admin_panel') navigate({ to: '/admin' });
+  };
+
   return (
     <header className="sticky top-0 z-30 bg-[#F7F3EE]/95 backdrop-blur-md border-b border-[#E7E2DA] transition-all">
       {/* 3-App Master Portal Switcher Bar with Official Deep Petrol Theme */}
       <div className="bg-[#0F3232] text-white px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs border-b border-[#173B3F]">
         <div className="flex items-center gap-2">
-          {liveBackendStatus?.isConnected ? (
-            <span className="flex items-center gap-1.5 bg-[#173B3F] text-[#6F9A8D] border border-[#6F9A8D]/40 px-2 py-0.5 rounded-full text-[10px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#6F9A8D] animate-pulse" />
-              <span>متصل به سرور بویا و دیتابیس پستگرس ({toPersianDigits(liveBackendStatus.latencyMs)}ms)</span>
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 bg-[#173B3F] text-[#C99558] border border-[#C99558]/40 px-2 py-0.5 rounded-full text-[10px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C99558]" />
-              <span>سرور و دیتابیس فعال</span>
-            </span>
-          )}
+          <span className="flex items-center gap-1.5 bg-[#173B3F] text-[#C99558] border border-[#C99558]/40 px-2 py-0.5 rounded-full text-[10px] font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#C99558]" />
+            <span>سرور و دیتابیس فعال</span>
+          </span>
           <span className="text-[11px] text-[#E8F0EF] font-medium hidden md:inline">
             سامانه جامع زیبایی بویا (پلتفرم دوطرفه + سامانه وب ادمین کل)
           </span>
@@ -58,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Triple Application Switcher */}
         <div className="flex items-center gap-1 bg-black/30 p-1 rounded-full border border-white/10">
           <button
-            onClick={() => onToggleAppMode('customer')}
+            onClick={() => handleSwitchAppMode('customer')}
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${
               appMode === 'customer'
                 ? 'bg-[#D9A2B0] text-[#173B3F] shadow-sm font-bold'
@@ -70,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <button
-            onClick={() => onToggleAppMode('salon_panel')}
+            onClick={() => handleSwitchAppMode('salon_panel')}
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${
               appMode === 'salon_panel'
                 ? 'bg-[#D9A2B0] text-[#173B3F] shadow-sm font-bold'
@@ -82,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <button
-            onClick={() => onToggleAppMode('admin_panel')}
+            onClick={() => handleSwitchAppMode('admin_panel')}
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${
               appMode === 'admin_panel'
                 ? 'bg-[#D9A2B0] text-[#173B3F] shadow-sm font-bold'
@@ -113,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* City & GPS Selector in Customer Mode */}
             {appMode === 'customer' && (
               <button
-                onClick={onOpenLocationModal}
+                onClick={() => setIsLocationModalOpen(true)}
                 className="flex items-center gap-1.5 bg-white border border-[#E7E2DA] hover:border-[#173B3F] px-2.5 py-1 rounded-full text-xs text-[#1C1C1C] hover:bg-[#FAF7F2] transition-all shadow-xs group"
                 title="تغییر استان، شهرستان یا تعیین موقعیت با GPS"
               >
@@ -133,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Viewport Frame Mode Toggle (390px baseline vs desktop) */}
             <button
-              onClick={onToggleFrame}
+              onClick={() => setIsMobileFrame(!isMobileFrame)}
               title={isMobileFrame ? 'نمای گسترده مانیتور' : 'نمای استاندارد ۳۹۰ پیکسل'}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs text-[#173B3F] bg-white border border-[#E7E2DA] hover:border-[#173B3F] transition-colors shadow-sm"
             >

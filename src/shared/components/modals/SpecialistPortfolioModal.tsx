@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, CheckCircle2, Star, Calendar, Car, Sparkles, Heart } from 'lucide-react';
-import { Specialist, Salon } from '../../../shared/data/marketplaceData';
-import { toPersianDigits } from '../../../shared/utils/persianUtils';
+import { Specialist, Salon } from '../../data/marketplaceData';
+import { toPersianDigits } from '../../utils/persianUtils';
 
 interface SpecialistPortfolioModalProps {
   specialist: Specialist | null;

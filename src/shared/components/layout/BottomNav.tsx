@@ -1,41 +1,54 @@
 import React from 'react';
 import { Sparkles, Search, Calendar, Heart, User } from 'lucide-react';
+import { useNavigate, useLocation } from '@tanstack/react-router';
 import { toPersianDigits } from '../../utils/persianUtils';
+import { useUIStore, NavTab } from '../../stores/uiStore';
+import { useDataStore } from '../../stores/dataStore';
 
-export type NavTab = 'home' | 'salons' | 'bookings' | 'saved' | 'profile';
+export const BottomNav: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { activeTab, setActiveTab } = useUIStore();
+  const { bookings } = useDataStore();
+  
+  // Calculate counts for badges
+  const activeBookingsCount = bookings.filter((b) => b.status === 'confirmed').length;
+  const savedCount = 2; // This should come from a store too, but for now mocked or from data
 
-interface BottomNavProps {
-  activeTab: NavTab;
-  onChangeTab: (tab: NavTab) => void;
-  bookingsCount: number;
-  savedCount: number;
-}
+  // Sync activeTab with current path
+  React.useEffect(() => {
+    const path = location.pathname;
+    if (path === '/') setActiveTab('home');
+    else if (path === '/salons') setActiveTab('home'); // Map salons search to home or separate? 
+    else if (path === '/bookings') setActiveTab('bookings');
+    else if (path === '/saved') setActiveTab('saved');
+    else if (path === '/profile') setActiveTab('profile');
+  }, [location.pathname, setActiveTab]);
 
-export const BottomNav: React.FC<BottomNavProps> = ({
-  activeTab,
-  onChangeTab,
-  bookingsCount,
-  savedCount,
-}) => {
-  const tabs: { id: NavTab; label: string; icon: React.ElementType; badge?: number }[] = [
-    { id: 'home', label: 'خانه', icon: Sparkles },
-    { id: 'salons', label: 'سالن‌ها و خدمات', icon: Search },
-    { id: 'bookings', label: 'نوبت‌های من', icon: Calendar, badge: bookingsCount },
-    { id: 'saved', label: 'نشان‌شده‌ها', icon: Heart, badge: savedCount },
-    { id: 'profile', label: 'پروفایل و تیکت', icon: User },
+  const tabs: { id: NavTab; label: string; icon: React.ElementType; badge?: number; path: string }[] = [
+    { id: 'home', label: 'خانه', icon: Sparkles, path: '/' },
+    { id: 'salons', label: 'سالن‌ها و خدمات', icon: Search, path: '/salons' },
+    { id: 'bookings', label: 'نوبت‌های من', icon: Calendar, badge: activeBookingsCount, path: '/bookings' },
+    { id: 'saved', label: 'نشان‌شده‌ها', icon: Heart, badge: savedCount, path: '/saved' },
+    { id: 'profile', label: 'پروفایل و تیکت', icon: User, path: '/profile' },
   ];
+
+  const handleTabChange = (tabId: NavTab, path: string) => {
+    setActiveTab(tabId);
+    navigate({ to: path });
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/98 backdrop-blur-md border-t border-[#E7E2DA] shadow-[0_-4px_20px_rgba(23,59,63,0.06)]">
       <div className="max-w-md mx-auto px-3 py-2 flex items-center justify-around">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive = location.pathname === tab.path || (tab.id === 'home' && location.pathname === '/');
 
           return (
             <button
               key={tab.id}
-              onClick={() => onChangeTab(tab.id)}
+              onClick={() => handleTabChange(tab.id, tab.path)}
               className={`relative flex flex-col items-center justify-center py-1 px-2.5 transition-all group ${
                 isActive ? 'text-[#173B3F]' : 'text-[#6C6C6C] hover:text-[#173B3F]'
               }`}
