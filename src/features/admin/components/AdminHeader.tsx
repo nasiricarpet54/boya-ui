@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, ShieldCheck, Database, Radio, Bell, UserCog } from 'lucide-react';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { useDataStore } from '../../../shared/stores/dataStore';
+import { useAuthStore } from '../../../shared/stores/authStore';
 
 interface AdminHeaderProps {
   title: string;
@@ -21,6 +22,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onNavigateToProfile,
 }) => {
   const { adminProfile } = useDataStore();
+  const { user, isAuthenticated } = useAuthStore();
 
   return (
     <header className="bg-white border-b border-[#E7E2DA] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-20 shadow-xs">
@@ -57,32 +59,30 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           <span className="font-semibold">ملی‌پیامک: فعال</span>
         </div>
 
-        {/* Admin Profile Chip (Clickable) */}
-        <button
-          onClick={onNavigateToProfile}
-          className="flex items-center gap-2 pr-2 border-r border-[#E7E2DA] hover:bg-[#FAF7F2] p-1 rounded-xl transition-all text-right group cursor-pointer"
-          title="مشاهده و ویرایش پروفایل ادمین کل"
-        >
-          {adminProfile.avatarUrl ? (
-            <img
-              src={adminProfile.avatarUrl}
-              alt={adminProfile.fullName}
-              className="w-8 h-8 rounded-full object-cover border border-[#D9A2B0]/60 shadow-xs"
-            />
-          ) : (
+        {/* Admin Profile Chip or Auth Status */}
+        {!isAuthenticated ? (
+          <span className="text-xs font-bold text-[#173B3F] bg-[#D9A2B0]/20 px-3 py-1.5 rounded-xl border border-[#D9A2B0]/40">
+            شما هنوز وارد سامانه نشده اید
+          </span>
+        ) : (
+          <button
+            onClick={onNavigateToProfile}
+            className="flex items-center gap-2 pr-2 border-r border-[#E7E2DA] hover:bg-[#FAF7F2] p-1 rounded-xl transition-all text-right group cursor-pointer"
+            title="مشاهده و ویرایش پروفایل"
+          >
             <div className="w-8 h-8 rounded-full bg-[#173B3F] text-[#D9A2B0] flex items-center justify-center font-bold text-xs border border-[#D9A2B0]/40">
-              ادمین
+              {user?.fullName?.charAt(0) || adminProfile.fullName?.charAt(0) || 'ادمین'}
             </div>
-          )}
-          <div className="text-right">
-            <span className="text-xs font-bold text-[#173B3F] block group-hover:text-[#0F3232]">
-              {adminProfile.fullName || 'مهندس حسینی'}
-            </span>
-            <span className="text-[10px] text-[#6F9A8D] font-bold block -mt-0.5">
-              {adminProfile.positionTitle || 'Super Admin'}
-            </span>
-          </div>
-        </button>
+            <div className="text-right">
+              <span className="text-xs font-bold text-[#173B3F] block group-hover:text-[#0F3232]">
+                {user?.fullName || adminProfile.fullName || 'مهندس حسینی'}
+              </span>
+              <span className="text-[10px] text-[#6F9A8D] font-bold block -mt-0.5">
+                {user?.role || adminProfile.positionTitle || 'Super Admin'}
+              </span>
+            </div>
+          </button>
+        )}
       </div>
     </header>
   );

@@ -53,22 +53,23 @@ export const Header: React.FC = () => {
               </button>
             )}
 
-            {/* Auth / Login Button */}
+            {/* Auth / Login status or User details */}
             {!isAuthenticated ? (
               <button
                 onClick={() => openAuthModal()}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#173B3F] text-white text-[11px] font-bold shadow-sm hover:bg-[#0F3232] transition-all"
+                className="text-[11px] font-bold text-[#173B3F] bg-[#D9A2B0]/20 hover:bg-[#D9A2B0]/30 px-3 py-1.5 rounded-full border border-[#D9A2B0]/40 transition-all cursor-pointer"
+                title="برای ورود کلیک کنید"
               >
-                <span>ورود / ثبت‌نام</span>
+                شما هنوز وارد سامانه نشده اید
               </button>
             ) : (
               <div className="flex items-center gap-2">
                 <div className="hidden sm:block text-left">
                   <span className="text-[10px] font-bold text-[#173B3F] block">{user?.fullName}</span>
-                  <span className="text-[9px] text-[#6C6C6C] block uppercase">{user?.role.replace('_', ' ')}</span>
+                  <span className="text-[9px] text-[#6C6C6C] block uppercase">{user?.role?.replace('_', ' ')}</span>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-[#D9A2B0] flex items-center justify-center text-[#173B3F] font-bold text-xs border border-[#173B3F]/10">
-                  {user?.fullName.charAt(0)}
+                  {user?.fullName?.charAt(0) || 'ک'}
                 </div>
               </div>
             )}

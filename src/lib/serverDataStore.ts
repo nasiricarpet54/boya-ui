@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { INITIAL_SALONS, INITIAL_USERS, INITIAL_TICKETS } from '../shared/data/marketplaceData';
+import { INITIAL_SALONS, INITIAL_USERS, INITIAL_TICKETS } from '../shared/data/marketplaceData.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

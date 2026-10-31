@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Calendar, Clock, CheckCircle2, MapPin, User, Car, ShieldCheck, Sparkles, Phone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, Clock, CheckCircle2, MapPin, User, Car, ShieldCheck, Sparkles, Phone, CalendarDays } from 'lucide-react';
 import { Salon, SalonService, Specialist } from '../../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../../utils/persianUtils';
 import { BeautyActivityIcon } from '../../components/ui/BeautyActivityIcon';
@@ -9,6 +9,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { bookingSchema } from '../../utils/validation';
 import { useAuthStore } from '../../stores/authStore';
 import api from '../../api/apiClient';
+import { JalaliDatePicker } from '../ui/JalaliDatePicker';
+import { getSlotsForArbitraryDate } from '../../utils/dateSlotGenerator';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -35,14 +37,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [generatedTrackingCode, setGeneratedTrackingCode] = useState('');
   const [isMobileService, setIsMobileService] = useState(false);
 
+  // Dynamic Date and Time selection
+  const [selectedDate, setSelectedDate] = useState<string>(bookingData?.date || '');
+  const [selectedTime, setSelectedTime] = useState<string>(bookingData?.time || '');
+
+  useEffect(() => {
+    if (bookingData) {
+      setSelectedDate(bookingData.date || 'شنبه ۵ آبان');
+      setSelectedTime(bookingData.time || '۱۱:۳۰');
+    }
+  }, [bookingData]);
+
   const { register, handleSubmit, formState: { errors }, watch } = useForm({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
       salonId: bookingData?.salon.id || '',
       serviceId: bookingData?.service.id || '',
       specialistId: bookingData?.specialist.id || '',
-      date: bookingData?.date || '',
-      time: bookingData?.time || '',
+      date: selectedDate,
+      time: selectedTime,
       customerName: user?.fullName || '',
       customerPhone: user?.phone || '',
       notes: '',
@@ -51,7 +64,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   if (!isOpen || !bookingData) return null;
 
-  const { salon, service, specialist, date, time } = bookingData;
+  const { salon, service, specialist } = bookingData;
+  const availableSlots = getSlotsForArbitraryDate(selectedDate, salon.availableSlots);
 
   const handleConfirm = async (data: any) => {
     setIsProcessing(true);
@@ -60,8 +74,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         salonId: salon.id,
         serviceId: service.id,
         specialistId: specialist.id,
-        date,
-        time,
+        date: selectedDate,
+        time: selectedTime,
         customerName: data.customerName,
         isMobileBooking: isMobileService,
         customerAddress: data.customerAddress,
@@ -110,7 +124,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   در حال ثبت نوبت در تقویم کاری سالن و صدور کد رهگیری...
                 </h4>
                 <p className="text-xs text-[#6C6C6C]">
-                  رزرو سانس {toPersianDigits(time)} برای {specialist.name}
+                  رزرو سانس {toPersianDigits(selectedTime)} برای {bookingData?.specialist?.name || 'متخصص'}
                 </p>
               </div>
             </div>
@@ -155,7 +169,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <div className="flex justify-between py-1 border-b border-[#E7E2DA]/60">
                   <span className="text-[#6C6C6C]">زمان مقرر:</span>
                   <span className="font-bold text-[#1C1C1C]">
-                    {date} - ساعت {toPersianDigits(time)}
+                    {selectedDate} - ساعت {toPersianDigits(selectedTime)}
                   </span>
                 </div>
                 <div className="flex justify-between pt-1">
@@ -203,14 +217,50 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#E7E2DA] text-xs">
-                  <div className="flex items-center gap-1.5 text-[#1C1C1C]">
-                    <Calendar className="w-3.5 h-3.5 text-[#173B3F]" />
-                    <span>{date}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[#1C1C1C]">
-                    <Clock className="w-3.5 h-3.5 text-[#173B3F]" />
-                    <span>ساعت {toPersianDigits(time)}</span>
+                <div className="pt-2.5 border-t border-[#E7E2DA] space-y-2">
+                  <JalaliDatePicker
+                    selectedDate={selectedDate}
+                    onDateChange={(jalaliFormattedStr) => {
+                      setSelectedDate(jalaliFormattedStr);
+                    }}
+                    label="تاریخ رزرو نوبت (قابل تغییر برای روزهای آینده):"
+                    placeholder="انتخاب تاریخ از تقویم..."
+                  />
+
+                  {/* Time Slots grid for selected date */}
+                  <div>
+                    <label className="text-[11px] font-bold text-[#173B3F] block mb-1.5 flex items-center justify-between">
+                      <span>ساعات آزاد در {selectedDate}:</span>
+                      <span className="text-[10px] text-[#2E5E52] bg-[#EAF2EF] px-2 py-0.5 rounded-full font-bold">
+                        {toPersianDigits(availableSlots.filter(s => !s.booked).length)} سانس آزاد
+                      </span>
+                    </label>
+                    <div className="grid grid-cols-4 sm:grid-cols-4 gap-1.5">
+                      {availableSlots.map((slot) => {
+                        const isSelected = selectedTime === slot.time;
+                        if (slot.booked) {
+                          return (
+                            <div key={slot.time} className="py-1.5 text-center rounded-xl bg-slate-100 text-slate-400 text-[11px] line-through select-none">
+                              {toPersianDigits(slot.time)}
+                            </div>
+                          );
+                        }
+                        return (
+                          <button
+                            key={slot.time}
+                            type="button"
+                            onClick={() => setSelectedTime(slot.time)}
+                            className={`py-1.5 px-1 rounded-xl text-xs font-bold transition-all border text-center ${
+                              isSelected
+                                ? 'bg-[#173B3F] text-white border-[#173B3F] shadow-xs'
+                                : 'bg-emerald-50 text-[#173B3F] border-emerald-200 hover:bg-emerald-100'
+                            }`}
+                          >
+                            {toPersianDigits(slot.time)}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>

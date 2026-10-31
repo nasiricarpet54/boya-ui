@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { Star, MapPin, CheckCircle2, ChevronLeft, Clock, Calendar, Car, Eye, Heart, Navigation, Layers, Sparkles, UserCheck } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Star, MapPin, CheckCircle2, ChevronLeft, Clock, Calendar, Car, Eye, Heart, Navigation, Layers, Sparkles, UserCheck, CalendarDays } from 'lucide-react';
 import { Salon, SalonService, Specialist, SERVICE_LINES } from '../../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../../utils/persianUtils';
 import { formatDistancePersian } from '../../utils/geoUtils';
 import { BeautyActivityIcon } from './BeautyActivityIcon';
 import { useModalStore } from '../../stores/modalStore';
 import { SafeHtml } from './SafeHtml';
+import { JalaliDatePicker } from './JalaliDatePicker';
+import { generateUpcomingDays, getSlotsForArbitraryDate } from '../../utils/dateSlotGenerator';
 
 interface SalonCardProps {
   salon: Salon;
@@ -15,21 +17,6 @@ interface SalonCardProps {
   isWishlisted: boolean;
   onToggleWishlist: () => void;
 }
-
-const DEFAULT_SLOTS = [
-  { time: '۱۰:۰۰', booked: false },
-  { time: '۱۱:۳۰', booked: false },
-  { time: '۱۴:۰۰', booked: false },
-  { time: '۱۶:۰۰', booked: false },
-  { time: '۱۷:۳۰', booked: false },
-  { time: '۱۹:۰۰', booked: false },
-];
-
-const DEFAULT_AVAILABLE_SLOTS = [
-  { date: 'شنبه ۵ آبان', dayName: 'شنبه', dayNumber: '۵', slots: DEFAULT_SLOTS },
-  { date: 'یکشنبه ۶ آبان', dayName: 'یکشنبه', dayNumber: '۶', slots: DEFAULT_SLOTS },
-  { date: 'دوشنبه ۷ آبان', dayName: 'دوشنبه', dayNumber: '۷', slots: DEFAULT_SLOTS },
-];
 
 export const SalonCard: React.FC<SalonCardProps> = ({
   salon,
@@ -43,11 +30,17 @@ export const SalonCard: React.FC<SalonCardProps> = ({
   const [selectedSpecialistIndex, setSelectedSpecialistIndex] = useState<number>(0);
   const [selectedServiceIndex, setSelectedServiceIndex] = useState<number>(0);
   const [selectedDateIndex, setSelectedDateIndex] = useState<number>(0);
+  const [customSelectedDate, setCustomSelectedDate] = useState<string | null>(null);
+  const [showDatePickerModal, setShowDatePickerModal] = useState<boolean>(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
 
   const services = salon.services || [];
   const specialists = salon.specialists || [];
-  const availableSlots = salon.availableSlots || DEFAULT_AVAILABLE_SLOTS;
+  
+  // Generate 30 upcoming days with standard slots
+  const upcomingSchedule = useMemo(() => {
+    return generateUpcomingDays(30, salon.availableSlots);
+  }, [salon.availableSlots]);
 
   // Filtered lists based on line
   const filteredSpecialists = selectedLineId === 'all'
@@ -79,15 +72,18 @@ export const SalonCard: React.FC<SalonCardProps> = ({
     serviceLineId: 'hair'
   };
 
-  const currentDateSlots = availableSlots[selectedDateIndex] || availableSlots[0] || {
-    date: 'شنبه ۵ آبان',
-    dayName: 'شنبه',
-    dayNumber: '۵',
-    slots: DEFAULT_SLOTS
-  };
+  // Determine current active date and time slots
+  const selectedDayItem = customSelectedDate
+    ? {
+        date: customSelectedDate,
+        dayName: 'تاریخ انتخابی',
+        dayNumber: '',
+        slots: getSlotsForArbitraryDate(customSelectedDate, salon.availableSlots),
+      }
+    : upcomingSchedule[selectedDateIndex] || upcomingSchedule[0];
 
-  // Time slots for current date
-  const availableTimeSlots = currentDateSlots.slots || DEFAULT_SLOTS;
+  const currentDateLabel = selectedDayItem.date;
+  const availableTimeSlots = selectedDayItem.slots || [];
   const freeSlotsCount = availableTimeSlots.filter(s => !s.booked).length;
 
   const handleSlotClick = (time: string, booked: boolean) => {
@@ -98,7 +94,7 @@ export const SalonCard: React.FC<SalonCardProps> = ({
   const handleBooking = () => {
     const timeToBook =
       selectedTimeSlot || availableTimeSlots.find((t) => !t.booked)?.time || '۱۱:۳۰';
-    onBookNow(salon, currentService, currentSpecialist, currentDateSlots.date, timeToBook);
+    onBookNow(salon, currentService, currentSpecialist, currentDateLabel, timeToBook);
   };
 
   const { openQuickViewModal } = useModalStore();
@@ -379,36 +375,63 @@ export const SalonCard: React.FC<SalonCardProps> = ({
           </div>
         </div>
 
-        {/* Section 3: Booking Dates Selector */}
+        {/* Section 3: Booking Dates Selector (30 Upcoming Days Strip & Calendar Popover) */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-[#173B3F] flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-[#173B3F]" />
-              انتخاب روز رزرو نوبت:
+              انتخاب تاریخ رزرو نوبت (روزهای آینده):
             </span>
-            <span className="text-[11px] text-[#2E5E52] font-semibold bg-[#EAF2EF] px-2 py-0.5 rounded-full border border-[#6F9A8D]/30">
-              {toPersianDigits(freeSlotsCount)} سانس آزاد
-            </span>
+            
+            {/* Calendar Popover Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setShowDatePickerModal(!showDatePickerModal)}
+              className="px-2.5 py-1 rounded-xl bg-[#FAF7F2] hover:bg-[#EAF2EF] border border-[#E7E2DA] text-[11px] font-bold text-[#173B3F] flex items-center gap-1 shadow-xs transition-colors"
+            >
+              <CalendarDays className="w-3.5 h-3.5 text-[#D9A2B0]" />
+              <span>{showDatePickerModal ? 'بستن تقویم' : 'تقویم کامل شمسی 📅'}</span>
+            </button>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {availableSlots.map((slot, idx) => {
-              const isSelected = selectedDateIndex === idx;
+          {/* Inline Jalali Date Picker if toggled */}
+          {showDatePickerModal && (
+            <div className="mb-3 p-3 bg-[#FAF7F2] rounded-2xl border border-[#173B3F]/20">
+              <JalaliDatePicker
+                selectedDate={customSelectedDate || currentDateLabel}
+                onDateChange={(jalaliFormattedStr) => {
+                  setCustomSelectedDate(jalaliFormattedStr);
+                  setSelectedTimeSlot('');
+                  setShowDatePickerModal(false);
+                }}
+                label="انتخاب تاریخ رزرو نوبت از تقویم شمسی:"
+                placeholder="برای رزرو روزهای آینده کلیک کنید..."
+              />
+            </div>
+          )}
+
+          {/* 30-day Horizontal Strip */}
+          <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
+            {upcomingSchedule.map((slot, idx) => {
+              const isSelected = !customSelectedDate && selectedDateIndex === idx;
               return (
                 <button
                   key={slot.date}
                   onClick={() => {
+                    setCustomSelectedDate(null);
                     setSelectedDateIndex(idx);
                     setSelectedTimeSlot('');
                   }}
-                  className={`flex flex-col items-center justify-center px-4 py-2 rounded-2xl border transition-all shrink-0 ${
+                  className={`flex flex-col items-center justify-center px-3.5 py-2 rounded-2xl border transition-all shrink-0 min-w-[70px] ${
                     isSelected
                       ? 'border-[#173B3F] bg-[#173B3F] text-white shadow-md'
                       : 'border-[#E7E2DA] bg-white text-[#6C6C6C] hover:border-[#173B3F]'
                   }`}
                 >
-                  <span className={`text-[10px] font-medium ${isSelected ? 'text-[#E8F0EF]' : 'text-[#6C6C6C]'}`}>{slot.dayName}</span>
-                  <span className="text-sm font-extrabold">
+                  <span className={`text-[10px] font-medium ${isSelected ? 'text-[#E8F0EF]' : 'text-[#6C6C6C]'}`}>
+                    {slot.dayName}
+                  </span>
+                  <span className="text-sm font-black mt-0.5">
                     {slot.dayNumber}
                   </span>
                 </button>
@@ -420,11 +443,11 @@ export const SalonCard: React.FC<SalonCardProps> = ({
         {/* Section 4: Available Time Slots ("زمان‌های آزاد برای تعیین وقت") */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-[#173B3F] block">
-              زمان‌های آزاد تعیین وقت ({currentDateSlots.date}):
+            <span className="text-xs font-bold text-[#173B3F] block truncate max-w-[260px]">
+              ساعات آزاد تعیین وقت ({currentDateLabel}):
             </span>
-            <span className="text-[10px] text-[#6C6C6C]">
-              متخصص: <strong className="text-[#173B3F]">{currentSpecialist.name}</strong>
+            <span className="text-[10.5px] text-[#2E5E52] bg-[#EAF2EF] px-2 py-0.5 rounded-full border border-[#6F9A8D]/30 font-bold shrink-0">
+              {toPersianDigits(freeSlotsCount)} سانس آزاد
             </span>
           </div>
 
@@ -493,4 +516,5 @@ export const SalonCard: React.FC<SalonCardProps> = ({
     </div>
   );
 };
+
 
