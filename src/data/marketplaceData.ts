@@ -45,6 +45,9 @@ export interface Specialist {
   specialtyLine: string;
   bio: string;
   isMobileSpecialist: boolean;
+  specialistType?: 'salon_specialist' | 'independent_specialist' | 'mobile_specialist';
+  workingHours?: string;
+  workingDays?: string[];
   phone: string;
   portfolio: SpecialistPortfolio[];
 }
@@ -324,6 +327,9 @@ export const INITIAL_SALONS: Salon[] = [
         experienceYears: 12,
         specialtyLine: 'skincare',
         isMobileSpecialist: false,
+        specialistType: 'salon_specialist',
+        workingHours: 'شنبه تا چهارشنبه ۱۰:۰۰ الی ۱۸:۰۰',
+        workingDays: ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه'],
         phone: '۰۹۱۲۳۴۵۱۱۲۰',
         bio: 'دارای مدرک بین‌المللی بیوتی تراپیست از آکادمی ژنو و مدرس فیشیال‌های جوانساز با متدهای روز اروپا',
         portfolio: [
@@ -368,7 +374,10 @@ export const INITIAL_SALONS: Salon[] = [
         reviewsCount: 118,
         experienceYears: 10,
         specialtyLine: 'hair',
-        isMobileSpecialist: true,
+        isMobileSpecialist: false,
+        specialistType: 'independent_specialist',
+        workingHours: 'شنبه تا پنجشنبه ۱۱:۰۰ الی ۲۰:۰۰',
+        workingDays: ['شنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه'],
         phone: '۰۹۱۲۴۵۶۷۷۸۸',
         bio: 'متخصص ژورنال‌خوانی و تکنیک‌های آمبره روسی، بالیاژ خطی و بوتاکس مو با تضمین سلامت ساقه',
         portfolio: [
@@ -407,6 +416,9 @@ export const INITIAL_SALONS: Salon[] = [
         experienceYears: 8,
         specialtyLine: 'nail',
         isMobileSpecialist: true,
+        specialistType: 'mobile_specialist',
+        workingHours: 'همه روزه ۹:۳۰ الی ۲۱:۰۰ (اعزام به محل مشتری)',
+        workingDays: ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'],
         phone: '۰۹۱۲۷۷۷۸۸۹۹',
         bio: 'دارای سرتیفیکیت مانیکور روسی از مسکو، متخصص کاشت فیگور، ژلیش مغناطیسی و دیزاین مینیمال',
         portfolio: [
@@ -1323,6 +1335,29 @@ export const INITIAL_BOOKINGS: Booking[] = [
     customerAddress: 'تهران، زعفرانیه، خیابان آصف، برج آسمان',
     status: 'confirmed',
     createdAt: '۱۴۰۳/۰۸/۰۱',
+  },
+  {
+    id: 'bkg-103',
+    trackingCode: 'BY-339182',
+    tenantId: 'tnt-tehran-elahiyeh-01',
+    salonName: 'سالن زیبایی و عمارت گل سرخ',
+    salonAddress: 'تهران، الهیه، خیابان فرشته، بن‌بست نیلوفر، پلاک ۱۲',
+    serviceId: 'serv-103',
+    serviceName: 'کاشت ناخن با پودر روسی و ژلیش کهکشانی',
+    serviceLineId: 'nail',
+    specialistId: 'spec-nail-1',
+    specialistName: 'سارا محمدی',
+    date: 'دوشنبه ۷ آبان',
+    time: '۱۵:۳۰',
+    durationMinutes: 90,
+    price: 1100000,
+    customerName: 'مونا کریمی',
+    customerPhone: '۰۹۱۲۸۸۸۳۳۲۲',
+    notes: 'درخواست دیزاین مینیمال ژورنالی در محل',
+    isMobileBooking: true,
+    customerAddress: 'تهران، ولنجک، خیابان چهاردهم، برج صبا',
+    status: 'confirmed',
+    createdAt: '۱۴۰۳/۰۸/۰۳',
   },
 ];
 

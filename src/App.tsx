@@ -229,6 +229,13 @@ export default function App() {
     showToast('وضعیت نوبت در پنل سالندار به‌روز شد.');
   };
 
+  const handleUpdateSalon = (salonId: string, updates: Partial<Salon>) => {
+    setSalons((prev) =>
+      prev.map((s) => (s.id === salonId ? { ...s, ...updates } : s))
+    );
+    showToast('اطلاعات سالن با موفقیت به‌روزرسانی شد.');
+  };
+
   // --- Admin Panel Handlers ---
   const handleApproveTenant = (tenantId: string) => {
     setSalons((prev) =>
@@ -481,6 +488,7 @@ export default function App() {
                   onSwitchToCustomerApp={() => setAppMode('customer')}
                   bookings={bookings}
                   onUpdateBookingStatus={handleUpdateBookingStatus}
+                  onUpdateSalon={handleUpdateSalon}
                   salons={salons}
                 />
               ) : (
