@@ -9,43 +9,65 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, setAuth } = useAuthStore();
   const { openAuthModal } = useModalStore();
   const location = useLocation();
 
-  React.useEffect(() => {
-    if (!isAuthenticated) {
-      openAuthModal();
-    }
-  }, [isAuthenticated, openAuthModal]);
+  const handleQuickAdminLogin = () => {
+    setAuth({
+      id: 1,
+      uid: 'admin-super-1',
+      fullName: 'مهندس حسینی (مدیر ارشد)',
+      role: 'super_admin',
+      phone: '09123456789',
+      email: 'admin@boya.ir'
+    }, 'token_super_admin_mock');
+  };
 
   if (!isAuthenticated) {
-    // Show a blank state or a "please login" message while modal is open
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6" dir="rtl">
+      <div className="flex flex-col items-center justify-center min-h-[450px] text-center p-6 bg-white rounded-3xl shadow-sm border border-[#E7E2DA] m-4" dir="rtl">
         <div className="w-16 h-16 bg-[#F7F3EE] rounded-full flex items-center justify-center mb-4 border border-[#E7E2DA]">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#173B3F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
         </div>
-        <h3 className="text-lg font-bold text-[#173B3F] mb-2">نیاز به ورود</h3>
-        <p className="text-sm text-[#6C6C6C] mb-6">برای مشاهده این بخش باید ابتدا وارد حساب کاربری خود شوید.</p>
-        <button 
-          onClick={() => openAuthModal()}
-          className="bg-[#173B3F] text-white px-8 py-2.5 rounded-full font-bold text-xs"
-        >
-          ورود به حساب
-        </button>
+        <h3 className="text-xl font-extrabold text-[#173B3F] mb-2">شما هنوز وارد سامانه نشده اید</h3>
+        <p className="text-xs text-[#6C6C6C] mb-6">برای دسترسی به پنل مدیریت و امکانات سامانه بویا، لطفاً وارد حساب کاربری خود شوید یا از ورود سریع ادمین استفاده کنید.</p>
+        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+          <button 
+            onClick={() => openAuthModal()}
+            className="flex-1 bg-[#173B3F] text-white px-6 py-3 rounded-2xl font-bold text-xs shadow-sm hover:bg-[#122e31] transition-all cursor-pointer"
+          >
+            ورود با شماره موبایل
+          </button>
+          <button 
+            onClick={handleQuickAdminLogin}
+            className="flex-1 bg-[#D9A2B0]/30 text-[#173B3F] border border-[#D9A2B0] px-6 py-3 rounded-2xl font-bold text-xs hover:bg-[#D9A2B0]/50 transition-all cursor-pointer"
+          >
+            ورود سریع ادمین کل
+          </button>
+        </div>
       </div>
     );
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    // Role not authorized
     return (
-      <div className="p-8 text-center bg-red-50 text-red-700 rounded-lg border border-red-200 m-4">
-        <h2 className="text-xl font-bold mb-2">عدم دسترسی</h2>
-        <p>شما اجازه دسترسی به این بخش را ندارید.</p>
+      <div className="p-8 text-center bg-white rounded-3xl border border-[#E7E2DA] shadow-sm m-4" dir="rtl">
+        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-[#173B3F] mb-2">سطح دسترسی محدود</h2>
+        <p className="text-xs text-[#6C6C6C] mb-6">حساب کاربری شما ({user.fullName}) نقش لازم برای این بخش را ندارد. می‌توانید با دسترسی ادمین کل وارد شوید.</p>
+        <button 
+          onClick={handleQuickAdminLogin}
+          className="bg-[#173B3F] text-white px-8 py-3 rounded-2xl font-bold text-xs shadow-md hover:bg-[#122e31] transition-all cursor-pointer"
+        >
+          ورود با دسترسی ادمین کل
+        </button>
       </div>
     );
   }
