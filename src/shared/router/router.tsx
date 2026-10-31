@@ -36,6 +36,23 @@ const Root = () => {
     showToast(`نوبت در سالن «${data.salonName}» ثبت شد.`);
   };
 
+  const isAdminMode = appMode === 'admin_panel' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin'));
+
+  if (isAdminMode) {
+    return (
+      <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased selection:bg-[#D9A2B0] selection:text-[#173B3F]">
+        <main className="flex-1 w-full min-h-screen">
+          <Outlet />
+        </main>
+        {toastMessage && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#173B3F] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-[#D9A2B0]/40 flex items-center gap-2 animate-bounce">
+            <span>{toastMessage}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#E7E2DA] flex flex-col selection:bg-[#D9A2B0] selection:text-[#173B3F]">
       <div className="flex justify-center w-full min-h-screen">

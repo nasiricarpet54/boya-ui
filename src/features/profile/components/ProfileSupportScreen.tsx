@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Share2, Plus, Send, CheckCircle2, ChevronLeft, Store } from 'lucide-react';
+import { MapPin, Share2, Plus, Send, CheckCircle2, ChevronLeft, Store, ShieldCheck } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { SupportTicket, INITIAL_TICKETS } from '../../../shared/data/marketplaceData';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
@@ -112,6 +112,19 @@ export const ProfileSupportScreen: React.FC = () => {
           >
             <Store className="w-5 h-5 mb-0.5" />
             <span className="text-[10px] font-bold">پنل سالن</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              setSplashAppName('ورود به وب پنل ادمین اصلی کل');
+              setShowSplashScreen(true);
+              setAppMode('admin_panel');
+              navigate({ to: '/admin' });
+            }} 
+            className="flex flex-col items-center p-2 rounded-2xl bg-[#173B3F] text-white hover:bg-[#0F3232] transition-all min-w-[70px]"
+          >
+            <ShieldCheck className="w-5 h-5 mb-0.5 text-[#D9A2B0]" />
+            <span className="text-[10px] font-bold">وب پنل ادمین</span>
           </button>
           
           <button 
