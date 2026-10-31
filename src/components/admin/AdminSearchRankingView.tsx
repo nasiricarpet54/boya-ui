@@ -17,6 +17,7 @@ import {
   Save,
 } from 'lucide-react';
 import { Salon } from '../../data/marketplaceData';
+import { IRAN_PROVINCES } from '../../data/iranLocations';
 import { toPersianDigits } from '../../utils/persianUtils';
 import { sortSalonsForSearchResults } from '../../utils/salonRanking';
 
@@ -160,10 +161,12 @@ export const AdminSearchRankingView: React.FC<AdminSearchRankingViewProps> = ({
             onChange={(e) => setCityFilter(e.target.value)}
             className="h-10 px-3.5 rounded-xl border border-[#E7E2DA] bg-[#FAF7F2] text-xs font-bold text-[#173B3F] focus:border-[#173B3F] outline-none shadow-xs"
           >
-            <option value="all">همه استان‌ها و شهرها</option>
-            <option value="تهران">تهران</option>
-            <option value="شیراز">فارس (شیراز)</option>
-            <option value="اصفهان">اصفهان</option>
+            <option value="all">همه ۳۱ استان و شهرستان‌ها</option>
+            {IRAN_PROVINCES.map((p) => (
+              <option key={p.id} value={p.name}>
+                {p.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>

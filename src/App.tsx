@@ -14,8 +14,11 @@ import { ProfileSupportScreen } from './components/ProfileSupportScreen';
 import { SalonAdminDashboard } from './components/SalonAdminDashboard';
 import { BookingModal } from './components/BookingModal';
 import { SpecialistPortfolioModal } from './components/SpecialistPortfolioModal';
+import { LocationSelectorModal } from './components/LocationSelectorModal';
+import { BoyaSplashScreen } from './components/BoyaSplashScreen';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { boyaApi } from './services/boyaApi';
+import { CustomerLocationState } from './utils/geoUtils';
 import {
   INITIAL_SALONS,
   Salon,
@@ -34,13 +37,37 @@ import {
 export default function App() {
   // Master Switcher: 3 Distinct Systems (Customer App vs Salon & Specialist App vs Super Admin Web Panel)
   const [appMode, setAppMode] = useState<AppExperienceMode>('customer');
+  const [showSplashScreen, setShowSplashScreen] = useState<boolean>(true);
+  const [splashAppName, setSplashAppName] = useState<string>('ورود به اپلیکیشن هوشمند مشتریان بویا');
+
+  const handleSwitchAppMode = (mode: AppExperienceMode) => {
+    const names: Record<AppExperienceMode, string> = {
+      customer: 'ورود به اپلیکیشن هوشمند مشتریان بویا',
+      salon_panel: 'ورود به پنل جامع سالندار و متخصصین بویا',
+      admin_panel: 'ورود به سامانه نظارتی ادمین کل (Super Admin)',
+    };
+    setSplashAppName(names[mode]);
+    setShowSplashScreen(true);
+    setAppMode(mode);
+  };
 
   // Customer Navigation: 5 tabs
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [targetServiceLine, setTargetServiceLine] = useState<string>('all');
 
-  // City selector
+  // Iranian 31 Provinces & City Cascading Filter + GPS Geolocation State
+  const [selectedProvince, setSelectedProvince] = useState<string>('تهران');
   const [selectedCity, setSelectedCity] = useState<string>('تهران');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('همه');
+  const [customerLocation, setCustomerLocation] = useState<CustomerLocationState>({
+    coords: { lat: 35.7951, lng: 51.4239 },
+    status: 'simulated',
+    source: 'preset',
+    label: 'موقعیت آزمایشی: تهران (الهیه)',
+  });
+  const [maxDistanceKm, setMaxDistanceKm] = useState<number | null>(null);
+  const [sortByDistance, setSortByDistance] = useState<boolean>(true);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState<boolean>(false);
 
   // Viewport Frame Mode: default 390px baseline for mobile apps
   const [isMobileFrame, setIsMobileFrame] = useState<boolean>(true);
@@ -386,9 +413,12 @@ export default function App() {
         <div className="flex flex-col h-screen">
           <Header
             appMode={appMode}
-            onToggleAppMode={setAppMode}
+            onToggleAppMode={handleSwitchAppMode}
             selectedCity={selectedCity}
             onSelectCity={setSelectedCity}
+            selectedProvince={selectedProvince}
+            onOpenLocationModal={() => setIsLocationModalOpen(true)}
+            hasGpsActive={!!customerLocation.coords}
             isMobileFrame={isMobileFrame}
             onToggleFrame={() => setIsMobileFrame(!isMobileFrame)}
             activeBookingsCount={activeBookingsCount}
@@ -412,8 +442,8 @@ export default function App() {
               onAddUser={handleAddUser}
               onToggleSpecialistVerified={handleToggleSpecialistVerified}
               onReplyTicket={handleReplyTicket}
-              onSwitchToCustomerApp={() => setAppMode('customer')}
-              onSwitchToSalonApp={() => setAppMode('salon_panel')}
+              onSwitchToCustomerApp={() => handleSwitchAppMode('customer')}
+              onSwitchToSalonApp={() => handleSwitchAppMode('salon_panel')}
             />
           </div>
         </div>
@@ -430,9 +460,12 @@ export default function App() {
             {/* Top Header */}
             <Header
               appMode={appMode}
-              onToggleAppMode={setAppMode}
+              onToggleAppMode={handleSwitchAppMode}
               selectedCity={selectedCity}
               onSelectCity={setSelectedCity}
+              selectedProvince={selectedProvince}
+              onOpenLocationModal={() => setIsLocationModalOpen(true)}
+              hasGpsActive={!!customerLocation.coords}
               isMobileFrame={isMobileFrame}
               onToggleFrame={() => setIsMobileFrame(!isMobileFrame)}
               activeBookingsCount={activeBookingsCount}
@@ -466,6 +499,9 @@ export default function App() {
                       savedSalonIds={savedSalonIds}
                       onToggleWishlistSalon={handleToggleWishlistSalon}
                       selectedCity={selectedCity}
+                      selectedProvince={selectedProvince}
+                      customerLocation={customerLocation}
+                      onOpenLocationModal={() => setIsLocationModalOpen(true)}
                     />
                   )}
 
@@ -477,7 +513,19 @@ export default function App() {
                       onViewSpecialistPortfolio={handleViewSpecialistPortfolio}
                       savedSalonIds={savedSalonIds}
                       onToggleWishlistSalon={handleToggleWishlistSalon}
+                      selectedProvince={selectedProvince}
+                      onSelectProvince={setSelectedProvince}
                       selectedCity={selectedCity}
+                      onSelectCity={setSelectedCity}
+                      selectedDistrict={selectedDistrict}
+                      onSelectDistrict={setSelectedDistrict}
+                      customerLocation={customerLocation}
+                      onUpdateCustomerLocation={setCustomerLocation}
+                      maxDistanceKm={maxDistanceKm}
+                      onSelectMaxDistance={setMaxDistanceKm}
+                      sortByDistance={sortByDistance}
+                      onToggleSortByDistance={setSortByDistance}
+                      onOpenLocationModal={() => setIsLocationModalOpen(true)}
                     />
                   )}
 
@@ -541,6 +589,24 @@ export default function App() {
               }}
             />
 
+            {/* Location & GPS Selector Modal (31 Iranian Provinces, Counties, Districts & Haversine Distance) */}
+            <LocationSelectorModal
+              isOpen={isLocationModalOpen}
+              onClose={() => setIsLocationModalOpen(false)}
+              locationState={customerLocation}
+              onUpdateLocation={setCustomerLocation}
+              selectedProvince={selectedProvince}
+              onSelectProvince={setSelectedProvince}
+              selectedCity={selectedCity}
+              onSelectCity={setSelectedCity}
+              selectedDistrict={selectedDistrict}
+              onSelectDistrict={setSelectedDistrict}
+              maxDistanceKm={maxDistanceKm}
+              onSelectMaxDistance={setMaxDistanceKm}
+              sortByDistance={sortByDistance}
+              onToggleSortByDistance={setSortByDistance}
+            />
+
             {/* Action Toast Feedback */}
             {toastMessage && (
               <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-[#173B3F] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-[#D9A2B0]/40 flex items-center gap-2 animate-bounce">
@@ -551,6 +617,13 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Animated BOYA Splash Screen & Loading Entrance Sequence */}
+      <BoyaSplashScreen
+        isOpen={showSplashScreen}
+        appName={splashAppName}
+        onFinish={() => setShowSplashScreen(false)}
+      />
     </div>
   );
 }

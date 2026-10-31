@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Star, MapPin, CheckCircle2, ChevronLeft, Clock, Calendar, Car, Eye, Phone, Crown, Heart } from 'lucide-react';
+import { Star, MapPin, CheckCircle2, ChevronLeft, Clock, Calendar, Car, Eye, Phone, Crown, Heart, Navigation } from 'lucide-react';
 import { Salon, SalonService, Specialist } from '../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../utils/persianUtils';
+import { formatDistancePersian } from '../utils/geoUtils';
 import { BeautyActivityIcon } from './BeautyActivityIcon';
 
 interface SalonCardProps {
   salon: Salon;
+  distanceKm?: number;
   onBookNow: (salon: Salon, service: SalonService, specialist: Specialist, date: string, time: string) => void;
   onViewSpecialistPortfolio: (specialist: Specialist, salon: Salon) => void;
   isWishlisted: boolean;
@@ -14,6 +16,7 @@ interface SalonCardProps {
 
 export const SalonCard: React.FC<SalonCardProps> = ({
   salon,
+  distanceKm,
   onBookNow,
   onViewSpecialistPortfolio,
   isWishlisted,
@@ -89,16 +92,24 @@ export const SalonCard: React.FC<SalonCardProps> = ({
 
         {/* Location & Rating */}
         <div className="absolute bottom-3 right-3 left-3 flex items-end justify-between text-white">
-          <div>
+          <div className="space-y-0.5">
             <h3 className="text-base sm:text-lg font-bold font-serif leading-tight">
               {salon.name}
             </h3>
-            <div className="flex items-center gap-1.5 text-xs text-[#E8F0EF] mt-1">
-              <MapPin className="w-3.5 h-3.5 text-[#D9A2B0]" />
-              <span>{salon.city}، {salon.district}</span>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#E8F0EF]">
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-[#D9A2B0]" />
+                <span>{salon.province !== salon.city ? `${salon.province}، ` : ''}{salon.city}، {salon.district}</span>
+              </div>
+              {distanceKm !== undefined && (
+                <span className="inline-flex items-center gap-1 bg-[#173B3F]/90 text-[#D9A2B0] border border-[#D9A2B0]/40 text-[10.5px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+                  <Navigation className="w-2.5 h-2.5 fill-current rotate-45" />
+                  <span>{formatDistancePersian(distanceKm)} تا شما</span>
+                </span>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
+          <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 shrink-0">
             <Star className="w-3.5 h-3.5 text-[#C99558] fill-current" />
             <span className="text-xs font-bold text-white">
               {toPersianDigits(salon.rating.toFixed(2))}

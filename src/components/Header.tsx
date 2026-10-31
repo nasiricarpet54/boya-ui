@@ -1,6 +1,7 @@
 import React from 'react';
-import { Smartphone, Monitor, MapPin, Store, UserCheck, ShieldCheck, Bell } from 'lucide-react';
+import { Smartphone, Monitor, MapPin, Store, UserCheck, ShieldCheck, Bell, Navigation } from 'lucide-react';
 import { toPersianDigits } from '../utils/persianUtils';
+import { BoyaLogo } from './BoyaLogo';
 
 export type AppExperienceMode = 'customer' | 'salon_panel' | 'admin_panel';
 
@@ -9,6 +10,9 @@ interface HeaderProps {
   onToggleAppMode: (mode: AppExperienceMode) => void;
   selectedCity: string;
   onSelectCity: (city: string) => void;
+  selectedProvince?: string;
+  onOpenLocationModal?: () => void;
+  hasGpsActive?: boolean;
   isMobileFrame: boolean;
   onToggleFrame: () => void;
   activeBookingsCount: number;
@@ -21,6 +25,9 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleAppMode,
   selectedCity,
   onSelectCity,
+  selectedProvince = 'تهران',
+  onOpenLocationModal,
+  hasGpsActive = false,
   isMobileFrame,
   onToggleFrame,
   activeBookingsCount,
@@ -96,45 +103,32 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Main Header Bar (Shown in Customer & Salon modes) */}
       {appMode !== 'admin_panel' && (
         <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between">
-          {/* Brand Identity */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-[#173B3F] flex items-center justify-center text-[#D9A2B0] border border-[#D9A2B0]/30 shadow-sm shrink-0">
-              <span className="font-serif font-black text-lg select-none">ب</span>
-            </div>
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xl font-bold tracking-tight text-[#173B3F] font-serif">
-                  بویا
-                </span>
-                <span className="text-[10px] tracking-widest text-[#6F9A8D] font-bold uppercase">
-                  BOYA
-                </span>
-              </div>
-              <p className="text-[10px] text-[#6C6C6C] -mt-1 hidden xs:block">
-                {appMode === 'customer'
-                  ? 'رزرو آنلاین سالن‌ها و خدمات در محل'
-                  : 'سیستم جامع مدیریت سالن و سانس‌های کاری'}
-              </p>
-            </div>
+          {/* Official Brand Identity */}
+          <div className="flex items-center gap-2">
+            <BoyaLogo variant="header" size="sm" showText={true} />
           </div>
 
           {/* Right Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* City Selector in Customer Mode */}
+            {/* City & GPS Selector in Customer Mode */}
             {appMode === 'customer' && (
-              <div className="flex items-center gap-1 bg-white border border-[#E7E2DA] px-2.5 py-1 rounded-full text-xs text-[#1C1C1C] hover:border-[#6F9A8D] transition-colors shadow-sm">
-                <MapPin className="w-3.5 h-3.5 text-[#173B3F]" />
-                <select
-                  value={selectedCity}
-                  onChange={(e) => onSelectCity(e.target.value)}
-                  className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer text-[#1C1C1C]"
-                >
-                  <option value="تهران">تهران</option>
-                  <option value="شیراز">شیراز</option>
-                  <option value="اصفهان">اصفهان</option>
-                  <option value="همه">همه شهرها</option>
-                </select>
-              </div>
+              <button
+                onClick={onOpenLocationModal}
+                className="flex items-center gap-1.5 bg-white border border-[#E7E2DA] hover:border-[#173B3F] px-2.5 py-1 rounded-full text-xs text-[#1C1C1C] hover:bg-[#FAF7F2] transition-all shadow-xs group"
+                title="تغییر استان، شهرستان یا تعیین موقعیت با GPS"
+              >
+                <MapPin className="w-3.5 h-3.5 text-[#173B3F] group-hover:scale-110 transition-transform" />
+                <span className="font-bold text-[11px] text-[#173B3F]">
+                  {selectedCity === 'همه'
+                    ? selectedProvince === 'همه'
+                      ? 'کل کشور'
+                      : selectedProvince
+                    : selectedCity}
+                </span>
+                {hasGpsActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#2E5E52] animate-pulse" />
+                )}
+              </button>
             )}
 
             {/* Viewport Frame Mode Toggle (390px baseline vs desktop) */}

@@ -15,6 +15,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { toPersianDigits } from '../../utils/persianUtils';
+import { BoyaLogo } from '../BoyaLogo';
 
 export type AdminTab =
   | 'dashboard'
@@ -80,15 +81,19 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     <aside className="w-64 bg-[#0F3232] text-white flex flex-col justify-between shrink-0 border-l border-[#173B3F] select-none shadow-xl">
       {/* Brand & System Title */}
       <div>
-        <div className="p-5 border-b border-[#173B3F] flex items-center justify-between">
+        <div className="p-4 border-b border-[#173B3F] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-[#173B3F] text-[#D9A2B0] border border-[#D9A2B0]/30 flex items-center justify-center font-serif font-black text-lg shadow-md">
-              ب
+            <div className="w-10 h-10 rounded-2xl bg-white p-1 border border-white/20 shadow-md flex items-center justify-center shrink-0">
+              <img
+                src="/assets/aistudio/IMG_20261031_121115_770_79cc90aa.png"
+                alt="BOYA"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div className="flex items-baseline gap-1.5">
-                <span className="font-serif font-bold text-base text-white">بویا ادمین</span>
-                <span className="text-[10px] text-[#D9A2B0] font-mono font-bold">PANEL</span>
+                <span className="font-serif font-black text-base text-white">بویا ادمین</span>
+                <span className="text-[10px] text-[#D9A2B0] font-mono font-bold tracking-wider">PANEL</span>
               </div>
               <span className="text-[10px] text-[#E8F0EF]/80 block -mt-0.5">سامانه جامع مدیریت پلتفرم</span>
             </div>

@@ -17,10 +17,13 @@ import {
   Layers,
   ArrowLeft,
   UserCheck,
+  Navigation,
+  Compass,
 } from 'lucide-react';
 import { SALONS, SERVICE_LINES, Salon, Specialist, SalonService, Booking } from '../data/marketplaceData';
 import { SalonCard } from './SalonCard';
 import { toPersianDigits, formatPrice } from '../utils/persianUtils';
+import { calculateDistanceKm, CustomerLocationState } from '../utils/geoUtils';
 import { generatePersonalizedRecommendations, RecommendedServiceItem } from '../utils/recommendationEngine';
 import { sortSalonsForSearchResults } from '../utils/salonRanking';
 import { BeautyActivityIcon } from './BeautyActivityIcon';
@@ -34,6 +37,9 @@ interface HomeScreenProps {
   savedSalonIds: string[];
   onToggleWishlistSalon: (salonId: string) => void;
   selectedCity: string;
+  selectedProvince?: string;
+  customerLocation?: CustomerLocationState;
+  onOpenLocationModal?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -45,6 +51,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   savedSalonIds,
   onToggleWishlistSalon,
   selectedCity,
+  selectedProvince = 'تهران',
+  customerLocation,
+  onOpenLocationModal,
 }) => {
   const [filterMobileOnly, setFilterMobileOnly] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -63,7 +72,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   // Search results sorted with VIP salons first
   const filteredSalons = useMemo(() => {
+    // Province/City filter: if selectedCity is 'همه', check selectedProvince
     const list = salons.filter((salon) => {
+      if (selectedProvince && selectedProvince !== 'همه') {
+        if (!salon.province.includes(selectedProvince)) {
+          return false;
+        }
+      }
       if (selectedCity !== 'همه' && !salon.province.includes(selectedCity) && !salon.city.includes(selectedCity)) {
         return false;
       }
@@ -81,7 +96,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       return true;
     });
     return sortSalonsForSearchResults(list);
-  }, [salons, selectedCity, filterMobileOnly, searchQuery]);
+  }, [salons, selectedCity, selectedProvince, filterMobileOnly, searchQuery]);
+
+  // Attach distanceKm to each salon
+  const filteredSalonsWithDistance = useMemo(() => {
+    return filteredSalons.map((salon) => {
+      let distanceKm: number | undefined;
+      if (customerLocation?.coords) {
+        distanceKm = calculateDistanceKm(
+          customerLocation.coords.lat,
+          customerLocation.coords.lng,
+          salon.latitude,
+          salon.longitude
+        );
+      }
+      return { salon, distanceKm };
+    });
+  }, [filteredSalons, customerLocation]);
 
   return (
     <div className="space-y-6 pb-24">
@@ -107,10 +138,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </h1>
 
           <p className="text-xs sm:text-sm text-[#E8F0EF] leading-relaxed mb-5 max-w-md">
-            دسترسی آسان به برترین سالن‌ها و متخصصین تایید شده در {selectedCity === 'همه' ? 'سراسر کشور' : selectedCity}. بدون کارمزد، با تایید آنی پیامکی.
+            دسترسی آسان به برترین سالن‌ها و متخصصین تایید شده در {selectedCity === 'همه' ? (selectedProvince === 'همه' ? 'سراسر کشور' : selectedProvince) : `${selectedProvince}، ${selectedCity}`}. بدون کارمزد، با تایید آنی پیامکی.
           </p>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => onNavigateToSalons()}
               className="h-12 px-6 rounded-full bg-[#D9A2B0] hover:bg-[#E6B5C0] active:bg-[#C98F9F] text-[#173B3F] font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-[#D9A2B0]/25"
@@ -119,16 +150,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <ChevronLeft className="w-4 h-4 text-[#173B3F]" />
             </button>
 
+            {onOpenLocationModal && (
+              <button
+                onClick={onOpenLocationModal}
+                className="h-12 px-4 rounded-full bg-white/15 hover:bg-white/25 border border-white/30 text-white text-xs font-bold flex items-center gap-1.5 transition-all backdrop-blur-md shadow-xs"
+              >
+                <Navigation className="w-3.5 h-3.5 text-[#D9A2B0] rotate-45" />
+                <span>GPS و انتخاب شهر ({selectedCity})</span>
+              </button>
+            )}
+
             <button
               onClick={() => setFilterMobileOnly(!filterMobileOnly)}
-              className={`h-12 px-5 rounded-full backdrop-blur-md border text-xs font-semibold flex items-center gap-2 transition-all ${
+              className={`h-12 px-4 rounded-full backdrop-blur-md border text-xs font-semibold flex items-center gap-2 transition-all ${
                 filterMobileOnly
                   ? 'bg-[#C99558] text-[#173B3F] border-[#C99558] shadow-md font-bold'
                   : 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
               }`}
             >
               <Car className="w-3.5 h-3.5" />
-              <span>{filterMobileOnly ? 'فیلتر خدمات در محل فعال است' : 'خدمات در منزل (Mobile Service)'}</span>
+              <span>{filterMobileOnly ? 'فیلتر خدمات در محل فعال' : 'خدمات در منزل'}</span>
             </button>
           </div>
         </div>
@@ -428,10 +469,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </button>
           </div>
         ) : (
-          filteredSalons.map((salon) => (
+          filteredSalonsWithDistance.map(({ salon, distanceKm }) => (
             <SalonCard
               key={salon.id}
               salon={salon}
+              distanceKm={distanceKm}
               isWishlisted={savedSalonIds.includes(salon.id)}
               onToggleWishlist={() => onToggleWishlistSalon(salon.id)}
               onBookNow={onBookSalon}

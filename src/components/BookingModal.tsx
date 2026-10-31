@@ -3,6 +3,7 @@ import { X, Calendar, Clock, CheckCircle2, MapPin, User, Car, ShieldCheck, Spark
 import { Salon, SalonService, Specialist } from '../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../utils/persianUtils';
 import { BeautyActivityIcon } from './BeautyActivityIcon';
+import { BoyaLogo } from './BoyaLogo';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -49,34 +50,39 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [isMobileService, setIsMobileService] = useState(false);
   const [userAddress, setUserAddress] = useState('تهران، زعفرانیه، خیابان آصف، کوچه شقایق، پلاک ۴');
   const [userNotes, setUserNotes] = useState('پوست حساس - ترجیح مواد ملایم');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [generatedTrackingCode, setGeneratedTrackingCode] = useState('');
 
   const handleConfirm = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsProcessing(true);
     const code = `BY-${Math.floor(100000 + Math.random() * 900000)}`;
     setGeneratedTrackingCode(code);
 
-    onConfirmBooking({
-      salonId: salon.id,
-      salonName: salon.name,
-      salonAddress: salon.address,
-      serviceId: service.id,
-      serviceName: service.name,
-      serviceLineId: service.serviceLineId,
-      specialistId: specialist.id,
-      specialistName: specialist.name,
-      date,
-      time,
-      durationMinutes: service.durationMinutes,
-      price: service.price,
-      customerName: userName,
-      customerPhone: userPhone,
-      customerAddress: isMobileService ? userAddress : undefined,
-      notes: userNotes,
-      isMobileBooking: isMobileService,
-    });
-    setIsConfirmed(true);
+    setTimeout(() => {
+      onConfirmBooking({
+        salonId: salon.id,
+        salonName: salon.name,
+        salonAddress: salon.address,
+        serviceId: service.id,
+        serviceName: service.name,
+        serviceLineId: service.serviceLineId,
+        specialistId: specialist.id,
+        specialistName: specialist.name,
+        date,
+        time,
+        durationMinutes: service.durationMinutes,
+        price: service.price,
+        customerName: userName,
+        customerPhone: userPhone,
+        customerAddress: isMobileService ? userAddress : undefined,
+        notes: userNotes,
+        isMobileBooking: isMobileService,
+      });
+      setIsProcessing(false);
+      setIsConfirmed(true);
+    }, 900);
   };
 
   return (
@@ -102,10 +108,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
         {/* Content */}
         <div className="p-5 max-h-[82vh] overflow-y-auto">
-          {isConfirmed ? (
-            <div className="text-center py-5 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-[#EAF2EF] text-[#2E5E52] border border-[#6F9A8D]/40 flex items-center justify-center mx-auto shadow-sm">
-                <CheckCircle2 className="w-9 h-9 text-[#6F9A8D]" />
+          {isProcessing ? (
+            <div className="text-center py-10 space-y-4">
+              <BoyaLogo variant="animated" size="md" showText={false} />
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-[#173B3F] font-serif">
+                  در حال ثبت نوبت در تقویم کاری سالن و صدور کد رهگیری...
+                </h4>
+                <p className="text-xs text-[#6C6C6C]">
+                  رزرو سانس {toPersianDigits(time)} برای {specialist.name}
+                </p>
+              </div>
+            </div>
+          ) : isConfirmed ? (
+            <div className="text-center py-4 space-y-3.5">
+              <div className="flex justify-center">
+                <BoyaLogo variant="badge" />
+              </div>
+              <div className="w-14 h-14 rounded-full bg-[#EAF2EF] text-[#2E5E52] border border-[#6F9A8D]/40 flex items-center justify-center mx-auto shadow-sm">
+                <CheckCircle2 className="w-8 h-8 text-[#6F9A8D]" />
               </div>
               <h4 className="text-lg font-bold text-[#173B3F] font-serif">
                 نوبت شما در سامانه بویا ثبت گردید

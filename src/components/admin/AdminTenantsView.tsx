@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Building2, MapPin, Phone, CheckCircle2, AlertCircle, Ban, Car, Eye, Crown } from 'lucide-react';
 import { Salon } from '../../data/marketplaceData';
+import { IRAN_PROVINCES } from '../../data/iranLocations';
 import { toPersianDigits } from '../../utils/persianUtils';
 
 interface AdminTenantsViewProps {
@@ -36,16 +37,18 @@ export const AdminTenantsView: React.FC<AdminTenantsViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#64748B]">فیلتر استان:</span>
+          <span className="text-xs text-[#64748B]">فیلتر استان ({toPersianDigits(31)} استان):</span>
           <select
             value={cityFilter}
             onChange={(e) => setCityFilter(e.target.value)}
             className="h-9 px-3 rounded-xl border border-[#E2E8F0] text-xs font-semibold focus:border-[#C59B27] outline-none"
           >
-            <option value="all">همه استان‌ها</option>
-            <option value="تهران">تهران</option>
-            <option value="شیراز">فارس (شیراز)</option>
-            <option value="اصفهان">اصفهان</option>
+            <option value="all">همه ۳۱ استان کشور</option>
+            {IRAN_PROVINCES.map((p) => (
+              <option key={p.id} value={p.name}>
+                {p.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>
