@@ -21,6 +21,7 @@ export interface SalonService {
   price: number;
   description: string;
   isMobileAvailable?: boolean;
+  imageUrl?: string;
 }
 
 export interface SpecialistPortfolio {
@@ -260,10 +261,13 @@ export const INITIAL_SALONS: Salon[] = [
     displayPriority: 1,
     vipBadgeLabel: 'سالن برگزیده VIP',
     vipExpiryDate: '۱۴۰۳/۱۲/۲۹',
-    coverImage: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1000&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1200&q=80',
     gallery: [
-      'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1000&q=80',
-      'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1000&q=80', // سالن اصلی و استایلینگ
+      'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?auto=format&fit=crop&w=1000&q=80', // ایستگاه‌های رنگ و مو
+      'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1000&q=80', // اتاق اختصاصی فیشیال VIP
+      'https://images.unsplash.com/photo-1607779097040-26e80aa78e66?auto=format&fit=crop&w=1000&q=80', // بار تخصصی مانیکور و پدیکور
+      'https://images.unsplash.com/photo-1519415510236-718bdfcd89c8?auto=format&fit=crop&w=1000&q=80', // لانژ انتظار و پذیرایی مهمانان
     ],
     services: [
       {
@@ -274,6 +278,7 @@ export const INITIAL_SALONS: Salon[] = [
         price: 3800000,
         description: 'صافی و احیای ۱۰۰٪ بدون فرمالدئید با روغن کندر و خاویار، مناسب موهای آسیب‌دیده',
         isMobileAvailable: true,
+        imageUrl: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=600&q=80',
       },
       {
         id: 'serv-102',
@@ -283,6 +288,7 @@ export const INITIAL_SALONS: Salon[] = [
         price: 2600000,
         description: 'پاکسازی چندمرحله‌ای، تخلیه کمدون با اولتراسونیک، تزریق سرم زعفران و ماسک طلا',
         isMobileAvailable: false,
+        imageUrl: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80',
       },
       {
         id: 'serv-103',
@@ -292,6 +298,7 @@ export const INITIAL_SALONS: Salon[] = [
         price: 1100000,
         description: 'فرم‌دهی طبیعی، مانیکور دقیق روسی با سرسوهان الماسه و لاک‌ژل شاین با ماندگاری بالا',
         isMobileAvailable: true,
+        imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=600&q=80',
       },
       {
         id: 'serv-104',
@@ -301,6 +308,7 @@ export const INITIAL_SALONS: Salon[] = [
         price: 1450000,
         description: 'تارهای فوق سبک بدون احساس سنگینی، چسب گیاهی ضدحساسیت و لیفت ملایم گوشه چشم',
         isMobileAvailable: false,
+        imageUrl: 'https://images.unsplash.com/photo-1583001809873-a128495da465?auto=format&fit=crop&w=600&q=80',
       },
     ],
     specialists: [
@@ -317,21 +325,35 @@ export const INITIAL_SALONS: Salon[] = [
         specialtyLine: 'skincare',
         isMobileSpecialist: false,
         phone: '۰۹۱۲۳۴۵۱۱۲۰',
-        bio: 'دارای مدرک بین‌المللی بیوتی تراپیست از آکادمی ژنو و مدرس فیشیال‌های جوانساز',
+        bio: 'دارای مدرک بین‌المللی بیوتی تراپیست از آکادمی ژنو و مدرس فیشیال‌های جوانساز با متدهای روز اروپا',
         portfolio: [
           {
             id: 'port-1',
             title: 'درمان لک و شفاف‌سازی پوست با عصاره زعفران',
             imageUrl: 'https://images.unsplash.com/photo-1512290900672-1f486a42a033?auto=format&fit=crop&w=600&q=80',
             category: 'فیشیال',
-            likesCount: 89,
+            likesCount: 148,
           },
           {
             id: 'port-2',
             title: 'هیدرودرمی و بستن منافذ باز چهره',
             imageUrl: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80',
             category: 'اسکین‌کر',
-            likesCount: 124,
+            likesCount: 194,
+          },
+          {
+            id: 'port-1-3',
+            title: 'پیلینگ کربن هالیوودی و روشن‌کنندگی عمقی',
+            imageUrl: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&w=600&q=80',
+            category: 'پاکسازی کلینیکال',
+            likesCount: 165,
+          },
+          {
+            id: 'port-1-4',
+            title: 'ماسک ورقه‌ای طلا ۲۴ عیار و لیفتینگ گردن',
+            imageUrl: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80',
+            category: 'جوانسازی',
+            likesCount: 220,
           },
         ],
       },
@@ -348,14 +370,66 @@ export const INITIAL_SALONS: Salon[] = [
         specialtyLine: 'hair',
         isMobileSpecialist: true,
         phone: '۰۹۱۲۴۵۶۷۷۸۸',
-        bio: 'متخصص ژورنال‌خوانی و تکنیک‌های آمبره روسی، بالیاژ خطی و بوتاکس مو',
+        bio: 'متخصص ژورنال‌خوانی و تکنیک‌های آمبره روسی، بالیاژ خطی و بوتاکس مو با تضمین سلامت ساقه',
         portfolio: [
           {
             id: 'port-3',
             title: 'بالیاژ شنی کاراملی با احیای بوتاکس مو',
             imageUrl: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80',
             category: 'رنگ و لایت',
-            likesCount: 210,
+            likesCount: 285,
+          },
+          {
+            id: 'port-2-2',
+            title: 'کراتین احیاکننده نانو ابریشمی موهای دکلره',
+            imageUrl: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=600&q=80',
+            category: 'احیا و تراپی',
+            likesCount: 215,
+          },
+          {
+            id: 'port-2-3',
+            title: 'شینیون اروپایی عروس با بافت هلندی',
+            imageUrl: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&w=600&q=80',
+            category: 'شینیون و استایل',
+            likesCount: 310,
+          },
+        ],
+      },
+      {
+        id: 'spec-nail-1',
+        salonId: 'salon-1',
+        name: 'سارا محمدی',
+        role: 'مستر آرتیست ناخن و طراحی دیزاین ژورنالی',
+        avatar: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=400&q=80',
+        verified: true,
+        rating: 4.95,
+        reviewsCount: 188,
+        experienceYears: 8,
+        specialtyLine: 'nail',
+        isMobileSpecialist: true,
+        phone: '۰۹۱۲۷۷۷۸۸۹۹',
+        bio: 'دارای سرتیفیکیت مانیکور روسی از مسکو، متخصص کاشت فیگور، ژلیش مغناطیسی و دیزاین مینیمال',
+        portfolio: [
+          {
+            id: 'port-n-1',
+            title: 'کاشت بیبی بومر با ژلیش کهکشانی',
+            imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=600&q=80',
+            category: 'کاشت ژل',
+            likesCount: 312,
+          },
+          {
+            id: 'port-n-2',
+            title: 'مانیکور کمبی روسی و لمینت استحکام ناخن',
+            imageUrl: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=600&q=80',
+            category: 'مانیکور روسی',
+            likesCount: 224,
+          },
+          {
+            id: 'port-n-3',
+            title: 'فرنچ کلاسیک گلد با پدیکور VIP اسپا',
+            imageUrl: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=600&q=80',
+            category: 'پدیکور و اسپا',
+            likesCount: 189,
           },
         ],
       },
@@ -371,7 +445,7 @@ export const INITIAL_SALONS: Salon[] = [
           { time: '۱۴:۰۰', booked: false, specialistId: 'spec-2' },
           { time: '۱۶:۰۰', booked: true, specialistId: 'spec-2' },
           { time: '۱۷:۳۰', booked: false, specialistId: 'spec-1' },
-          { time: '۱۹:۰۰', booked: false, specialistId: 'spec-2' },
+          { time: '۱۹:۰۰', booked: false, specialistId: 'spec-nail-1' },
         ],
       },
       {
@@ -382,7 +456,7 @@ export const INITIAL_SALONS: Salon[] = [
           { time: '۱۰:۳۰', booked: false, specialistId: 'spec-1' },
           { time: '۱۲:۰۰', booked: false, specialistId: 'spec-2' },
           { time: '۱۴:۳۰', booked: true, specialistId: 'spec-1' },
-          { time: '۱۶:۳۰', booked: false, specialistId: 'spec-2' },
+          { time: '۱۶:۳۰', booked: false, specialistId: 'spec-nail-1' },
           { time: '۱۸:۰۰', booked: false, specialistId: 'spec-1' },
         ],
       },
@@ -393,7 +467,7 @@ export const INITIAL_SALONS: Salon[] = [
         slots: [
           { time: '۱۱:۰۰', booked: false, specialistId: 'spec-1' },
           { time: '۱۳:۰۰', booked: true, specialistId: 'spec-2' },
-          { time: '۱۵:۳۰', booked: false, specialistId: 'spec-1' },
+          { time: '۱۵:۳۰', booked: false, specialistId: 'spec-nail-1' },
           { time: '۱۷:۳۰', booked: false, specialistId: 'spec-2' },
         ],
       },
@@ -423,9 +497,11 @@ export const INITIAL_SALONS: Salon[] = [
     status: 'active',
     isVip: false,
     displayPriority: 10,
-    coverImage: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1000&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1200&q=80',
     gallery: [
-      'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1000&q=80', // کلینیک و اتاق استریل پوست
+      'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1000&q=80', // اتاق لیزر و دستگاه‌های هایفو
+      'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1000&q=80', // فضای پذیرش و مشاوره تخصصی
     ],
     services: [
       {
@@ -436,6 +512,7 @@ export const INITIAL_SALONS: Salon[] = [
         price: 2900000,
         description: 'تحریک کلاژن‌سازی فیبروبلاست‌ها، رفع جای جوش و اسکار با دستگاه نیدلینگ پزشکی',
         isMobileAvailable: false,
+        imageUrl: 'https://images.unsplash.com/photo-1512290900672-1f486a42a033?auto=format&fit=crop&w=600&q=80',
       },
       {
         id: 'serv-202',
@@ -445,6 +522,7 @@ export const INITIAL_SALONS: Salon[] = [
         price: 1650000,
         description: 'تزریق گاز دی‌اکسید کربن پزشکی برای تحریک گردش خون و رفع تیرگی گودی زیر چشم',
         isMobileAvailable: false,
+        imageUrl: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80',
       },
     ],
     specialists: [
@@ -461,14 +539,21 @@ export const INITIAL_SALONS: Salon[] = [
         specialtyLine: 'skincare',
         isMobileSpecialist: false,
         phone: '۰۹۱۲۹۹۸۸۷۷۶',
-        bio: 'بیش از ۱۵ سال تجربه در جوان‌سازی بالینی و اصلاح مشکلات ساختاری پوست و لک‌های مقاوم',
+        bio: 'بیش از ۱۵ سال تجربه در جوان‌سازی بالینی، تزریق مزوژل‌های ساختاری و اصلاح لک‌های مقاوم پوستی',
         portfolio: [
           {
             id: 'port-4',
             title: 'درمان اسکار و جوانسازی گردن و دست‌ها',
             imageUrl: 'https://images.unsplash.com/photo-1512290900672-1f486a42a033?auto=format&fit=crop&w=600&q=80',
             category: 'مزوتراپی',
-            likesCount: 95,
+            likesCount: 135,
+          },
+          {
+            id: 'port-4-2',
+            title: 'لیفتینگ غیرجراحی صورت با آر‌اف فرکشنال',
+            imageUrl: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80',
+            category: 'لیفت کلینیکال',
+            likesCount: 178,
           },
         ],
       },
@@ -523,9 +608,11 @@ export const INITIAL_SALONS: Salon[] = [
     displayPriority: 2,
     vipBadgeLabel: 'همکار طلایی بویا',
     vipExpiryDate: '۱۴۰۴/۰۱/۱۵',
-    coverImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
     gallery: [
-      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80', // تالار ماساژ و حمام سنتی
+      'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=1000&q=80', // حوضچه اسپا و تخت‌های سنگ داغ
+      'https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=1000&q=80', // فضای ریلکسیشن و چای سنتی
     ],
     services: [
       {
@@ -536,6 +623,7 @@ export const INITIAL_SALONS: Salon[] = [
         price: 2800000,
         description: 'حمام بخار معطر، کیسه‌کشی ملایم سنتی با صابون مراغه، لیف کف گل سرخ قمصر و ماساژ سر',
         isMobileAvailable: false,
+        imageUrl: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
       },
       {
         id: 'serv-302',
@@ -545,6 +633,7 @@ export const INITIAL_SALONS: Salon[] = [
         price: 2300000,
         description: 'ماساژ عضلانی کل بدن با سنگ‌های آتشفشانی داغ و روغن خالص بهارنارنج شیراز',
         isMobileAvailable: true,
+        imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=600&q=80',
       },
     ],
     specialists: [
@@ -568,7 +657,14 @@ export const INITIAL_SALONS: Salon[] = [
             title: 'فضای اسپا و تراپی سنگ داغ اختصاصی',
             imageUrl: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80',
             category: 'اسپا و ماساژ',
-            likesCount: 180,
+            likesCount: 230,
+          },
+          {
+            id: 'port-5-2',
+            title: 'ماساژ آروماتراپی با اسانس طبیعی بهارنارنج',
+            imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=600&q=80',
+            category: 'آروماتراپی',
+            likesCount: 195,
           },
         ],
       },
@@ -610,9 +706,10 @@ export const INITIAL_SALONS: Salon[] = [
     status: 'pending',
     isVip: false,
     displayPriority: 20,
-    coverImage: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1000&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80',
     gallery: [
-      'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1000&q=80',
+      'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1000&q=80', // عمارت عروس و اتاق میکاپ
+      'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1000&q=80', // لاین شینیون و استایل
     ],
     services: [
       {
@@ -623,6 +720,7 @@ export const INITIAL_SALONS: Salon[] = [
         price: 2200000,
         description: 'شینیون‌های خطی ماندگار با متریال ضد رطوبت و نصب تور و تاج اختصاصی',
         isMobileAvailable: true,
+        imageUrl: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&w=600&q=80',
       },
     ],
     specialists: [
@@ -639,8 +737,23 @@ export const INITIAL_SALONS: Salon[] = [
         specialtyLine: 'hair',
         isMobileSpecialist: true,
         phone: '۰۹۱۳۷۷۷۸۸۹۹',
-        bio: 'مدرس تخصصی شینیون و استایل مو در آکادمی‌های معتبر اصفهان',
-        portfolio: [],
+        bio: 'مدرس تخصصی شینیون و استایل مو در آکادمی‌های معتبر اصفهان، برنده مسابقات استایلینگ ۱۳۹۹',
+        portfolio: [
+          {
+            id: 'port-501',
+            title: 'شینیون مدرن با تکنیک اس براش',
+            imageUrl: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&w=600&q=80',
+            category: 'شینیون عروس',
+            likesCount: 160,
+          },
+          {
+            id: 'port-502',
+            title: 'بافت مکزیکی و بافت فرانسوی با موی اضافه',
+            imageUrl: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80',
+            category: 'بافت تخصصی',
+            likesCount: 112,
+          },
+        ],
       },
     ],
     availableSlots: [

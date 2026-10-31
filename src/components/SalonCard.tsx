@@ -194,7 +194,15 @@ export const SalonCard: React.FC<SalonCardProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <BeautyActivityIcon activityId={serv.serviceLineId} size="sm" isActive={isSelected} />
+                    {serv.imageUrl ? (
+                      <img
+                        src={serv.imageUrl}
+                        alt={serv.name}
+                        className="w-10 h-10 rounded-xl object-cover border border-[#E7E2DA] shrink-0"
+                      />
+                    ) : (
+                      <BeautyActivityIcon activityId={serv.serviceLineId} size="sm" isActive={isSelected} />
+                    )}
                     <div className="min-w-0">
                       <div className="text-xs font-bold text-[#1C1C1C] truncate">
                         {serv.name}

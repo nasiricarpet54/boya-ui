@@ -448,6 +448,7 @@ export default function App() {
                   onSwitchToCustomerApp={() => setAppMode('customer')}
                   bookings={bookings}
                   onUpdateBookingStatus={handleUpdateBookingStatus}
+                  salons={salons}
                 />
               ) : (
                 /* Customer App */
