@@ -78,10 +78,10 @@ const Root = () => {
       </div>
       
       <BookingModal isOpen={isBookingModalOpen} onClose={closeBookingModal} bookingData={bookingData} onConfirmBooking={handleConfirmBooking} />
-      <SpecialistPortfolioModal isOpen={isPortfolioModalOpen} onClose={closePortfolioModal} specialist={portfolioSpecialist} salon={portfolioSalon} onBookWithSpecialist={(spec, sal) => {
-          const serv = sal.services[0];
-          const date = sal.availableSlots[0].date;
-          const time = sal.availableSlots[0].slots.find(s => !s.booked)?.time || '۱۱:۰۰';
+      <SpecialistPortfolioModal isOpen={isPortfolioModalOpen} onClose={closePortfolioModal} specialist={portfolioSpecialist} salon={portfolioSalon} onBookWithSpecialist={(spec, sal, service) => {
+          const serv = service || sal.services.find(s => s.serviceLineId === spec.specialtyLine) || sal.services[0];
+          const date = sal.availableSlots?.[0]?.date || 'شنبه ۵ آبان';
+          const time = sal.availableSlots?.[0]?.slots.find(s => !s.booked)?.time || '۱۱:۰۰';
           openBookingModal(sal, serv, spec, date, time);
       }} />
       <LocationSelectorModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} locationState={locationState.customerLocation} onUpdateLocation={locationState.setCustomerLocation} selectedProvince={locationState.selectedProvince} onSelectProvince={locationState.setSelectedProvince} selectedCity={locationState.selectedCity} onSelectCity={locationState.setSelectedCity} selectedDistrict={locationState.selectedDistrict} onSelectDistrict={locationState.setSelectedDistrict} maxDistanceKm={locationState.maxDistanceKm} onSelectMaxDistance={locationState.setMaxDistanceKm} sortByDistance={locationState.sortByDistance} onToggleSortByDistance={locationState.setSortByDistance} />
