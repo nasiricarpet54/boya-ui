@@ -4,12 +4,16 @@ import { useNavigate } from '@tanstack/react-router';
 import { SupportTicket, INITIAL_TICKETS } from '../../../shared/data/marketplaceData';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { useUIStore } from '../../../shared/stores/uiStore';
+import { useAuthStore } from '../../../shared/stores/authStore';
+import { LogOut } from 'lucide-react';
 
 export const ProfileSupportScreen: React.FC = () => {
   const navigate = useNavigate();
   const { setAppMode, setShowSplashScreen, setSplashAppName } = useUIStore();
+  const { logout, user } = useAuthStore();
   
   const [activeTab, setActiveTab] = useState<'profile' | 'tickets' | 'addresses' | 'referral'>('tickets');
+  // ... rest of state
   const [tickets, setTickets] = useState<SupportTicket[]>(INITIAL_TICKETS);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [newReplyText, setNewReplyText] = useState<string>('');
@@ -101,10 +105,23 @@ export const ProfileSupportScreen: React.FC = () => {
             <span className="text-xs text-[#6C6C6C] block font-mono">{toPersianDigits('۰۹۱۲۳۴۵۶۷۸۹')}</span>
           </div>
         </div>
-        <button onClick={handleSwitchToSalonPanel} className="flex flex-col items-center p-2 rounded-2xl bg-[#E8F0EF] text-[#173B3F] hover:bg-[#173B3F] hover:text-white transition-all">
-          <Store className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] font-bold">پنل سالن</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleSwitchToSalonPanel} 
+            className="flex flex-col items-center p-2 rounded-2xl bg-[#E8F0EF] text-[#173B3F] hover:bg-[#173B3F] hover:text-white transition-all min-w-[70px]"
+          >
+            <Store className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] font-bold">پنل سالن</span>
+          </button>
+          
+          <button 
+            onClick={() => logout()} 
+            className="flex flex-col items-center p-2 rounded-2xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all min-w-[70px] border border-red-100"
+          >
+            <LogOut className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] font-bold">خروج</span>
+          </button>
+        </div>
       </div>
 
       <div className="flex p-1 bg-white rounded-2xl border border-[#E7E2DA] shadow-sm">

@@ -50,6 +50,7 @@ import {
 import { formatPrice, toPersianDigits } from '../../../shared/utils/persianUtils';
 import { BeautyActivityIcon } from '../../../shared/components/ui/BeautyActivityIcon';
 import { SpecialistFinancialsView } from '../../../shared/components/ui/SpecialistFinancialsView';
+import { SafeHtml } from '../../../shared/components/ui/SafeHtml';
 
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useDataStore } from '../../../shared/stores/dataStore';
@@ -537,9 +538,10 @@ export const SalonAdminDashboard: React.FC = () => {
                     </span>
                   </div>
 
-                  <p className="text-xs text-[#E8F0EF] leading-relaxed max-w-xl">
-                    {activeSpecialistView.bio}
-                  </p>
+                  <SafeHtml 
+                    html={activeSpecialistView.bio} 
+                    className="text-xs text-[#E8F0EF] leading-relaxed max-w-xl"
+                  />
 
                   <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
                     <span className="flex items-center gap-1 text-[#C99558]">
@@ -760,9 +762,10 @@ export const SalonAdminDashboard: React.FC = () => {
                       )}
 
                       {bkg.notes && (
-                        <p className="text-[11px] text-[#6C6C6C] italic bg-white p-2 rounded-xl border border-[#E7E2DA]">
-                          توضیحات و ترجیحات مشتری: {bkg.notes}
-                        </p>
+                        <div className="text-[11px] text-[#6C6C6C] italic bg-white p-2 rounded-xl border border-[#E7E2DA] flex gap-1">
+                          <span>توضیحات و ترجیحات مشتری:</span>
+                          <SafeHtml html={bkg.notes} tag="span" />
+                        </div>
                       )}
 
                       {/* Specialist Action Buttons: STRICT REQUIREMENT #8 (Confirm or Reject) */}

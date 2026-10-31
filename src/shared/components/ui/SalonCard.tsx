@@ -5,6 +5,7 @@ import { formatPrice, toPersianDigits } from '../../utils/persianUtils';
 import { formatDistancePersian } from '../../utils/geoUtils';
 import { BeautyActivityIcon } from './BeautyActivityIcon';
 import { useModalStore } from '../../stores/modalStore';
+import { SafeHtml } from './SafeHtml';
 
 interface SalonCardProps {
   salon: Salon;
@@ -231,9 +232,10 @@ export const SalonCard: React.FC<SalonCardProps> = ({
                       <div className="text-xs font-bold text-[#1C1C1C] truncate">
                         {serv.name}
                       </div>
-                      <div className="text-[11px] text-[#6C6C6C] truncate">
-                        {serv.description}
-                      </div>
+                      <SafeHtml 
+                        html={serv.description} 
+                        className="text-[11px] text-[#6C6C6C] truncate" 
+                      />
                     </div>
                   </div>
 

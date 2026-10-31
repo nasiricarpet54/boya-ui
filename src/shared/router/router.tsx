@@ -11,6 +11,8 @@ import { useDataStore } from '../stores/dataStore';
 import { useModalStore } from '../stores/modalStore';
 import { useLocationStore } from '../stores/locationStore';
 import { QuickServicesModal } from '../components/modals/QuickServicesModal';
+import { ProtectedRoute } from '../components/guards/ProtectedRoute';
+import { AuthModal } from '../components/modals/AuthModal';
 
 // Root layout
 const Root = () => {
@@ -24,6 +26,7 @@ const Root = () => {
     isBookingModalOpen, closeBookingModal, bookingData,
     isPortfolioModalOpen, closePortfolioModal, portfolioSpecialist, portfolioSalon,
     isQuickViewModalOpen, closeQuickViewModal, quickViewSalon,
+    isAuthModalOpen, closeAuthModal,
     openBookingModal
   } = useModalStore();
   
@@ -80,6 +83,7 @@ const Root = () => {
             openBookingModal(quickViewSalon, service, quickViewSalon.specialists[0], quickViewSalon.availableSlots[0].date, quickViewSalon.availableSlots[0].slots.find(s => !s.booked)?.time || '۱۱:۰۰');
           }
       }} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
       <BoyaSplashScreen isOpen={showSplashScreen} appName={splashAppName} onFinish={() => setShowSplashScreen(false)} />
     </div>
   );
@@ -97,11 +101,11 @@ const SalonAdminDashboard = lazy(() => import('../../features/salon-admin/compon
 
 const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><HomeScreen /></Suspense> });
 const salonsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salons', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><SalonsScreen /></Suspense> });
-const bookingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/bookings', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><BookingsScreen /></Suspense> });
-const savedRoute = createRoute({ getParentRoute: () => rootRoute, path: '/saved', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><SavedScreen /></Suspense> });
-const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProfileSupportScreen /></Suspense> });
-const salonAdminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><SalonAdminDashboard /></Suspense> });
-const adminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><AdminPanel /></Suspense> });
+const bookingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/bookings', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute><BookingsScreen /></ProtectedRoute></Suspense> });
+const savedRoute = createRoute({ getParentRoute: () => rootRoute, path: '/saved', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute><SavedScreen /></ProtectedRoute></Suspense> });
+const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute><ProfileSupportScreen /></ProtectedRoute></Suspense> });
+const salonAdminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['salon_admin', 'admin']}><SalonAdminDashboard /></ProtectedRoute></Suspense> });
+const adminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['admin']}><AdminPanel /></ProtectedRoute></Suspense> });
 
 const routeTree = rootRoute.addChildren([indexRoute, salonsRoute, bookingsRoute, savedRoute, profileRoute, salonAdminRoute, adminRoute]);
 export const router = createRouter({ routeTree });

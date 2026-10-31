@@ -4,37 +4,10 @@ import { Salon, SalonService, Specialist } from '../../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../../utils/persianUtils';
 import { BeautyActivityIcon } from '../../components/ui/BeautyActivityIcon';
 import { BoyaLogo } from '../../components/ui/BoyaLogo';
-
-interface BookingModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  bookingData: {
-    salon: Salon;
-    service: SalonService;
-    specialist: Specialist;
-    date: string;
-    time: string;
-  } | null;
-  onConfirmBooking: (appointment: {
-    salonId: string;
-    salonName: string;
-    salonAddress: string;
-    serviceId: string;
-    serviceName: string;
-    serviceLineId: string;
-    specialistId: string;
-    specialistName: string;
-    date: string;
-    time: string;
-    durationMinutes: number;
-    price: number;
-    customerName: string;
-    customerPhone: string;
-    customerAddress?: string;
-    notes?: string;
-    isMobileBooking: boolean;
-  }) => void;
-}
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { bookingSchema } from '../../utils/validation';
+import { useAuthStore } from '../../stores/authStore';
 
 export const BookingModal: React.FC<BookingModalProps> = ({
   isOpen,
@@ -42,42 +15,45 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   bookingData,
   onConfirmBooking,
 }) => {
-  if (!isOpen || !bookingData) return null;
-
-  const { salon, service, specialist, date, time } = bookingData;
-  const [userName, setUserName] = useState('شادی بهرامی');
-  const [userPhone, setUserPhone] = useState('۰۹۱۲۳۴۵۶۷۸۹');
-  const [isMobileService, setIsMobileService] = useState(false);
-  const [userAddress, setUserAddress] = useState('تهران، زعفرانیه، خیابان آصف، کوچه شقایق، پلاک ۴');
-  const [userNotes, setUserNotes] = useState('پوست حساس - ترجیح مواد ملایم');
+  const { user } = useAuthStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [generatedTrackingCode, setGeneratedTrackingCode] = useState('');
+  const [isMobileService, setIsMobileService] = useState(false);
 
-  const handleConfirm = (e: React.FormEvent) => {
-    e.preventDefault();
+  const { register, handleSubmit, formState: { errors }, watch } = useForm({
+    resolver: zodResolver(bookingSchema),
+    defaultValues: {
+      salonId: bookingData?.salon.id || '',
+      serviceId: bookingData?.service.id || '',
+      specialistId: bookingData?.specialist.id || '',
+      date: bookingData?.date || '',
+      time: bookingData?.time || '',
+      customerName: user?.name || '',
+      customerPhone: user?.phone || '',
+      notes: '',
+    }
+  });
+
+  if (!isOpen || !bookingData) return null;
+
+  const { salon, service, specialist, date, time } = bookingData;
+
+  const handleConfirm = (data: any) => {
     setIsProcessing(true);
     const code = `BY-${Math.floor(100000 + Math.random() * 900000)}`;
     setGeneratedTrackingCode(code);
 
     setTimeout(() => {
       onConfirmBooking({
-        salonId: salon.id,
+        ...data,
         salonName: salon.name,
         salonAddress: salon.address,
-        serviceId: service.id,
         serviceName: service.name,
         serviceLineId: service.serviceLineId,
-        specialistId: specialist.id,
         specialistName: specialist.name,
-        date,
-        time,
         durationMinutes: service.durationMinutes,
         price: service.price,
-        customerName: userName,
-        customerPhone: userPhone,
-        customerAddress: isMobileService ? userAddress : undefined,
-        notes: userNotes,
         isMobileBooking: isMobileService,
       });
       setIsProcessing(false);
@@ -180,7 +156,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
             </div>
           ) : (
-            <form onSubmit={handleConfirm} className="space-y-4">
+            <form onSubmit={handleSubmit(handleConfirm)} className="space-y-4">
               {/* Service & Salon banner with Activity Icon */}
               <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E7E2DA] space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -260,12 +236,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     نام و نام خانوادگی رزروکننده:
                   </label>
                   <input
+                    {...register('customerName')}
                     type="text"
-                    required
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
                     className="w-full h-11 px-3 rounded-xl border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] focus:outline-none"
                   />
+                  {errors.customerName && <p className="text-red-500 text-[10px] pr-2 mt-1">{errors.customerName.message}</p>}
                 </div>
 
                 <div>
@@ -273,12 +248,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     شماره همراه (جهت دریافت پیامک تایید و رمز یکبار مصرف OTP):
                   </label>
                   <input
+                    {...register('customerPhone')}
                     type="text"
-                    required
-                    value={userPhone}
-                    onChange={(e) => setUserPhone(e.target.value)}
                     className="w-full h-11 px-3 rounded-xl border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] focus:outline-none"
+                    dir="ltr"
                   />
+                  {errors.customerPhone && <p className="text-red-500 text-[10px] pr-2 mt-1">{errors.customerPhone.message}</p>}
                 </div>
 
                 {isMobileService && (
@@ -287,13 +262,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       آدرس دقیق محل اعزام متخصص:
                     </label>
                     <textarea
+                      {...register('customerAddress')}
                       rows={2}
-                      required
-                      value={userAddress}
-                      onChange={(e) => setUserAddress(e.target.value)}
                       placeholder="تهران، خیابان..."
                       className="w-full p-2.5 rounded-xl border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] focus:outline-none"
                     />
+                    {errors.customerAddress && <p className="text-red-500 text-[10px] pr-2 mt-1">{errors.customerAddress.message}</p>}
                   </div>
                 )}
 
@@ -302,9 +276,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     توضیحات و نیازمندی‌های خاص (اختیاری):
                   </label>
                   <textarea
+                    {...register('notes')}
                     rows={2}
-                    value={userNotes}
-                    onChange={(e) => setUserNotes(e.target.value)}
                     placeholder="مثلا حساسیت به مواد، رنگ موی مدنظر یا..."
                     className="w-full p-2.5 rounded-xl border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] focus:outline-none"
                   />

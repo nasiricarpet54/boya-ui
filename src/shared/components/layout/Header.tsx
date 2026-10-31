@@ -6,6 +6,7 @@ import { BoyaLogo } from '../ui/BoyaLogo';
 import { useUIStore, AppExperienceMode } from '../../stores/uiStore';
 import { useLocationStore } from '../../stores/locationStore';
 import { useDataStore } from '../../stores/dataStore';
+import { RoleGuard } from '../guards/ProtectedRoute';
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -82,22 +83,24 @@ export const Header: React.FC = () => {
             <span>۲. پنل سالندار و متخصص</span>
           </button>
 
-          <button
-            onClick={() => handleSwitchAppMode('admin_panel')}
-            className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${
-              appMode === 'admin_panel'
-                ? 'bg-[#D9A2B0] text-[#173B3F] shadow-sm font-bold'
-                : 'text-[#E8F0EF] hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-[#C99558]" />
-            <span>۳. سامانه ادمین کل</span>
-            {pendingApprovalsCount > 0 && (
-              <span className="bg-[#C99558] text-[#173B3F] text-[9px] px-1.5 py-0.2 rounded-full font-bold">
-                {toPersianDigits(pendingApprovalsCount)}
-              </span>
-            )}
-          </button>
+          <RoleGuard roles={['admin']}>
+            <button
+              onClick={() => handleSwitchAppMode('admin_panel')}
+              className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${
+                appMode === 'admin_panel'
+                  ? 'bg-[#D9A2B0] text-[#173B3F] shadow-sm font-bold'
+                  : 'text-[#E8F0EF] hover:text-white'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-[#C99558]" />
+              <span>۳. سامانه ادمین کل</span>
+              {pendingApprovalsCount > 0 && (
+                <span className="bg-[#C99558] text-[#173B3F] text-[9px] px-1.5 py-0.2 rounded-full font-bold">
+                  {toPersianDigits(pendingApprovalsCount)}
+                </span>
+              )}
+            </button>
+          </RoleGuard>
         </div>
       </div>
 

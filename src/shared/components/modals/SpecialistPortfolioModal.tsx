@@ -2,6 +2,7 @@ import React from 'react';
 import { X, CheckCircle2, Star, Calendar, Car, Sparkles, Heart } from 'lucide-react';
 import { Specialist, Salon } from '../../data/marketplaceData';
 import { toPersianDigits } from '../../utils/persianUtils';
+import { SafeHtml } from '../ui/SafeHtml';
 
 interface SpecialistPortfolioModalProps {
   specialist: Specialist | null;
@@ -90,9 +91,11 @@ export const SpecialistPortfolioModal: React.FC<SpecialistPortfolioModalProps> =
             <span className="text-xs font-bold text-[#173B3F] block mb-1">
               درباره متخصص و تکنیک‌های کاری:
             </span>
-            <p className="text-xs text-[#1C1C1C] leading-relaxed text-justify">
-              {specialist.bio}
-            </p>
+            <SafeHtml 
+              html={specialist.bio} 
+              className="text-xs text-[#1C1C1C] leading-relaxed text-justify"
+              tag="p"
+            />
           </div>
 
           {/* Portfolio Gallery */}

@@ -18,6 +18,8 @@ interface ModalState {
   quickViewSalon: Salon | null;
   isQuickViewModalOpen: boolean;
 
+  isAuthModalOpen: boolean;
+
   openBookingModal: (salon: Salon, service: SalonService, specialist: Specialist, date: string, time: string) => void;
   closeBookingModal: () => void;
   
@@ -26,6 +28,9 @@ interface ModalState {
 
   openQuickViewModal: (salon: Salon) => void;
   closeQuickViewModal: () => void;
+
+  openAuthModal: () => void;
+  closeAuthModal: () => void;
 }
 
 export const useModalStore = create<ModalState>((set) => ({
@@ -38,6 +43,8 @@ export const useModalStore = create<ModalState>((set) => ({
 
   quickViewSalon: null,
   isQuickViewModalOpen: false,
+
+  isAuthModalOpen: false,
 
   openBookingModal: (salon, service, specialist, date, time) => set({
     bookingData: { salon, service, specialist, date, time },
@@ -57,4 +64,7 @@ export const useModalStore = create<ModalState>((set) => ({
     isQuickViewModalOpen: true,
   }),
   closeQuickViewModal: () => set({ isQuickViewModalOpen: false, quickViewSalon: null }),
+
+  openAuthModal: () => set({ isAuthModalOpen: true }),
+  closeAuthModal: () => set({ isAuthModalOpen: false }),
 }));

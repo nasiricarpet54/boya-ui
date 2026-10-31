@@ -4,8 +4,9 @@
  */
 
 import { Salon, SalonService, Specialist } from '../data/marketplaceData';
+import api from './apiClient';
 
-const BASE_URL = 'https://boya.bcshopir.ir/api/v1';
+const BASE_URL = '/api/v1';
 
 export interface LiveHealthStatus {
   status: string;
@@ -66,23 +67,16 @@ class BoyaApiService {
   async checkHealth(): Promise<LiveHealthStatus> {
     const start = performance.now();
     try {
-      const response = await fetch(`${this.baseUrl}/health`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      });
+      const response = await api.get(`${this.baseUrl}/health`);
       const end = performance.now();
       const latencyMs = Math.round(end - start);
 
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          status: data.status || 'ok',
-          timestamp: data.timestamp || new Date().toISOString(),
-          latencyMs,
-          isConnected: true,
-        };
-      }
-      return { status: 'error', timestamp: new Date().toISOString(), latencyMs, isConnected: false };
+      return {
+        status: response.data.status || 'ok',
+        timestamp: response.data.timestamp || new Date().toISOString(),
+        latencyMs,
+        isConnected: true,
+      };
     } catch {
       return { status: 'offline', timestamp: new Date().toISOString(), latencyMs: 0, isConnected: false };
     }
@@ -91,13 +85,8 @@ class BoyaApiService {
   // Fetch live salons from PostgreSQL database
   async fetchLiveSalons(): Promise<LiveBackendSalon[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/salons`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      });
-      if (!response.ok) return [];
-      const json = await response.json();
-      return json.data || [];
+      const response = await api.get(`${this.baseUrl}/salons`);
+      return response.data.data || [];
     } catch {
       return [];
     }
@@ -106,12 +95,8 @@ class BoyaApiService {
   // Fetch single salon detail from PostgreSQL database
   async fetchSalonDetail(salonId: string): Promise<LiveSalonDetail | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/salons/${salonId}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      });
-      if (!response.ok) return null;
-      return await response.json();
+      const response = await api.get(`${this.baseUrl}/salons/${salonId}`);
+      return response.data;
     } catch {
       return null;
     }
@@ -120,18 +105,16 @@ class BoyaApiService {
   // Send real SMS OTP via Melipayamak API through the backend
   async sendOtp(phoneNumber: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/otp/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber }),
-      });
-      const data = await response.json();
+      const response = await api.post(`${this.baseUrl}/auth/otp/send`, { phoneNumber });
       return {
-        success: response.ok,
-        message: data.message || (response.ok ? 'کد تأیید ارسال شد.' : 'خطا در ارسال'),
+        success: true,
+        message: response.data.message || 'کد تأیید ارسال شد.',
       };
-    } catch {
-      return { success: false, message: 'خطا در ارتباط با سرور پیامک' };
+    } catch (error: any) {
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'خطا در ارتباط با سرور پیامک' 
+      };
     }
   }
 
