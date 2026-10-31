@@ -1,5 +1,5 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router';
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BoyaSplashScreen } from '../components/ui/BoyaSplashScreen';
 import { Header } from '../components/layout/Header';
 import { BottomNav } from '../components/layout/BottomNav';
@@ -7,7 +7,6 @@ import { BookingModal } from '../components/modals/BookingModal';
 import { SpecialistPortfolioModal } from '../components/modals/SpecialistPortfolioModal';
 import { LocationSelectorModal } from '../components/modals/LocationSelectorModal';
 import { useUIStore } from '../stores/uiStore';
-import { useDataStore } from '../stores/dataStore';
 import { useModalStore } from '../stores/modalStore';
 import { useLocationStore } from '../stores/locationStore';
 import { QuickServicesModal } from '../components/modals/QuickServicesModal';

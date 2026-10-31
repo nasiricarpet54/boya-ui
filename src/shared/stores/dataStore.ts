@@ -49,8 +49,13 @@ export interface DataState {
   setLatestBookingAlert: (alert: any) => void;
   clearLatestBookingAlert: () => void;
   setSalons: (salons: any[]) => void;
+  addSalon: (salon: any) => void;
   updateSalon: (id: string | number, patch: any) => void;
+  deleteSalon: (id: string | number) => void;
   setUsers: (users: any[]) => void;
+  addUser: (user: any) => void;
+  updateUser: (id: string | number, patch: any) => void;
+  deleteUser: (id: string | number) => void;
   setTickets: (tickets: any[]) => void;
   updateBookingStatus: (id: string | number, status: string) => void;
   addNotification: (n: PlatformNotification) => void;
@@ -95,21 +100,6 @@ const DEFAULT_NOTIFICATIONS: PlatformNotification[] = [
     clicksCount: 112,
     smsSentCount: 58,
   },
-  {
-    id: 'notif-3',
-    title: 'اطلاعیه نگهداری زیرساخت دیتابیس ابری',
-    content: 'سامانه در تاریخ ۱۵ آبان از ساعت ۰۳:۰۰ الی ۰۴:۰۰ بامداد به مدت ۶۰ دقیقه جهت ارتقای سرورها در دسترس نخواهد بود.',
-    type: 'alert',
-    targetAudience: 'all',
-    channel: 'both',
-    badgeText: 'هشدار مهم',
-    isActive: false,
-    createdAt: '۱۴۰۳/۰۸/۰۵',
-    expiresAt: '۱۴۰۳/۰۸/۱۶',
-    viewsCount: 890,
-    clicksCount: 64,
-    smsSentCount: 320,
-  },
 ];
 
 const DEFAULT_ADMIN_PROFILE: AdminProfileData = {
@@ -144,10 +134,21 @@ export const useDataStore = create<DataState>()(
       setLatestBookingAlert: (latestBookingAlert) => set({ latestBookingAlert }),
       clearLatestBookingAlert: () => set({ latestBookingAlert: null }),
       setSalons: (salons) => set({ salons }),
+      addSalon: (salon) => set((state) => ({ salons: [salon, ...state.salons] })),
       updateSalon: (id, patch) => set((state) => ({
         salons: state.salons.map((s) => (s.id === id ? { ...s, ...patch } : s)),
       })),
+      deleteSalon: (id) => set((state) => ({
+        salons: state.salons.filter((s) => s.id !== id),
+      })),
       setUsers: (users) => set({ users }),
+      addUser: (user) => set((state) => ({ users: [user, ...state.users] })),
+      updateUser: (id, patch) => set((state) => ({
+        users: state.users.map((u) => (u.id === id ? { ...u, ...patch } : u)),
+      })),
+      deleteUser: (id) => set((state) => ({
+        users: state.users.filter((u) => u.id !== id),
+      })),
       setTickets: (tickets) => set({ tickets }),
       updateBookingStatus: (id, status) => set((state) => ({
         bookings: state.bookings.map((b) => (b.id === id ? { ...b, status } : b)),

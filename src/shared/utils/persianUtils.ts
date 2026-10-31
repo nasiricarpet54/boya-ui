@@ -51,7 +51,7 @@ export function formatJalaliDate(date: Date | string = new Date(), options?: Int
   try {
     const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', defaultOptions);
     return formatter.format(d);
-  } catch (e) {
+  } catch {
     return d.toLocaleDateString('fa-IR');
   }
 }
@@ -71,7 +71,7 @@ export function getTehranTime(date: Date | string = new Date()): string {
       hour12: false,
     });
     return formatter.format(d);
-  } catch (e) {
+  } catch {
     return '۱۲:۰۰';
   }
 }

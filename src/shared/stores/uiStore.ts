@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { CustomerLocationState } from '../utils/geoUtils';
 
 export type NavTab = 'home' | 'salons' | 'bookings' | 'saved' | 'profile';
 
