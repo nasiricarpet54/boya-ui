@@ -35,7 +35,8 @@ import {
   Save,
   ShieldAlert,
   Check,
-  Ban
+  Ban,
+  BarChart3
 } from 'lucide-react';
 import {
   SALONS,
@@ -48,6 +49,7 @@ import {
 } from '../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../utils/persianUtils';
 import { BeautyActivityIcon } from './BeautyActivityIcon';
+import { SpecialistFinancialsView } from './SpecialistFinancialsView';
 
 interface SalonAdminDashboardProps {
   onSwitchToCustomerApp: () => void;
@@ -89,7 +91,7 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
 
   // Specialist panel tab navigation:
   // Strictly separated tabs per user requirements
-  const [specialistTab, setSpecialistTab] = useState<'profile' | 'bookings' | 'services' | 'schedule' | 'portfolio' | 'salon_info'>('bookings');
+  const [specialistTab, setSpecialistTab] = useState<'profile' | 'bookings' | 'services' | 'schedule' | 'portfolio' | 'salon_info' | 'financials'>('bookings');
 
   // Lightbox Modal state for full-screen inspection
   const [lightboxImage, setLightboxImage] = useState<{ url: string; title: string; category?: string; author?: string } | null>(null);
@@ -628,6 +630,17 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
             >
               <Camera className="w-3.5 h-3.5" />
               <span>نمونه‌کارهای من ({toPersianDigits(activeSpecialistView.portfolio.length)})</span>
+            </button>
+            <button
+              onClick={() => setSpecialistTab('financials')}
+              className={`flex-1 min-w-[125px] py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                specialistTab === 'financials'
+                  ? 'bg-[#173B3F] text-white shadow-xs'
+                  : 'text-[#6C6C6C] hover:text-[#173B3F]'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-[#D9A2B0]" />
+              <span>درآمد و عملکرد مالی</span>
             </button>
             <button
               onClick={() => setSpecialistTab('salon_info')}
@@ -1452,6 +1465,15 @@ export const SalonAdminDashboard: React.FC<SalonAdminDashboardProps> = ({
                 </div>
               </div>
             </div>
+          )}
+
+          {/* SPECIALIST TAB 7: MONTHLY REVENUE & RECHARTS FINANCIAL PERFORMANCE */}
+          {specialistTab === 'financials' && (
+            <SpecialistFinancialsView
+              specialist={activeSpecialistView}
+              bookings={bookings}
+              salonName={currentSalon.name}
+            />
           )}
 
           {/* NOTE FOR REQUIREMENT #7:
