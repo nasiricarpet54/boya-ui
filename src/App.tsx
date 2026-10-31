@@ -4,21 +4,21 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Header, AppExperienceMode } from './components/Header';
-import { BottomNav, NavTab } from './components/BottomNav';
-import { HomeScreen } from './components/HomeScreen';
-import { SalonsScreen } from './components/SalonsScreen';
-import { BookingsScreen } from './components/BookingsScreen';
-import { SavedScreen } from './components/SavedScreen';
-import { ProfileSupportScreen } from './components/ProfileSupportScreen';
-import { SalonAdminDashboard } from './components/SalonAdminDashboard';
-import { BookingModal } from './components/BookingModal';
-import { SpecialistPortfolioModal } from './components/SpecialistPortfolioModal';
-import { LocationSelectorModal } from './components/LocationSelectorModal';
-import { BoyaSplashScreen } from './components/BoyaSplashScreen';
-import { AdminPanel } from './components/admin/AdminPanel';
-import { boyaApi } from './services/boyaApi';
-import { CustomerLocationState } from './utils/geoUtils';
+import { Header, AppExperienceMode } from './shared/components/layout/Header';
+import { BottomNav, NavTab } from './shared/components/layout/BottomNav';
+import { HomeScreen } from './features/home/components/HomeScreen';
+import { SalonsScreen } from './features/salons/components/SalonsScreen';
+import { BookingsScreen } from './features/booking/components/BookingsScreen';
+import { SavedScreen } from './features/saved/components/SavedScreen';
+import { ProfileSupportScreen } from './features/profile/components/ProfileSupportScreen';
+import { SalonAdminDashboard } from './features/salon-admin/components/SalonAdminDashboard';
+import { BookingModal } from './features/booking/components/BookingModal';
+import { SpecialistPortfolioModal } from './features/specialist/components/SpecialistPortfolioModal';
+import { LocationSelectorModal } from './features/location/components/LocationSelectorModal';
+import { BoyaSplashScreen } from './shared/components/ui/BoyaSplashScreen';
+import { AdminPanel } from './features/admin/components/AdminPanel';
+import { boyaApi } from './shared/api/boyaApi';
+import { CustomerLocationState } from './shared/utils/geoUtils';
 import {
   INITIAL_SALONS,
   Salon,
@@ -32,7 +32,7 @@ import {
   INITIAL_TICKETS,
   AuditLogItem,
   INITIAL_AUDIT_LOGS,
-} from './data/marketplaceData';
+} from './shared/data/marketplaceData';
 
 export default function App() {
   // Master Switcher: 3 Distinct Systems (Customer App vs Salon & Specialist App vs Super Admin Web Panel)
