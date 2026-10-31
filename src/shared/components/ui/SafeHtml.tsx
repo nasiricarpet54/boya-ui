@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify';
 interface SafeHtmlProps {
   html: string;
   className?: string;
-  tag?: keyof JSX.IntrinsicElements;
+  tag?: keyof React.JSX.IntrinsicElements;
 }
 
 export const SafeHtml: React.FC<SafeHtmlProps> = ({ html, className, tag: Tag = 'div' }) => {

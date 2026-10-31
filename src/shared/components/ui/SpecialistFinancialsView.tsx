@@ -30,8 +30,8 @@ import { Specialist, Booking } from '../../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../../utils/persianUtils';
 
 interface SpecialistFinancialsViewProps {
-  specialist: Specialist;
-  bookings: Booking[];
+  specialist: any;
+  bookings: any[];
   salonName: string;
 }
 
@@ -42,6 +42,48 @@ interface MonthlyDataPoint {
   totalRevenue: number;
   completedBookingsCount: number;
 }
+
+// Custom Recharts Tooltip Component
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const salonVal = payload.find((p: any) => p.dataKey === 'salonRevenue')?.value || 0;
+    const mobileVal = payload.find((p: any) => p.dataKey === 'mobileRevenue')?.value || 0;
+    const total = salonVal + mobileVal;
+
+    return (
+      <div className="bg-[#173B3F] text-white p-3.5 rounded-2xl shadow-xl border border-[#D9A2B0]/40 text-xs space-y-2 min-w-[210px] animate-fadeIn">
+        <div className="flex items-center justify-between border-b border-white/15 pb-1.5">
+          <span className="font-bold text-sm text-[#D9A2B0]">{label}</span>
+          <span className="text-[10px] text-[#E8F0EF]">گزارش درآمد</span>
+        </div>
+
+        <div className="space-y-1.5 text-[11px]">
+          <div className="flex justify-between items-center text-[#E8F0EF]">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-[#6F9A8D]" />
+              <span>خدمات در سالن:</span>
+            </span>
+            <span className="font-bold">{formatPrice(salonVal)}</span>
+          </div>
+
+          <div className="flex justify-between items-center text-[#E8F0EF]">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-[#D9A2B0]" />
+              <span>خدمات سیار / در محل:</span>
+            </span>
+            <span className="font-bold">{formatPrice(mobileVal)}</span>
+          </div>
+
+          <div className="pt-1.5 border-t border-white/20 flex justify-between items-center font-bold text-white text-xs">
+            <span>مجموع ناخالص ماه:</span>
+            <span className="text-[#D9A2B0]">{formatPrice(total)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 export const SpecialistFinancialsView: React.FC<SpecialistFinancialsViewProps> = ({
   specialist,
@@ -54,8 +96,8 @@ export const SpecialistFinancialsView: React.FC<SpecialistFinancialsViewProps> =
   // Filter bookings strictly for this specialist that are confirmed or completed
   const specialistCompletedBookings = useMemo(() => {
     return bookings.filter(
-      (b) =>
-        ((b.specialistId && b.specialistId === specialist.id) || b.specialistName === specialist.name) &&
+      (b: any) =>
+        (b.specialistId === specialist.id) &&
         (b.status === 'completed' || b.status === 'confirmed')
     );
   }, [bookings, specialist]);
@@ -63,21 +105,23 @@ export const SpecialistFinancialsView: React.FC<SpecialistFinancialsViewProps> =
   // Current month dynamic extra revenue from real bookings
   const dynamicCurrentMonthSalonRevenue = useMemo(() => {
     return specialistCompletedBookings
-      .filter((b) => !b.isMobileBooking)
-      .reduce((sum, b) => sum + b.price, 0);
+      .filter((b: any) => !b.isMobileBooking)
+      .reduce((sum, b: any) => sum + Number(b.price), 0);
   }, [specialistCompletedBookings]);
 
   const dynamicCurrentMonthMobileRevenue = useMemo(() => {
     return specialistCompletedBookings
-      .filter((b) => b.isMobileBooking)
-      .reduce((sum, b) => sum + b.price, 0);
+      .filter((b: any) => b.isMobileBooking)
+      .reduce((sum, b: any) => sum + Number(b.price), 0);
   }, [specialistCompletedBookings]);
 
   // Monthly breakdown dataset customized for this specialist
   const rawMonthlyData: MonthlyDataPoint[] = useMemo(() => {
     // Baseline factors depending on experience and rating
-    const baseMultiplier = (specialist.rating / 5) * (specialist.experienceYears >= 10 ? 1.25 : 1.0);
-    const isMobilePrimary = specialist.isMobileSpecialist || specialist.specialistType === 'mobile_specialist';
+    const ratingValue = Number(specialist.rating) || 5;
+    const experienceValue = Number(specialist.experienceYears) || 0;
+    const baseMultiplier = (ratingValue / 5) * (experienceValue >= 10 ? 1.25 : 1.0);
+    const isMobilePrimary = specialist.isMobileActive || specialist.user?.role === 'mobile_specialist';
 
     return [
       {
@@ -167,48 +211,6 @@ export const SpecialistFinancialsView: React.FC<SpecialistFinancialsViewProps> =
   // Payout calculation (e.g. 85% specialist share after salon platform fee)
   const specialistCommissionSharePercent = 85;
   const netSpecialistShare = Math.round((currentMonthPoint.totalRevenue * specialistCommissionSharePercent) / 100);
-
-  // Custom Recharts Tooltip Component
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const salonVal = payload.find((p: any) => p.dataKey === 'salonRevenue')?.value || 0;
-      const mobileVal = payload.find((p: any) => p.dataKey === 'mobileRevenue')?.value || 0;
-      const total = salonVal + mobileVal;
-
-      return (
-        <div className="bg-[#173B3F] text-white p-3.5 rounded-2xl shadow-xl border border-[#D9A2B0]/40 text-xs space-y-2 min-w-[210px] animate-fadeIn">
-          <div className="flex items-center justify-between border-b border-white/15 pb-1.5">
-            <span className="font-bold text-sm text-[#D9A2B0]">{label}</span>
-            <span className="text-[10px] text-[#E8F0EF]">گزارش درآمد</span>
-          </div>
-
-          <div className="space-y-1.5 text-[11px]">
-            <div className="flex justify-between items-center text-[#E8F0EF]">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#6F9A8D]" />
-                <span>خدمات در سالن:</span>
-              </span>
-              <span className="font-bold">{formatPrice(salonVal)}</span>
-            </div>
-
-            <div className="flex justify-between items-center text-[#E8F0EF]">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#D9A2B0]" />
-                <span>خدمات سیار / در محل:</span>
-              </span>
-              <span className="font-bold">{formatPrice(mobileVal)}</span>
-            </div>
-
-            <div className="pt-1.5 border-t border-white/20 flex justify-between items-center font-bold text-white text-xs">
-              <span>مجموع ناخالص ماه:</span>
-              <span className="text-[#D9A2B0]">{formatPrice(total)}</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="space-y-5 animate-fadeIn">

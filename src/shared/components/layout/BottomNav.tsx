@@ -3,16 +3,16 @@ import { Sparkles, Search, Calendar, Heart, User } from 'lucide-react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { toPersianDigits } from '../../utils/persianUtils';
 import { useUIStore, NavTab } from '../../stores/uiStore';
-import { useDataStore } from '../../stores/dataStore';
+import { useBookings } from '../../api/queries';
 
 export const BottomNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { activeTab, setActiveTab } = useUIStore();
-  const { bookings } = useDataStore();
+  const { data: bookings = [] } = useBookings();
   
   // Calculate counts for badges
-  const activeBookingsCount = bookings.filter((b) => b.status === 'confirmed').length;
+  const activeBookingsCount = (bookings || []).filter((b: any) => b.status === 'confirmed').length;
   const savedCount = 2; // This should come from a store too, but for now mocked or from data
 
   // Sync activeTab with current path

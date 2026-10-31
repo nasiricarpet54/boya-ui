@@ -27,15 +27,15 @@ import { useDataStore } from '../../../shared/stores/dataStore';
 import { useLocationStore } from '../../../shared/stores/locationStore';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useModalStore } from '../../../shared/stores/modalStore';
-import { useSalons } from '../../../shared/api/queries';
+import { useSalons, useBookings } from '../../../shared/api/queries';
 
 export const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
   const { data: salons = [], isLoading, isError } = useSalons();
-  const { bookings } = useDataStore();
-  const { selectedCity, selectedProvince, customerLocation, setIsLocationModalOpen } = useLocationStore();
+  const { data: bookings = [] } = useBookings();
+  const { selectedCity, selectedProvince, customerLocation } = useLocationStore();
   const { openBookingModal, openPortfolioModal } = useModalStore();
-  const { showToast } = useUIStore();
+  const { showToast, setIsLocationModalOpen } = useUIStore();
 
   const [filterMobileOnly, setFilterMobileOnly] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');

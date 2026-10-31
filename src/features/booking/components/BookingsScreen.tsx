@@ -9,6 +9,7 @@ import {
   X,
   Sparkles,
   Radio,
+  RefreshCw,
 } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { Booking } from '../../../shared/data/marketplaceData';
@@ -24,12 +25,16 @@ export interface BookingAlertNotification {
   time: string;
 }
 
+import { useBookings } from '../../../shared/api/queries';
+import api from '../../../shared/api/apiClient';
+
 export const BookingsScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { bookings, updateBookingStatus, latestBookingAlert } = useDataStore();
+  const { data: bookings = [], isLoading, isError, refetch } = useBookings();
+  const { latestBookingAlert } = useDataStore();
 
   const [filterTab, setFilterTab] = useState<'active' | 'completed' | 'cancelled'>('active');
-  const [reviewModalBooking, setReviewModalBooking] = useState<Booking | null>(null);
+  const [reviewModalBooking, setReviewModalBooking] = useState<any>(null);
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>('');
   const [reviewSubmitted, setReviewSubmitted] = useState<boolean>(false);
@@ -43,7 +48,7 @@ export const BookingsScreen: React.FC = () => {
   const [showNotificationCenter, setShowNotificationCenter] = useState<boolean>(false);
 
   // Ref to track previous statuses of all bookings
-  const prevStatusesRef = useRef<Map<string, 'confirmed' | 'completed' | 'cancelled' | 'pending'>>(new Map());
+  const prevStatusesRef = useRef<Map<string, string>>(new Map());
   const isInitialMount = useRef(true);
 
   // Helper to trigger a toast
@@ -52,7 +57,6 @@ export const BookingsScreen: React.FC = () => {
     setShowToast(true);
     setRecentAlerts((prev) => [alert, ...prev.filter((a) => a.id !== alert.id)].slice(0, 5));
 
-    // Auto dismiss after 6.5 seconds
     const timer = setTimeout(() => {
       setShowToast(false);
     }, 6500);
@@ -67,40 +71,46 @@ export const BookingsScreen: React.FC = () => {
     }
   }, [latestBookingAlert]);
 
-  // Reactive diff: Detect any status changes made by salon or specialist in bookings array
+  // Reactive diff: Detect any status changes
   useEffect(() => {
-    if (isInitialMount.current) {
-      bookings.forEach((b) => {
-        prevStatusesRef.current.set(b.id, b.status);
+    if (isInitialMount.current && bookings.length > 0) {
+      bookings.forEach((b: any) => {
+        prevStatusesRef.current.set(b.id.toString(), b.status);
       });
       isInitialMount.current = false;
       return;
     }
 
-    bookings.forEach((b) => {
-      const prevStatus = prevStatusesRef.current.get(b.id);
+    bookings.forEach((b: any) => {
+      const idStr = b.id.toString();
+      const prevStatus = prevStatusesRef.current.get(idStr);
       if (prevStatus && prevStatus !== b.status) {
         const newAlert: BookingAlertNotification = {
-          id: `diff-${b.id}-${Date.now()}`,
-          bookingId: b.id,
-          salonName: b.salonName,
-          serviceName: b.serviceName,
+          id: `diff-${idStr}-${Date.now()}`,
+          bookingId: idStr,
+          salonName: b.salon?.name || 'سالن بویا',
+          serviceName: b.service?.name || 'خدمت انتخابی',
           status: b.status,
           time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
         };
         triggerToast(newAlert);
       }
-      prevStatusesRef.current.set(b.id, b.status);
+      prevStatusesRef.current.set(idStr, b.status);
     });
   }, [bookings]);
 
-  const handleSimulateStatus = (bookingId: string, status: 'confirmed' | 'completed' | 'cancelled') => {
-    updateBookingStatus(bookingId, status);
+  const handleUpdateStatus = async (bookingId: number, status: string) => {
+    try {
+      await api.patch(`/bookings/${bookingId}/status`, { status });
+      refetch();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const activeBookings = bookings.filter((b) => b.status === 'confirmed' || b.status === 'pending');
-  const completedBookings = bookings.filter((b) => b.status === 'completed');
-  const cancelledBookings = bookings.filter((b) => b.status === 'cancelled');
+  const activeBookings = bookings.filter((b: any) => b.status === 'confirmed' || b.status === 'pending');
+  const completedBookings = bookings.filter((b: any) => b.status === 'completed');
+  const cancelledBookings = bookings.filter((b: any) => b.status === 'cancelled');
 
   const displayedBookings =
     filterTab === 'active'
@@ -210,13 +220,26 @@ export const BookingsScreen: React.FC = () => {
                 : 'text-[#6C6C6C] hover:text-[#173B3F]'
             }`}
           >
-            {tab === 'active' ? 'فعال' : tab === 'completed' ? 'انجام شده' : 'لغو شده'} ({toPersianDigits(bookings.filter(b => tab === 'active' ? (b.status === 'confirmed' || b.status === 'pending') : b.status === tab).length)})
+            {tab === 'active' ? 'فعال' : tab === 'completed' ? 'انجام شده' : 'لغو شده'} ({toPersianDigits(bookings.filter((b: any) => tab === 'active' ? (b.status === 'confirmed' || b.status === 'pending') : b.status === tab).length)})
           </button>
         ))}
       </div>
 
       <div className="space-y-4">
-        {displayedBookings.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-[#E7E2DA] p-6 space-y-3 shadow-xs">
+            <RefreshCw className="w-10 h-10 text-[#173B3F] mx-auto animate-spin" />
+            <h3 className="text-base font-bold text-[#173B3F]">در حال دریافت نوبت‌های شما...</h3>
+          </div>
+        ) : isError ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-[#E7E2DA] p-6 space-y-3 shadow-xs">
+            <XCircle className="w-12 h-12 text-[#B35D67] mx-auto" />
+            <h3 className="text-base font-bold text-[#173B3F]">خطا در دریافت اطلاعات نوبت‌ها</h3>
+            <button onClick={() => refetch()} className="px-6 py-2 rounded-full bg-[#173B3F] text-white text-xs font-bold">
+              تلاش مجدد
+            </button>
+          </div>
+        ) : displayedBookings.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-3xl border border-[#E7E2DA] p-6 space-y-3 shadow-xs">
             <Calendar className="w-12 h-12 text-[#173B3F] mx-auto opacity-20" />
             <h3 className="text-base font-bold text-[#173B3F]">نوبتی یافت نشد</h3>
@@ -228,7 +251,7 @@ export const BookingsScreen: React.FC = () => {
             </button>
           </div>
         ) : (
-          displayedBookings.map((bkg) => (
+          displayedBookings.map((bkg: any) => (
             <div key={bkg.id} className="bg-white rounded-2xl p-4 border border-[#E7E2DA] hover:border-[#173B3F] transition-all space-y-3 shadow-sm">
               <div className="flex items-start justify-between">
                 <div>
@@ -239,36 +262,29 @@ export const BookingsScreen: React.FC = () => {
                   }`}>
                     {bkg.status === 'confirmed' ? 'تایید شده' : bkg.status === 'completed' ? 'انجام شده' : 'لغو شده'}
                   </span>
-                  <h3 className="text-base font-bold text-[#173B3F] mt-1.5 font-serif">{bkg.salonName}</h3>
+                  <h3 className="text-base font-bold text-[#173B3F] mt-1.5 font-serif">{bkg.salon?.name || 'سالن بویا'}</h3>
                 </div>
-                <div className="text-left font-bold text-[#173B3F]">{formatPrice(bkg.price)}</div>
+                <div className="text-left font-bold text-[#173B3F]">{formatPrice(Number(bkg.price))}</div>
               </div>
 
               <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E7E2DA] text-xs space-y-2">
-                <div className="flex justify-between"><span>خدمت:</span><strong>{bkg.serviceName}</strong></div>
+                <div className="flex justify-between"><span>خدمت:</span><strong>{bkg.service?.name}</strong></div>
                 <div className="flex justify-between"><span>زمان:</span><strong>{bkg.date} - {toPersianDigits(bkg.time)}</strong></div>
                 <div className="flex justify-between"><span>کد رهگیری:</span><strong className="font-mono">{toPersianDigits(bkg.trackingCode)}</strong></div>
               </div>
 
               <div className="flex justify-between items-center pt-1 border-t border-[#E7E2DA]/60">
-                <a href={`https://neshan.org/maps?q=${encodeURIComponent(bkg.salonAddress)}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#FAF7F2] border border-[#E7E2DA] text-[11px]">
+                <a href={`https://neshan.org/maps?q=${encodeURIComponent(bkg.salon?.address || '')}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#FAF7F2] border border-[#E7E2DA] text-[11px]">
                   <Navigation className="w-3.5 h-3.5" />
                   <span>مسیریابی</span>
                 </a>
                 
                 <div className="flex gap-2">
                    {bkg.status === 'confirmed' && (
-                     <button onClick={() => updateBookingStatus(bkg.id, 'cancelled')} className="text-xs text-[#B35D67] font-bold">لغو نوبت</button>
+                     <button onClick={() => handleUpdateStatus(bkg.id, 'cancelled')} className="text-xs text-[#B35D67] font-bold">لغو نوبت</button>
                    )}
                    <button onClick={() => setReviewModalBooking(bkg)} className="text-xs text-[#173B3F] font-bold">ثبت نظر</button>
                 </div>
-              </div>
-
-              {/* Simulation for testing */}
-              <div className="pt-2 border-t border-dashed border-[#E7E2DA] flex gap-2">
-                <button onClick={() => handleSimulateStatus(bkg.id, 'confirmed')} className="text-[9px] bg-[#EAF2EF] px-1.5 py-0.5 rounded border border-[#6F9A8D]/20">تایید</button>
-                <button onClick={() => handleSimulateStatus(bkg.id, 'cancelled')} className="text-[9px] bg-[#F8ECEE] px-1.5 py-0.5 rounded border border-[#B35D67]/20">لغو</button>
-                <button onClick={() => handleSimulateStatus(bkg.id, 'completed')} className="text-[9px] bg-[#EDF4F5] px-1.5 py-0.5 rounded border border-[#5E8B95]/20">تکمیل</button>
               </div>
             </div>
           ))

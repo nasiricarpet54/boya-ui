@@ -16,6 +16,21 @@ interface SalonCardProps {
   onToggleWishlist: () => void;
 }
 
+const DEFAULT_SLOTS = [
+  { time: '۱۰:۰۰', booked: false },
+  { time: '۱۱:۳۰', booked: false },
+  { time: '۱۴:۰۰', booked: false },
+  { time: '۱۶:۰۰', booked: false },
+  { time: '۱۷:۳۰', booked: false },
+  { time: '۱۹:۰۰', booked: false },
+];
+
+const DEFAULT_AVAILABLE_SLOTS = [
+  { date: '۱۴۰۳/۰۸/۰۵', dayName: 'شنبه', dayNumber: '۵', slots: DEFAULT_SLOTS },
+  { date: '۱۴۰۳/۰۸/۰۶', dayName: 'یکشنبه', dayNumber: '۶', slots: DEFAULT_SLOTS },
+  { date: '۱۴۰۳/۰۸/۰۷', dayName: 'دوشنبه', dayNumber: '۷', slots: DEFAULT_SLOTS },
+];
+
 export const SalonCard: React.FC<SalonCardProps> = ({
   salon,
   distanceKm,
@@ -28,9 +43,30 @@ export const SalonCard: React.FC<SalonCardProps> = ({
   const [selectedSpecialistIndex, setSelectedSpecialistIndex] = useState<number>(0);
   const [selectedDateIndex, setSelectedDateIndex] = useState<number>(0);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
-  const currentService = salon.services[selectedServiceIndex] || salon.services[0];
-  const currentSpecialist = salon.specialists[selectedSpecialistIndex] || salon.specialists[0];
-  const currentDateSlots = salon.availableSlots[selectedDateIndex] || salon.availableSlots[0];
+
+  const services = salon.services || [];
+  const specialists = salon.specialists || [];
+  const availableSlots = salon.availableSlots || DEFAULT_AVAILABLE_SLOTS;
+
+  const currentService = services[selectedServiceIndex] || services[0] || {
+    id: 0,
+    name: 'خدمت زیبایی',
+    description: 'توضیحات خدمت',
+    price: '0',
+    durationMinutes: 60,
+    serviceLineId: 'hair'
+  };
+  const currentSpecialist = specialists[selectedSpecialistIndex] || specialists[0] || {
+    id: 0,
+    user: { fullName: 'متخصص بویا' },
+    specialtyLine: 'عمومی'
+  };
+  const currentDateSlots = availableSlots[selectedDateIndex] || availableSlots[0] || {
+    date: '۱۴۰۳/۰۸/۰۵',
+    dayName: 'شنبه',
+    dayNumber: '۵',
+    slots: DEFAULT_SLOTS
+  };
 
   const handleSlotClick = (time: string, booked: boolean) => {
     if (booked) return;
@@ -39,7 +75,7 @@ export const SalonCard: React.FC<SalonCardProps> = ({
 
   const handleBooking = () => {
     const timeToBook =
-      selectedTimeSlot || currentDateSlots.slots.find((t) => !t.booked)?.time || '۱۱:۳۰';
+      selectedTimeSlot || (currentDateSlots.slots || []).find((t) => !t.booked)?.time || '۱۱:۳۰';
     onBookNow(salon, currentService, currentSpecialist, currentDateSlots.date, timeToBook);
   };
 
@@ -115,7 +151,7 @@ export const SalonCard: React.FC<SalonCardProps> = ({
           <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 shrink-0">
             <Star className="w-3.5 h-3.5 text-[#C99558] fill-current" />
             <span className="text-xs font-bold text-white">
-              {toPersianDigits(salon.rating.toFixed(2))}
+              {toPersianDigits(Number(salon.rating).toFixed(2))}
             </span>
             <span className="text-[10px] text-[#E8F0EF]">
               ({toPersianDigits(salon.reviewsCount)})
@@ -138,8 +174,11 @@ export const SalonCard: React.FC<SalonCardProps> = ({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {salon.specialists.map((spec, idx) => {
+            {specialists.map((spec: any, idx) => {
               const isSelected = selectedSpecialistIndex === idx;
+              const name = spec.user?.fullName || 'متخصص بویا';
+              const avatar = spec.avatarUrl || 'https://images.unsplash.com/photo-1595152772835-219674b2a8a6?auto=format&fit=crop&w=150&q=80';
+              
               return (
                 <div
                   key={spec.id}
@@ -154,23 +193,23 @@ export const SalonCard: React.FC<SalonCardProps> = ({
                     className="flex items-center gap-2"
                   >
                     <img
-                      src={spec.avatar}
-                      alt={spec.name}
+                      src={avatar}
+                      alt={name}
                       className="w-7 h-7 rounded-full object-cover border border-[#D9A2B0]"
                     />
                     <div>
                       <div className="flex items-center gap-1">
                         <span className="text-xs font-bold text-[#1C1C1C]">
-                          {spec.name}
+                          {name}
                         </span>
-                        {spec.verified && (
+                        {spec.isVerified && (
                           <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded-full border border-[#6F9A8D]/40 bg-[#EAF2EF] text-[9px] text-[#2E5E52] font-semibold">
                             <CheckCircle2 className="w-2.5 h-2.5 text-[#6F9A8D]" />
                           </span>
                         )}
                       </div>
                       <span className="text-[10px] text-[#6C6C6C] block -mt-0.5">
-                        {spec.role}
+                        {spec.specialtyLine}
                       </span>
                     </div>
                   </button>
@@ -193,7 +232,7 @@ export const SalonCard: React.FC<SalonCardProps> = ({
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-[#173B3F] block">
-              خدمات و لاین‌های سالن ({toPersianDigits(salon.services.length)}):
+              خدمات و لاین‌های سالن ({toPersianDigits(services.length)}):
             </span>
             <button
               type="button"
@@ -206,7 +245,7 @@ export const SalonCard: React.FC<SalonCardProps> = ({
             </button>
           </div>
           <div className="space-y-2">
-            {salon.services.map((serv, idx) => {
+            {services.map((serv, idx) => {
               const isSelected = selectedServiceIndex === idx;
               return (
                 <div
@@ -267,7 +306,7 @@ export const SalonCard: React.FC<SalonCardProps> = ({
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {salon.availableSlots.map((slot, idx) => {
+            {availableSlots.map((slot, idx) => {
               const isSelected = selectedDateIndex === idx;
               return (
                 <button

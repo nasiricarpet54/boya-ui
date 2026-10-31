@@ -2,18 +2,16 @@ import React from 'react';
 import { Heart } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { SalonCard } from '../../../shared/components/ui/SalonCard';
-import { useDataStore } from '../../../shared/stores/dataStore';
-import { useModalStore } from '../../../shared/stores/modalStore';
-import { useUIStore } from '../../../shared/stores/uiStore';
+import { useSalons } from '../../../shared/api/queries';
 
 export const SavedScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { salons } = useDataStore();
+  const { data: salons = [] } = useSalons();
   const { openBookingModal, openPortfolioModal } = useModalStore();
   const { showToast } = useUIStore();
 
-  const savedSalonIds = ['salon-1', 'salon-3']; // Temporary, should move to store
-  const savedSalons = salons.filter((s) => savedSalonIds.includes(s.id));
+  const savedSalonIds = [1, 2];
+  const savedSalons = (salons || []).filter((s: any) => savedSalonIds.includes(s.id));
 
   const handleToggleWishlistSalon = (id: string) => {
     showToast('از نشان‌شده‌ها حذف شد.');

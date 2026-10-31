@@ -1,20 +1,20 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import jwt from 'jsonwebtoken';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import { requireAuth, AuthRequest } from './src/middleware/auth.ts';
+import { db } from './src/db/index.ts';
+import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'boya-secret-key-12345';
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'boya-refresh-secret-67890';
 
 async function createServer() {
   const app = express();
@@ -30,71 +30,84 @@ async function createServer() {
     next();
   });
 
-  // Proxy to live NestJS backend
+  // SMS Logger Mock
+  const logSms = (phone: string, message: string) => {
+    console.log(`[SMS] To: ${phone} | Content: ${message}`);
+  };
+
+  // --- API Routes ---
+
+  // User Profile
+  app.get('/api/profile', requireAuth, (req: AuthRequest, res) => {
+    res.json(req.dbUser);
+  });
+
+  // Salons & Services
+  app.get('/api/salons', async (req, res) => {
+    try {
+      const allSalons = await db.query.salons.findMany({
+        with: {
+          services: true,
+          specialists: {
+            with: {
+              user: true,
+              portfolio: true
+            }
+          }
+        }
+      });
+      res.json(allSalons);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to fetch salons' });
+    }
+  });
+
+  // Bookings
+  app.post('/api/bookings', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const booking = await createBooking({
+        ...req.body,
+        customerId: req.dbUser.id,
+      });
+      
+      logSms(req.dbUser.phone || '09120000000', `نوبت شما در سامانه بویا ثبت شد. کد رهگیری: ${booking.trackingCode}`);
+      
+      res.status(201).json(booking);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/bookings', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const bookings = await getBookingsForUser(req.dbUser);
+      res.json(bookings);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to fetch bookings' });
+    }
+  });
+
+  app.patch('/api/bookings/:id/status', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { status } = req.body;
+      const updated = await updateBookingStatus(Number(req.params.id), status);
+      
+      logSms(req.dbUser.phone || '09120000000', `وضعیت نوبت شما به ${status} تغییر یافت.`);
+      
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to update booking' });
+    }
+  });
+
+  // Proxy to external legacy backend
   app.use('/api/v1', createProxyMiddleware({
     target: 'https://boya.bcshopir.ir/api/v1',
     changeOrigin: true,
-    pathRewrite: {
-      '^/api/v1': '', // Remove /api/v1 when forwarding
-    },
-    onProxyReq: (proxyReq, req, res) => {
-      // You can add headers here if needed
-    }
+    pathRewrite: { '^/api/v1': '' },
   }));
-
-  // Logging middleware for unauthorized access attempts
-  app.use((req, res, next) => {
-    const originalSend = res.send;
-    res.send = function(body) {
-      if (res.statusCode === 401 || res.statusCode === 403) {
-        console.warn(`[SECURITY] Unauthorized access attempt: ${req.method} ${req.url} - IP: ${req.ip}`);
-      }
-      return originalSend.call(this, body);
-    };
-    next();
-  });
-
-  // Auth Endpoints (Mocking the logic for the BFF)
-  app.post('/api/auth/login', (req, res) => {
-    const { phone, otp } = req.body;
-    
-    // In a real app, verify OTP here.
-    // Mock user for demonstration:
-    const user = { id: 'usr-1', name: 'کاربر تستی', role: 'customer', phone };
-    
-    const accessToken = jwt.sign(user, JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign({ id: user.id }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    res.json({ user, accessToken });
-  });
-
-  app.post('/api/auth/refresh', (req, res) => {
-    const refreshToken = req.cookies.refreshToken;
-    if (!refreshToken) return res.status(401).json({ message: 'Refresh token missing' });
-
-    try {
-      const payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET) as any;
-      // In a real app, look up user in DB
-      const user = { id: payload.id, name: 'کاربر تستی', role: 'customer', phone: '09123456789' };
-      const accessToken = jwt.sign(user, JWT_SECRET, { expiresIn: '15m' });
-      
-      res.json({ accessToken });
-    } catch (err) {
-      res.status(401).json({ message: 'Invalid refresh token' });
-    }
-  });
-
-  app.post('/api/auth/logout', (req, res) => {
-    res.clearCookie('refreshToken');
-    res.json({ success: true });
-  });
 
   // Vite integration
   let vite: any;
@@ -125,13 +138,6 @@ async function createServer() {
       console.error(e.stack);
       res.status(500).end(isProd ? 'Internal Server Error' : e.stack);
     }
-  });
-
-  // Global Error Handler for production (Masking stack traces)
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error(err.stack);
-    const message = isProd ? 'خطایی در سرور رخ داده است. لطفاً بعداً تلاش کنید.' : err.message;
-    res.status(500).json({ error: message });
   });
 
   app.listen(PORT, () => {

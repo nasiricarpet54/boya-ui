@@ -5,8 +5,11 @@ import { toPersianDigits } from '../../utils/persianUtils';
 import { BoyaLogo } from '../ui/BoyaLogo';
 import { useUIStore, AppExperienceMode } from '../../stores/uiStore';
 import { useLocationStore } from '../../stores/locationStore';
-import { useDataStore } from '../../stores/dataStore';
+import { useAuthStore } from '../../stores/authStore';
+import { useModalStore } from '../../stores/modalStore';
 import { RoleGuard } from '../guards/ProtectedRoute';
+
+import { useSalons } from '../../api/queries';
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -21,9 +24,11 @@ export const Header: React.FC = () => {
   } = useUIStore();
   
   const { selectedCity, selectedProvince, customerLocation } = useLocationStore();
-  const { salons } = useDataStore();
+  const { data: salons = [] } = useSalons();
+  const { user, isAuthenticated } = useAuthStore();
+  const { openAuthModal } = useModalStore();
 
-  const pendingApprovalsCount = salons.filter((s) => !s.isApproved).length;
+  const pendingApprovalsCount = salons.filter((s: any) => !s.isApproved).length;
   const hasGpsActive = !!customerLocation.coords;
 
   const handleSwitchAppMode = (mode: AppExperienceMode) => {
@@ -83,7 +88,7 @@ export const Header: React.FC = () => {
             <span>۲. پنل سالندار و متخصص</span>
           </button>
 
-          <RoleGuard roles={['admin']}>
+          <RoleGuard roles={['super_admin']}>
             <button
               onClick={() => handleSwitchAppMode('admin_panel')}
               className={`flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${
@@ -135,6 +140,26 @@ export const Header: React.FC = () => {
               </button>
             )}
 
+            {/* Auth / Login Button */}
+            {!isAuthenticated ? (
+              <button
+                onClick={() => openAuthModal()}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#173B3F] text-white text-[11px] font-bold shadow-sm hover:bg-[#0F3232] transition-all"
+              >
+                <span>ورود / ثبت‌نام</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:block text-left">
+                  <span className="text-[10px] font-bold text-[#173B3F] block">{user?.fullName}</span>
+                  <span className="text-[9px] text-[#6C6C6C] block uppercase">{user?.role.replace('_', ' ')}</span>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-[#D9A2B0] flex items-center justify-center text-[#173B3F] font-bold text-xs border border-[#173B3F]/10">
+                  {user?.fullName.charAt(0)}
+                </div>
+              </div>
+            )}
+
             {/* Viewport Frame Mode Toggle (390px baseline vs desktop) */}
             <button
               onClick={() => setIsMobileFrame(!isMobileFrame)}
@@ -144,7 +169,7 @@ export const Header: React.FC = () => {
               {isMobileFrame ? (
                 <>
                   <Monitor className="w-3.5 h-3.5 text-[#173B3F]" />
-                  <span className="text-[11px] font-medium hidden md:inline">نمای دسکتاپ</span>
+                  <span className="text-[11px] font-medium hidden md:inline">دسکتاپ</span>
                 </>
               ) : (
                 <>

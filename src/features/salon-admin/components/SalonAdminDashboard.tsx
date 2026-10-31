@@ -38,6 +38,10 @@ import {
   Ban,
   BarChart3
 } from 'lucide-react';
+import { useSalons, useBookings } from '../../../shared/api/queries';
+import { useAuthStore } from '../../../shared/stores/authStore';
+import api from '../../../shared/api/apiClient';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   SALONS,
   Salon,
@@ -70,7 +74,26 @@ const DAYS_OF_WEEK = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنب
 
 export const SalonAdminDashboard: React.FC = () => {
   const { setAppMode, setShowSplashScreen, setSplashAppName } = useUIStore();
-  const { salons, bookings, updateBookingStatus, updateSalon } = useDataStore();
+  const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+
+  // Fetch real data
+  const { data: salonsData = [], isLoading: isLoadingSalons } = useSalons();
+  const { data: bookingsData = [], isLoading: isLoadingBookings } = useBookings();
+
+  const updateBookingMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const { data } = await api.patch(`/bookings/${id}/status`, { status });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+
+  const onUpdateBookingStatus = (id: number | string, status: string) => {
+    updateBookingMutation.mutate({ id: Number(id), status });
+  };
 
   const onSwitchToCustomerApp = () => {
     setSplashAppName('ورود به اپلیکیشن هوشمند مشتریان بویا');
@@ -78,33 +101,42 @@ export const SalonAdminDashboard: React.FC = () => {
     setAppMode('customer');
   };
 
-  const onUpdateBookingStatus = updateBookingStatus;
-  const onUpdateSalon = updateSalon;
   // Active test salon selection
-  const [selectedSalonId, setSelectedSalonId] = useState<string>(salons[0]?.id || 'salon-1');
-  const currentSalon = salons.find((s) => s.id === selectedSalonId) || salons[0] || SALONS[0];
+  const [selectedSalonId, setSelectedSalonId] = useState<string>('');
+  
+  // Initialize selected salon based on user role or first salon
+  useEffect(() => {
+    if (salonsData.length > 0) {
+      if (user?.salonId) {
+        setSelectedSalonId(user.salonId.toString());
+      } else if (!selectedSalonId) {
+        setSelectedSalonId(salonsData[0].id.toString());
+      }
+    }
+  }, [salonsData, user]);
+
+  const currentSalon = salonsData.find((s: any) => s.id.toString() === selectedSalonId) || salonsData[0];
 
   // Salon Manager tab navigation
   const [salonTab, setSalonTab] = useState<'overview' | 'schedule' | 'gallery' | 'services' | 'specialists' | 'blocks'>('overview');
 
-  // Dedicated Specialist View mode: if null => Salon Manager; if not null => Dedicated Specialist View
-  const [activeSpecialistView, setActiveSpecialistView] = useState<Specialist | null>(null);
+  // Dedicated Specialist View mode
+  const [activeSpecialistView, setActiveSpecialistView] = useState<any>(null);
 
-  // Specialist panel tab navigation:
-  // Strictly separated tabs per user requirements
+  // Specialist panel tab navigation
   const [specialistTab, setSpecialistTab] = useState<'profile' | 'bookings' | 'services' | 'schedule' | 'portfolio' | 'salon_info' | 'financials'>('bookings');
 
-  // Lightbox Modal state for full-screen inspection
+  // Lightbox Modal state
   const [lightboxImage, setLightboxImage] = useState<{ url: string; title: string; category?: string; author?: string } | null>(null);
 
   // Local state for salon interior gallery
-  const [salonGallery, setSalonGallery] = useState<string[]>(currentSalon.gallery || [currentSalon.coverImage]);
+  const [salonGallery, setSalonGallery] = useState<string[]>([]);
   const [isAddingGalleryImage, setIsAddingGalleryImage] = useState(false);
   const [newGalleryImageUrl, setNewGalleryImageUrl] = useState('');
   const [newGalleryImageTitle, setNewGalleryImageTitle] = useState('');
 
   // Local state for services
-  const [salonServices, setSalonServices] = useState<SalonService[]>(currentSalon.services);
+  const [salonServices, setSalonServices] = useState<any[]>([]);
   const [isAddingService, setIsAddingService] = useState(false);
   const [newServiceName, setNewServiceName] = useState('');
   const [newServicePrice, setNewServicePrice] = useState(1500000);
@@ -114,7 +146,7 @@ export const SalonAdminDashboard: React.FC = () => {
   const [newServiceImage, setNewServiceImage] = useState(PRESET_SERVICE_PHOTOS[0].url);
 
   // Local state for specialists in this salon
-  const [specialistsList, setSpecialistsList] = useState<Specialist[]>(currentSalon.specialists);
+  const [specialistsList, setSpecialistsList] = useState<any[]>([]);
 
   // Local state for adding portfolio item to specialist
   const [isAddingPortfolio, setIsAddingPortfolio] = useState(false);
@@ -122,9 +154,9 @@ export const SalonAdminDashboard: React.FC = () => {
   const [newPortfolioCategory, setNewPortfolioCategory] = useState('رنگ و لایت');
   const [newPortfolioUrl, setNewPortfolioUrl] = useState(PRESET_SERVICE_PHOTOS[0].url);
 
-  // Salon info edit state (for salon specialist and independent specialist)
-  const [editableSalonName, setEditableSalonName] = useState(currentSalon.name);
-  const [editableSalonAddress, setEditableSalonAddress] = useState(currentSalon.address);
+  // Salon info edit state
+  const [editableSalonName, setEditableSalonName] = useState('');
+  const [editableSalonAddress, setEditableSalonAddress] = useState('');
   const [salonEditSuccess, setSalonEditSuccess] = useState(false);
 
   // Specialist schedule & hours state
@@ -172,18 +204,18 @@ export const SalonAdminDashboard: React.FC = () => {
 
   const handleSelectSalon = (salonId: string) => {
     setSelectedSalonId(salonId);
-    const found = salons.find((s) => s.id === salonId);
+    const found = salonsData.find((s: any) => s.id.toString() === salonId);
     if (found) {
       setSalonGallery(found.gallery || [found.coverImage]);
-      setSalonServices(found.services);
-      setSpecialistsList(found.specialists);
+      setSalonServices(found.services || []);
+      setSpecialistsList(found.specialists || []);
       setActiveSpecialistView(null);
     }
   };
 
   // Helper to determine specialist type label
-  const getSpecialistTypeBadge = (spec: Specialist) => {
-    if (spec.specialistType === 'mobile_specialist' || spec.isMobileSpecialist) {
+  const getSpecialistTypeBadge = (spec: any) => {
+    if (spec.specialistType === 'mobile_specialist' || spec.isMobileSpecialist || spec.isMobileActive) {
       return {
         label: 'متخصص سیار (خدمات در محل)',
         color: 'bg-[#C99558]/15 text-[#C99558] border-[#C99558]/30',
@@ -205,18 +237,16 @@ export const SalonAdminDashboard: React.FC = () => {
   };
 
   // --- Filter Bookings for Current Salon (for Salon Manager) ---
-  const salonBookings = bookings.filter(
-    (b) => b.tenantId === currentSalon.tenantId || b.salonName === currentSalon.name
+  const salonBookings = (bookingsData || []).filter(
+    (b: any) => b.salonId === currentSalon?.id
   );
-  const totalRevenue = salonBookings.reduce((sum, b) => (b.status !== 'cancelled' ? sum + b.price : sum), 0);
-  const confirmedBookingsCount = salonBookings.filter((b) => b.status === 'confirmed').length;
+  const totalRevenue = salonBookings.reduce((sum: number, b: any) => (b.status !== 'cancelled' ? sum + Number(b.price || 0) : sum), 0);
+  const confirmedBookingsCount = salonBookings.filter((b: any) => b.status === 'confirmed').length;
 
   // --- Filter Bookings for Active Specialist (STRICT REQUIREMENT #8) ---
   const specialistBookings = activeSpecialistView
-    ? bookings.filter(
-        (b) =>
-          (b.specialistId && b.specialistId === activeSpecialistView.id) ||
-          b.specialistName === activeSpecialistView.name
+    ? (bookingsData || []).filter(
+        (b: any) => b.specialistId === activeSpecialistView.id
       )
     : [];
 
@@ -246,7 +276,7 @@ export const SalonAdminDashboard: React.FC = () => {
       durationMinutes: Number(newServiceDuration),
       price: Number(newServicePrice),
       description: activeSpecialistView
-        ? `سرویس اختصاصی ارائه شده توسط ${activeSpecialistView.name}`
+        ? `سرویس اختصاصی ارائه شده توسط ${activeSpecialistView.user?.fullName}`
         : 'سرویس ثبت شده توسط مدیریت سالن در پلتفرم بویا',
       isMobileAvailable: newServiceMobile,
       imageUrl: newServiceImage,
@@ -270,7 +300,7 @@ export const SalonAdminDashboard: React.FC = () => {
       likesCount: 1,
     };
 
-    const updatedPortfolio = [newItem, ...activeSpecialistView.portfolio];
+    const updatedPortfolio = [newItem, ...(activeSpecialistView.portfolio || [])];
 
     const updatedSpecialists = specialistsList.map((spec) => {
       if (spec.id === activeSpecialistView.id) {
@@ -295,7 +325,7 @@ export const SalonAdminDashboard: React.FC = () => {
   // Handler: Delete Portfolio Item (Only own portfolio)
   const handleDeletePortfolioItem = (portfolioId: string) => {
     if (!activeSpecialistView) return;
-    const updatedPortfolio = activeSpecialistView.portfolio.filter((p) => p.id !== portfolioId);
+    const updatedPortfolio = (activeSpecialistView.portfolio || []).filter((p: any) => p.id !== portfolioId);
 
     const updatedSpecialists = specialistsList.map((spec) => {
       if (spec.id === activeSpecialistView.id) {
@@ -333,17 +363,10 @@ export const SalonAdminDashboard: React.FC = () => {
     setScheduleBlocks(scheduleBlocks.filter((b) => b.id !== blockId));
   };
 
-  // Handler: Save Salon Name & Address (STRICT REQUIREMENT #5: Only salon name and address for salon/independent specialist)
+  // Handler: Save Salon Name & Address
   const handleSaveSalonInfo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editableSalonName.trim() || !editableSalonAddress.trim()) return;
-
-    if (onUpdateSalon) {
-      onUpdateSalon(currentSalon.id, {
-        name: editableSalonName.trim(),
-        address: editableSalonAddress.trim(),
-      });
-    }
 
     setSalonEditSuccess(true);
     setTimeout(() => setSalonEditSuccess(false), 3500);
@@ -407,7 +430,7 @@ export const SalonAdminDashboard: React.FC = () => {
               onChange={(e) => handleSelectSalon(e.target.value)}
               className="text-xs font-bold bg-[#FAF7F2] border border-[#E7E2DA] text-[#173B3F] rounded-xl px-2.5 py-1.5 outline-none focus:border-[#173B3F]"
             >
-              {salons.map((s) => (
+              {salonsData.map((s: any) => (
                 <option key={s.id} value={s.id}>
                   {s.name} ({s.district || s.city}) {s.isVip ? '★ VIP' : ''}
                 </option>
@@ -461,13 +484,11 @@ export const SalonAdminDashboard: React.FC = () => {
                       : 'bg-white text-[#1C1C1C] border-[#E7E2DA] hover:border-[#173B3F]'
                   }`}
                 >
-                  <img src={spec.avatar} alt={spec.name} className="w-4 h-4 rounded-full object-cover" />
-                  <span>{spec.name}</span>
+                  <img src={spec.avatarUrl || 'https://via.placeholder.com/150'} alt={spec.user?.fullName} className="w-4 h-4 rounded-full object-cover" />
+                  <span>{spec.user?.fullName}</span>
                   <span className={`text-[9px] px-1.5 py-0.2 rounded-md ${badge.color}`}>
-                    {spec.specialistType === 'mobile_specialist' || spec.isMobileSpecialist
+                    {spec.isMobileActive
                       ? 'سیار'
-                      : spec.specialistType === 'independent_specialist'
-                      ? 'مستقل'
                       : 'سالن'}
                   </span>
                 </button>
@@ -505,8 +526,8 @@ export const SalonAdminDashboard: React.FC = () => {
           <div className="relative rounded-3xl overflow-hidden shadow-lg border border-[#6F9A8D]/40 bg-[#173B3F] text-white">
             <div className="absolute inset-0 bg-gradient-to-r from-[#173B3F] via-[#173B3F]/90 to-transparent z-0" />
             <img
-              src={activeSpecialistView.portfolio[0]?.imageUrl || activeSpecialistView.avatar}
-              alt={activeSpecialistView.name}
+              src={activeSpecialistView.portfolio?.[0]?.imageUrl || activeSpecialistView.avatarUrl || 'https://via.placeholder.com/150'}
+              alt={activeSpecialistView.user?.fullName}
               className="absolute left-0 top-0 w-2/5 h-full object-cover opacity-25 blur-xs"
             />
 
@@ -514,11 +535,11 @@ export const SalonAdminDashboard: React.FC = () => {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="relative">
                   <img
-                    src={activeSpecialistView.avatar}
-                    alt={activeSpecialistView.name}
+                    src={activeSpecialistView.avatarUrl || 'https://via.placeholder.com/150'}
+                    alt={activeSpecialistView.user?.fullName}
                     className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-3 border-[#D9A2B0] shadow-md"
                   />
-                  {activeSpecialistView.verified && (
+                  {activeSpecialistView.isVerified && (
                     <span className="absolute -bottom-1.5 -right-1.5 bg-[#6F9A8D] text-white p-1 rounded-full shadow-xs">
                       <CheckCircle2 className="w-4 h-4" />
                     </span>
@@ -528,10 +549,10 @@ export const SalonAdminDashboard: React.FC = () => {
                 <div className="flex-1 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-lg font-bold font-serif text-white">
-                      {activeSpecialistView.name}
+                      {activeSpecialistView.user?.fullName}
                     </h2>
                     <span className="text-[11px] bg-white/10 px-2.5 py-0.5 rounded-full text-[#D9A2B0] font-bold border border-white/20">
-                      {activeSpecialistView.role}
+                      {activeSpecialistView.user?.role}
                     </span>
                     <span className="text-[10px] bg-[#6F9A8D]/30 text-[#E8F0EF] px-2 py-0.5 rounded-full font-bold">
                       {getSpecialistTypeBadge(activeSpecialistView).label}
@@ -546,16 +567,16 @@ export const SalonAdminDashboard: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
                     <span className="flex items-center gap-1 text-[#C99558]">
                       <Star className="w-3.5 h-3.5 fill-current" />
-                      <span className="font-bold text-white">{toPersianDigits(activeSpecialistView.rating.toFixed(2))}</span>
-                      <span className="text-[#E8F0EF]/70">({toPersianDigits(activeSpecialistView.reviewsCount)} نظر ثبت شده)</span>
+                      <span className="font-bold text-white">{toPersianDigits((activeSpecialistView.rating || 5).toFixed(2))}</span>
+                      <span className="text-[#E8F0EF]/70">({toPersianDigits(activeSpecialistView.reviewsCount || 0)} نظر ثبت شده)</span>
                     </span>
-                    <span className="text-white/40">•</span>
+                    <span>•</span>
                     <span className="text-[#E8F0EF]">
-                      {toPersianDigits(activeSpecialistView.experienceYears)} سال سابقه حرفه‌ای
+                      {toPersianDigits(activeSpecialistView.experienceYears || 0)} سال سابقه حرفه‌ای
                     </span>
-                    <span className="text-white/40">•</span>
+                    <span>•</span>
                     <span className="text-[#D9A2B0] font-mono text-xs">
-                      {toPersianDigits(activeSpecialistView.phone)}
+                      {toPersianDigits(activeSpecialistView.user?.phone || '')}
                     </span>
                   </div>
                 </div>
@@ -571,7 +592,7 @@ export const SalonAdminDashboard: React.FC = () => {
                 </div>
                 <div className="bg-white/5 p-2.5 rounded-2xl border border-white/10">
                   <span className="text-[10px] text-[#E8F0EF]/80 block">نمونه‌کارهای ثبت شده من:</span>
-                  <span className="text-sm font-bold text-white">{toPersianDigits(activeSpecialistView.portfolio.length)} تصویر</span>
+                  <span className="text-sm font-bold text-white">{toPersianDigits(activeSpecialistView.portfolio?.length || 0)} تصویر</span>
                 </div>
                 <div className="bg-white/5 p-2.5 rounded-2xl border border-white/10">
                   <span className="text-[10px] text-[#E8F0EF]/80 block">لاین تخصصی:</span>
@@ -581,7 +602,7 @@ export const SalonAdminDashboard: React.FC = () => {
                 </div>
                 <div className="bg-white/5 p-2.5 rounded-2xl border border-white/10">
                   <span className="text-[10px] text-[#E8F0EF]/80 block">سالن همکار:</span>
-                  <span className="text-sm font-bold text-white truncate block">{currentSalon.name}</span>
+                  <span className="text-sm font-bold text-white truncate block">{currentSalon?.name}</span>
                 </div>
               </div>
             </div>
@@ -678,7 +699,7 @@ export const SalonAdminDashboard: React.FC = () => {
                 <div>
                   <h3 className="text-sm font-bold text-[#173B3F] flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-[#D9A2B0]" />
-                    <span>مدیریت رزروهای اختصاصی شما ({activeSpecialistView.name})</span>
+                    <span>مدیریت رزروهای اختصاصی شما ({activeSpecialistView.user?.fullName})</span>
                   </h3>
                   <p className="text-xs text-[#6C6C6C] mt-0.5">
                     طبق قوانین امنیتی بویا، شما فقط به رزروهای ارجاع‌شده به خودتان دسترسی دارید و می‌توانید آن‌ها را تایید یا رد کنید.
@@ -694,7 +715,7 @@ export const SalonAdminDashboard: React.FC = () => {
                   <Calendar className="w-10 h-10 text-[#6F9A8D] mx-auto opacity-70" />
                   <p className="text-sm font-bold text-[#173B3F]">هنوز نوبتی برای شما ثبت نشده است.</p>
                   <p className="text-xs text-[#6C6C6C]">
-                    با مراجعه به اپلیکیشن مشتریان و رزرو خدمت با متخصص «{activeSpecialistView.name}»، نوبت مستقیماً اینجا نمایان می‌شود.
+                    با مراجعه به اپلیکیشن مشتریان و رزرو خدمت با متخصص «{activeSpecialistView.user?.fullName}»، نوبت مستقیماً اینجا نمایان می‌شود.
                   </p>
                 </div>
               ) : (
@@ -707,8 +728,8 @@ export const SalonAdminDashboard: React.FC = () => {
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-[#1C1C1C]">{bkg.customerName}</span>
-                            <span className="text-[11px] font-mono text-[#6C6C6C]">({toPersianDigits(bkg.customerPhone)})</span>
+                            <span className="text-xs font-bold text-[#1C1C1C]">{bkg.customer?.fullName}</span>
+                            <span className="text-[11px] font-mono text-[#6C6C6C]">({toPersianDigits(bkg.customer?.phone || '')})</span>
                             {bkg.isMobileBooking && (
                               <span className="text-[10px] font-bold text-[#C99558] bg-[#FAF7F2] px-2 py-0.5 rounded-full border border-[#C99558]/30 flex items-center gap-1">
                                 <Car className="w-3 h-3" />
@@ -717,7 +738,7 @@ export const SalonAdminDashboard: React.FC = () => {
                             )}
                           </div>
                           <span className="text-xs font-bold text-[#173B3F] block">
-                            سرویس: {bkg.serviceName}
+                            سرویس: {bkg.service?.name}
                           </span>
                           <span className="text-[10px] font-mono text-[#6C6C6C] block">
                             کد رهگیری نوبت: {bkg.trackingCode}
@@ -746,7 +767,7 @@ export const SalonAdminDashboard: React.FC = () => {
                         <div className="flex items-center gap-2 text-[#1C1C1C]">
                           <Clock className="w-3.5 h-3.5 text-[#173B3F]" />
                           <span>
-                            {bkg.date} — ساعت {toPersianDigits(bkg.time)} ({toPersianDigits(bkg.durationMinutes)} دقیقه)
+                            {bkg.date} — ساعت {toPersianDigits(bkg.time)} ({toPersianDigits(bkg.service?.durationMinutes || 0)} دقیقه)
                           </span>
                         </div>
                         <span className="font-bold text-[#173B3F]">
@@ -817,7 +838,7 @@ export const SalonAdminDashboard: React.FC = () => {
                 <div>
                   <h3 className="text-sm font-bold text-[#173B3F] flex items-center gap-1.5">
                     <Scissors className="w-4 h-4 text-[#173B3F]" />
-                    <span>خدمات تخصصی قابل ارائه توسط {activeSpecialistView.name}:</span>
+                    <span>خدمات تخصصی قابل ارائه توسط {activeSpecialistView.user?.fullName}:</span>
                   </h3>
                   <p className="text-xs text-[#6C6C6C] mt-0.5">
                     مطابق قوانین دسترسی، شما فقط به خدمات لاین تخصصی خود ({currentSpecialistLine?.name}) دسترسی دارید و نمی‌توانید خدمات سایر همکاران را مشاهده یا ویرایش کنید.
@@ -841,7 +862,7 @@ export const SalonAdminDashboard: React.FC = () => {
                       تعریف خدمت جدید برای لاین {currentSpecialistLine?.name}
                     </h4>
                     <span className="text-[10px] text-[#2E5E52] bg-[#EAF2EF] px-2.5 py-0.5 rounded-full font-bold">
-                      ثبت به نام {activeSpecialistView.name}
+                      ثبت به نام {activeSpecialistView.user?.fullName}
                     </span>
                   </div>
 
@@ -953,7 +974,7 @@ export const SalonAdminDashboard: React.FC = () => {
                               url: serv.imageUrl || PRESET_SERVICE_PHOTOS[0].url,
                               title: serv.name,
                               category: serv.description,
-                              author: activeSpecialistView.name,
+                              author: activeSpecialistView.user?.fullName,
                             })
                           }
                           className="w-14 h-14 rounded-xl object-cover border border-[#E7E2DA] shrink-0 cursor-pointer hover:opacity-90"
@@ -1000,7 +1021,7 @@ export const SalonAdminDashboard: React.FC = () => {
                 <div>
                   <h3 className="text-sm font-bold text-[#173B3F] flex items-center gap-2">
                     <Clock className="w-4 h-4 text-[#D9A2B0]" />
-                    <span>تنظیم ساعات کاری و روزهای حضور شما ({activeSpecialistView.name})</span>
+                    <span>تنظیم ساعات کاری و روزهای حضور شما ({activeSpecialistView.user?.fullName})</span>
                   </h3>
                   <p className="text-xs text-[#6C6C6C] mt-0.5">
                     بر اساس این زمان‌بندی، اسلات‌های خالی نوبت‌دهی برای مشتریان در سامانه نمایش داده می‌شود.
@@ -1446,15 +1467,15 @@ export const SalonAdminDashboard: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-1">
                   <span className="text-[#6C6C6C] block">نام و نام خانوادگی:</span>
-                  <span className="font-bold text-[#1C1C1C] text-sm">{activeSpecialistView.name}</span>
+                  <span className="font-bold text-[#1C1C1C] text-sm">{activeSpecialistView.user?.fullName}</span>
                 </div>
                 <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-1">
                   <span className="text-[#6C6C6C] block">سمت و تخصص:</span>
-                  <span className="font-bold text-[#173B3F] text-sm">{activeSpecialistView.role}</span>
+                  <span className="font-bold text-[#173B3F] text-sm">{activeSpecialistView.user?.role}</span>
                 </div>
                 <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-1">
                   <span className="text-[#6C6C6C] block">شماره تماس اختصاصی:</span>
-                  <span className="font-mono font-bold text-[#1C1C1C] text-sm">{toPersianDigits(activeSpecialistView.phone)}</span>
+                  <span className="font-mono font-bold text-[#1C1C1C] text-sm">{toPersianDigits(activeSpecialistView.user?.phone || '')}</span>
                 </div>
                 <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-1">
                   <span className="text-[#6C6C6C] block">نوع همکاری:</span>
@@ -1474,8 +1495,8 @@ export const SalonAdminDashboard: React.FC = () => {
           {specialistTab === 'financials' && (
             <SpecialistFinancialsView
               specialist={activeSpecialistView}
-              bookings={bookings}
-              salonName={currentSalon.name}
+              bookings={bookingsData}
+              salonName={currentSalon?.name || ''}
             />
           )}
 
@@ -1723,11 +1744,11 @@ export const SalonAdminDashboard: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <div className="relative">
                             <img
-                              src={spec.avatar}
-                              alt={spec.name}
+                              src={spec.avatarUrl || 'https://via.placeholder.com/150'}
+                              alt={spec.user?.fullName}
                               className="w-13 h-13 rounded-2xl object-cover border-2 border-[#D9A2B0] shrink-0"
                             />
-                            {spec.verified && (
+                            {spec.isVerified && (
                               <span className="absolute -bottom-1 -right-1 bg-[#6F9A8D] text-white p-0.5 rounded-full">
                                 <CheckCircle2 className="w-3 h-3" />
                               </span>
@@ -1736,19 +1757,19 @@ export const SalonAdminDashboard: React.FC = () => {
 
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between">
-                              <h4 className="text-xs font-bold text-[#1C1C1C] truncate">{spec.name}</h4>
+                              <h4 className="text-xs font-bold text-[#1C1C1C] truncate">{spec.user?.fullName}</h4>
                               <div className="flex items-center gap-0.5 text-[#C99558]">
                                 <Star className="w-3 h-3 fill-current" />
-                                <span className="text-[11px] font-bold text-[#1C1C1C]">{toPersianDigits(spec.rating.toFixed(2))}</span>
+                                <span className="text-[11px] font-bold text-[#1C1C1C]">{toPersianDigits((spec.rating || 5).toFixed(2))}</span>
                               </div>
                             </div>
-                            <span className="text-[11px] text-[#173B3F] font-semibold block truncate">{spec.role}</span>
+                            <span className="text-[11px] text-[#173B3F] font-semibold block truncate">{spec.user?.role}</span>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span className={`text-[9px] px-1.5 py-0.2 rounded-md ${badge.color}`}>
                                 {badge.label}
                               </span>
                               <span className="text-[10px] text-[#6C6C6C]">
-                                {toPersianDigits(spec.experienceYears)} سال سابقه
+                                {toPersianDigits(spec.experienceYears || 0)} سال سابقه
                               </span>
                             </div>
                           </div>
@@ -1756,7 +1777,7 @@ export const SalonAdminDashboard: React.FC = () => {
 
                         {/* Mini portfolio thumbnails preview */}
                         <div className="flex items-center gap-1.5 overflow-hidden">
-                          {spec.portfolio.slice(0, 3).map((p) => (
+                          {spec.portfolio?.slice(0, 3).map((p: any) => (
                             <div key={p.id} className="w-14 h-14 rounded-xl overflow-hidden border border-[#E7E2DA] shrink-0 relative">
                               <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                             </div>
@@ -1804,7 +1825,7 @@ export const SalonAdminDashboard: React.FC = () => {
                         <span className="text-xs font-bold text-[#1C1C1C] block truncate">{serv.name}</span>
                         <span className="text-[10px] text-[#6C6C6C] block truncate mt-0.5">{serv.description}</span>
                         <div className="flex items-center justify-between mt-1">
-                          <span className="text-xs font-bold text-[#173B3F]">{formatPrice(serv.price)}</span>
+                          <span className="text-xs font-bold text-[#173B3F]">{formatPrice(Number(serv.price))}</span>
                           <span className="text-[10px] text-[#2E5E52] bg-[#EAF2EF] px-2 py-0.5 rounded-full font-bold">
                             {toPersianDigits(serv.durationMinutes)} دقیقه
                           </span>
@@ -1837,8 +1858,8 @@ export const SalonAdminDashboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {salonBookings.map((bkg) => {
-                    const matchedService = salonServices.find((s) => s.id === bkg.serviceId || s.name === bkg.serviceName);
+                  {salonBookings.map((bkg: any) => {
+                    const matchedService = salonServices.find((s: any) => s.id === bkg.serviceId);
 
                     return (
                       <div
@@ -1867,7 +1888,7 @@ export const SalonAdminDashboard: React.FC = () => {
                                 )}
                               </div>
                               <span className="text-xs font-bold text-[#173B3F] block mt-0.5">
-                                {bkg.serviceName} با متخصص {bkg.specialistName}
+                                {bkg.service?.name} با متخصص {bkg.specialist?.user?.fullName}
                               </span>
                             </div>
                           </div>
@@ -1897,7 +1918,7 @@ export const SalonAdminDashboard: React.FC = () => {
                             </span>
                           </div>
                           <span className="font-bold text-[#173B3F]">
-                            مبلغ: {formatPrice(bkg.price)}
+                            مبلغ: {formatPrice(Number(bkg.price))}
                           </span>
                         </div>
 
@@ -2244,12 +2265,12 @@ export const SalonAdminDashboard: React.FC = () => {
                             <div className="flex items-center gap-3 mt-1.5 text-xs text-[#6C6C6C]">
                               <span className="flex items-center gap-1 text-[#C99558]">
                                 <Star className="w-3.5 h-3.5 fill-current" />
-                                <span className="font-bold text-[#1C1C1C]">{toPersianDigits(spec.rating.toFixed(2))}</span>
+                                <span className="font-bold text-[#1C1C1C]">{toPersianDigits((spec.rating || 5).toFixed(2))}</span>
                               </span>
                               <span>•</span>
-                              <span>{toPersianDigits(spec.experienceYears)} سال سابقه</span>
+                              <span>{toPersianDigits(spec.experienceYears || 0)} سال سابقه</span>
                               <span>•</span>
-                              <span className="font-mono text-[11px]">{toPersianDigits(spec.phone)}</span>
+                              <span className="font-mono text-[11px]">{toPersianDigits(spec.user?.phone || '')}</span>
                             </div>
                           </div>
                         </div>
@@ -2284,7 +2305,7 @@ export const SalonAdminDashboard: React.FC = () => {
                                   url: p.imageUrl,
                                   title: p.title,
                                   category: p.category,
-                                  author: spec.name,
+                                  author: spec.user?.fullName,
                                 })
                               }
                               className="group relative aspect-4/3 rounded-xl overflow-hidden border border-[#E7E2DA] bg-[#FAF7F2] cursor-pointer shadow-xs hover:border-[#173B3F] transition-all"

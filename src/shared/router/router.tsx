@@ -21,7 +21,6 @@ const Root = () => {
     toastMessage, isLocationModalOpen, setIsLocationModalOpen, showToast
   } = useUIStore();
   
-  const { confirmBooking, latestBookingAlert } = useDataStore();
   const { 
     isBookingModalOpen, closeBookingModal, bookingData,
     isPortfolioModalOpen, closePortfolioModal, portfolioSpecialist, portfolioSalon,
@@ -32,15 +31,7 @@ const Root = () => {
   
   const locationState = useLocationStore();
 
-  useEffect(() => {
-    if (latestBookingAlert) {
-      const statusText = latestBookingAlert.status === 'confirmed' ? 'تایید' : (latestBookingAlert.status === 'cancelled' ? 'لغو' : 'تغییر وضعیت');
-      showToast(`نوبت شما برای «${latestBookingAlert.serviceName}» در سالن «${latestBookingAlert.salonName}» توسط مدیریت ${statusText} شد.`);
-    }
-  }, [latestBookingAlert, showToast]);
-
   const handleConfirmBooking = (data: any) => {
-    confirmBooking(data);
     closeBookingModal();
     showToast(`نوبت در سالن «${data.salonName}» ثبت شد.`);
   };
@@ -104,8 +95,8 @@ const salonsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon
 const bookingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/bookings', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute><BookingsScreen /></ProtectedRoute></Suspense> });
 const savedRoute = createRoute({ getParentRoute: () => rootRoute, path: '/saved', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute><SavedScreen /></ProtectedRoute></Suspense> });
 const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute><ProfileSupportScreen /></ProtectedRoute></Suspense> });
-const salonAdminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['salon_admin', 'admin']}><SalonAdminDashboard /></ProtectedRoute></Suspense> });
-const adminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['admin']}><AdminPanel /></ProtectedRoute></Suspense> });
+const salonAdminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['salon_admin', 'super_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']}><SalonAdminDashboard /></ProtectedRoute></Suspense> });
+const adminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['super_admin']}><AdminPanel /></ProtectedRoute></Suspense> });
 
 const routeTree = rootRoute.addChildren([indexRoute, salonsRoute, bookingsRoute, savedRoute, profileRoute, salonAdminRoute, adminRoute]);
 export const router = createRouter({ routeTree });

@@ -4,7 +4,7 @@
  */
 
 import { toPersianDigits } from './persianUtils';
-import { IRAN_PROVINCES, GPS_PRESETS, Province, CountyCity } from '../data/iranLocations';
+import { IRAN_PROVINCES, Province, CountyCity } from '../data/iranLocations';
 
 export interface GeoCoordinates {
   lat: number;

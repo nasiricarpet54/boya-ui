@@ -8,6 +8,20 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { bookingSchema } from '../../utils/validation';
 import { useAuthStore } from '../../stores/authStore';
+import api from '../../api/apiClient';
+
+interface BookingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  bookingData: {
+    salon: Salon;
+    service: SalonService;
+    specialist: Specialist;
+    date: string;
+    time: string;
+  } | null;
+  onConfirmBooking: (appointment: any) => void;
+}
 
 export const BookingModal: React.FC<BookingModalProps> = ({
   isOpen,
@@ -29,7 +43,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       specialistId: bookingData?.specialist.id || '',
       date: bookingData?.date || '',
       time: bookingData?.time || '',
-      customerName: user?.name || '',
+      customerName: user?.fullName || '',
       customerPhone: user?.phone || '',
       notes: '',
     }
@@ -39,26 +53,29 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const { salon, service, specialist, date, time } = bookingData;
 
-  const handleConfirm = (data: any) => {
+  const handleConfirm = async (data: any) => {
     setIsProcessing(true);
-    const code = `BY-${Math.floor(100000 + Math.random() * 900000)}`;
-    setGeneratedTrackingCode(code);
-
-    setTimeout(() => {
-      onConfirmBooking({
-        ...data,
-        salonName: salon.name,
-        salonAddress: salon.address,
-        serviceName: service.name,
-        serviceLineId: service.serviceLineId,
-        specialistName: specialist.name,
-        durationMinutes: service.durationMinutes,
-        price: service.price,
+    try {
+      const response = await api.post('/bookings', {
+        salonId: salon.id,
+        serviceId: service.id,
+        specialistId: specialist.id,
+        date,
+        time,
         isMobileBooking: isMobileService,
+        customerAddress: data.customerAddress,
+        notes: data.notes,
+        price: service.price.toString(),
       });
-      setIsProcessing(false);
+      
+      setGeneratedTrackingCode(response.data.trackingCode);
       setIsConfirmed(true);
-    }, 900);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.error || 'خطایی در ثبت نوبت رخ داد.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -108,7 +125,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 نوبت شما در سامانه بویا ثبت گردید
               </h4>
               <p className="text-xs text-[#6C6C6C] max-w-sm mx-auto leading-relaxed">
-                پیامک تایید نوبت و جزئیات سانس از طریق سامانه ملی‌پیامک به شماره {toPersianDigits(userPhone)} ارسال گردید.
+                پیامک تایید نوبت و جزئیات سانس از طریق سامانه ملی‌پیامک به شماره {toPersianDigits(watch('customerPhone'))} ارسال گردید.
               </p>
 
               {/* Tracking Code */}

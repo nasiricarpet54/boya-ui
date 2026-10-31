@@ -1,12 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from '@tanstack/react-router';
-import { ErrorBoundary } from 'react-error-boundary';
+import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { QueryProvider } from './shared/api/queryClient';
 import { router } from './shared/router/router';
 import './index.css';
 
-const ErrorFallback = ({ error }: { error: Error }) => (
+const ErrorFallback = ({ error }: FallbackProps) => (
   <div className="min-h-screen flex items-center justify-center bg-[#F7F3EE] p-6 text-center" dir="rtl">
     <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-[#D9A2B0]/30">
       <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -24,7 +24,7 @@ const ErrorFallback = ({ error }: { error: Error }) => (
       </button>
       {process.env.NODE_ENV !== 'production' && (
         <pre className="mt-6 p-4 bg-gray-100 rounded text-left text-xs overflow-auto max-h-40">
-          {error.message}
+          {(error as any).message}
         </pre>
       )}
     </div>
