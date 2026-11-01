@@ -75,3 +75,25 @@ export function getTehranTime(date: Date | string = new Date()): string {
     return '۱۲:۰۰';
   }
 }
+
+/**
+ * Standardize phone number: convert Persian/Arabic digits, strip non-digits,
+ * and format as 11-digit 09xxxxxxxxx
+ */
+export function normalizePhone(raw: any): string {
+  if (!raw) return '';
+  const str = String(raw).trim();
+  const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  let res = str;
+  for (let i = 0; i < 10; i++) {
+    res = res.replaceAll(persianDigits[i], String(i)).replaceAll(arabicDigits[i], String(i));
+  }
+  res = res.replace(/[^0-9]/g, '');
+  if (res.startsWith('98') && res.length === 12) {
+    res = '0' + res.substring(2);
+  } else if (res.startsWith('9') && res.length === 10) {
+    res = '0' + res;
+  }
+  return res;
+}

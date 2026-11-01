@@ -8,6 +8,7 @@ import {
   INITIAL_AUDIT_LOGS,
 } from '../data/marketplaceData';
 import api from '../api/apiClient';
+import { normalizePhone } from '../utils/persianUtils';
 
 export interface PlatformNotification {
   id: string;
@@ -208,21 +209,29 @@ export const useDataStore = create<DataState>()(
       setUsers: (users) => set({ users }),
 
       addUser: async (user) => {
+        const cleanUser = {
+          ...user,
+          phone: normalizePhone(user.phone),
+        };
         try {
-          const { data } = await api.post('/users', user);
-          set((state) => ({ users: [data || user, ...state.users] }));
+          const { data } = await api.post('/users', cleanUser);
+          set((state) => ({ users: [data || cleanUser, ...state.users.filter(u => u.id !== cleanUser.id)] }));
         } catch (err) {
           console.error('Error adding user:', err);
-          set((state) => ({ users: [user, ...state.users] }));
+          set((state) => ({ users: [cleanUser, ...state.users] }));
         }
       },
 
       updateUser: async (id, patch) => {
+        const cleanPatch = {
+          ...patch,
+          ...(patch.phone ? { phone: normalizePhone(patch.phone) } : {}),
+        };
         set((state) => ({
-          users: state.users.map((u) => (String(u.id) === String(id) ? { ...u, ...patch } : u)),
+          users: state.users.map((u) => (String(u.id) === String(id) ? { ...u, ...cleanPatch } : u)),
         }));
         try {
-          await api.patch(`/users/${id}`, patch);
+          await api.patch(`/users/${id}`, cleanPatch);
         } catch (err) {
           console.error('Error updating user:', err);
         }

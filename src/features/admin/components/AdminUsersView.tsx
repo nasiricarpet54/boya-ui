@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Users, Plus, Edit, Trash2, Phone, Mail, Shield, ShieldCheck, CheckCircle2, X, Building2, User } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
-import { toPersianDigits } from '../../../shared/utils/persianUtils';
+import { toPersianDigits, normalizePhone } from '../../../shared/utils/persianUtils';
 import { PlatformUser } from '../../../shared/data/marketplaceData';
 
 export const AdminUsersView: React.FC = () => {
@@ -55,13 +55,15 @@ export const AdminUsersView: React.FC = () => {
     e.preventDefault();
     if (!fullName.trim() || !phone.trim()) return;
 
+    const cleanPhone = normalizePhone(phone.trim());
+
     if (editingUser) {
       // Edit user
       updateUser(editingUser.id, {
         fullName: fullName.trim(),
         name: fullName.trim(),
-        phone: phone.trim(),
-        email: email.trim() || `${phone.trim()}@boya.ir`,
+        phone: cleanPhone,
+        email: email.trim() || `${cleanPhone}@boya.ir`,
         role,
         salonId: selectedSalonId || undefined,
       });
@@ -71,8 +73,8 @@ export const AdminUsersView: React.FC = () => {
         id: `usr-${Date.now()}`,
         name: fullName.trim(),
         fullName: fullName.trim(),
-        phone: phone.trim(),
-        email: email.trim() || `${phone.trim()}@boya.ir`,
+        phone: cleanPhone,
+        email: email.trim() || `${cleanPhone}@boya.ir`,
         role: role as any,
         status: 'active',
         createdAt: 'امروز',

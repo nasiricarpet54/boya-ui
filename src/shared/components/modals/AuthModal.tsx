@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, ShieldCheck, Smartphone, KeyRound, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
+import { useUIStore } from '../../stores/uiStore';
 import { toPersianDigits } from '../../utils/persianUtils';
+import { useNavigate } from '@tanstack/react-router';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -55,6 +57,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     }
   };
 
+  const navigate = useNavigate(); // ✅
+  const { setAppMode } = useUIStore(); // ✅
+
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -66,6 +71,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
     try {
       await loginWithPhone(phoneNumber.trim(), otpCode.trim());
+      
+      // ✅ Redirect based on role
+      const { user } = useAuthStore.getState();
+      if (user) {
+        if (user.role === 'super_admin') {
+          setAppMode('admin_panel');
+          navigate({ to: '/admin' });
+        } else if (
+          user.role === 'salon_admin' || 
+          user.role === 'salon_specialist' || 
+          user.role === 'mobile_specialist' || 
+          user.role === 'line_manager'
+        ) {
+          setAppMode('salon_panel');
+          navigate({ to: '/salon-admin' });
+        } else {
+          setAppMode('customer');
+          navigate({ to: '/' });
+        }
+      }
+      
       onSuccess?.();
       onClose();
     } catch (err: any) {

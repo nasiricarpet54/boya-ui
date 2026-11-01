@@ -23,7 +23,7 @@ export const ProfileSupportScreen: React.FC = () => {
   const [newTicketMessage, setNewTicketMessage] = useState<string>('');
   const [copiedNotification, setCopiedNotification] = useState<boolean>(false);
 
-  const referralCode = 'BOYA-SHADI94';
+  const referralCode = user?.phone ? `BOYA-${user.phone.slice(-4)}` : 'BOYA-CLUB';
 
   const handleSwitchToSalonPanel = () => {
     setSplashAppName('ورود به پنل جامع سالندار و متخصصین بویا');
@@ -36,13 +36,14 @@ export const ProfileSupportScreen: React.FC = () => {
     e.preventDefault();
     if (!newReplyText.trim() || !selectedTicket) return;
 
+    const currentUserName = user?.fullName || 'کاربر بویا';
     const updated = {
       ...selectedTicket,
       messages: [
         ...selectedTicket.messages,
         {
           sender: 'user' as const,
-          senderName: 'شادی بهرامی',
+          senderName: currentUserName,
           text: newReplyText.trim(),
           time: 'هم‌اکنون',
         },
@@ -60,11 +61,14 @@ export const ProfileSupportScreen: React.FC = () => {
     e.preventDefault();
     if (!newTicketTitle.trim() || !newTicketMessage.trim()) return;
 
+    const currentUserName = user?.fullName || 'کاربر بویا';
+    const currentUserPhone = user?.phone || '';
+
     const newTicket: SupportTicket = {
       id: `tkt-${Math.floor(100 + Math.random() * 900)}`,
       title: newTicketTitle.trim(),
-      userName: 'شادی بهرامی',
-      userPhone: '۰۹۱۲۳۴۵۶۷۸۹',
+      userName: currentUserName,
+      userPhone: currentUserPhone,
       userRole: 'customer',
       category: newTicketCategory,
       status: 'open',
@@ -73,7 +77,7 @@ export const ProfileSupportScreen: React.FC = () => {
       messages: [
         {
           sender: 'user',
-          senderName: 'شادی بهرامی',
+          senderName: currentUserName,
           text: newTicketMessage.trim(),
           time: 'هم‌اکنون',
         },
@@ -85,6 +89,12 @@ export const ProfileSupportScreen: React.FC = () => {
     setNewTicketTitle('');
     setNewTicketMessage('');
     setSelectedTicket(newTicket);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setAppMode('customer');
+    navigate({ to: '/' });
   };
 
   return (
@@ -101,40 +111,40 @@ export const ProfileSupportScreen: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-[#173B3F]">{user?.fullName}</h2>
+              <h2 className="text-base font-bold text-[#173B3F]">{user?.fullName || 'کاربر مهمان'}</h2>
               <span className="text-[10px] text-[#2E5E52] bg-[#EAF2EF] px-2 py-0.5 rounded-full flex items-center gap-0.5 font-bold"><CheckCircle2 className="w-3 h-3" />تایید شده</span>
             </div>
             <span className="text-xs text-[#6C6C6C] block font-mono">{toPersianDigits(user?.phone || '')}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {user?.role !== 'customer' && (
-            (user?.role === 'super_admin' ? (
-              <button 
-                onClick={() => {
-                  setSplashAppName('ورود به وب پنل ادمین اصلی کل');
-                  setShowSplashScreen(true);
-                  setAppMode('admin_panel');
-                  navigate({ to: '/admin' });
-                }} 
-                className="flex flex-col items-center p-2 rounded-2xl bg-[#173B3F] text-white hover:bg-[#0F3232] transition-all min-w-[70px]"
-              >
-                <ShieldCheck className="w-5 h-5 mb-0.5 text-[#D9A2B0]" />
-                <span className="text-[10px] font-bold">پنل ادمین</span>
-              </button>
-            ) : (
-              <button 
-                onClick={handleSwitchToSalonPanel} 
-                className="flex flex-col items-center p-2 rounded-2xl bg-[#E8F0EF] text-[#173B3F] hover:bg-[#173B3F] hover:text-white transition-all min-w-[70px]"
-              >
-                <Store className="w-5 h-5 mb-0.5" />
-                <span className="text-[10px] font-bold">پنل سالن/متخصص</span>
-              </button>
-            ))
+          {user?.role === 'super_admin' && (
+            <button 
+              onClick={() => {
+                setSplashAppName('ورود به وب پنل ادمین اصلی کل');
+                setShowSplashScreen(true);
+                setAppMode('admin_panel');
+                navigate({ to: '/admin' });
+              }} 
+              className="flex flex-col items-center p-2 rounded-2xl bg-[#173B3F] text-white hover:bg-[#0F3232] transition-all min-w-[70px]"
+            >
+              <ShieldCheck className="w-5 h-5 mb-0.5 text-[#D9A2B0]" />
+              <span className="text-[10px] font-bold">پنل ادمین</span>
+            </button>
+          )}
+
+          {(user?.role === 'salon_admin' || user?.role === 'salon_specialist' || user?.role === 'mobile_specialist' || user?.role === 'line_manager') && (
+            <button 
+              onClick={handleSwitchToSalonPanel} 
+              className="flex flex-col items-center p-2 rounded-2xl bg-[#E8F0EF] text-[#173B3F] hover:bg-[#173B3F] hover:text-white transition-all min-w-[70px]"
+            >
+              <Store className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px] font-bold">پنل سالن/متخصص</span>
+            </button>
           )}
           
           <button 
-            onClick={() => logout()} 
+            onClick={handleLogout} 
             className="flex flex-col items-center p-2 rounded-2xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all min-w-[70px] border border-red-100"
           >
             <LogOut className="w-5 h-5 mb-0.5" />

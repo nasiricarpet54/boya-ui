@@ -14,6 +14,7 @@ import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db
 import { getOrCreateUserByPhone } from './src/db/users.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
 import { loadServerData, saveServerData } from './src/lib/serverDataStore.ts';
+import { normalizePhone } from './src/shared/utils/persianUtils.ts';
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ const PORT = process.env.PORT || 3000;
 
 async function createServer() {
   const app = express();
+  let serverData = loadServerData();
   app.use(express.json({ limit: '25mb' }));
   app.use(express.urlencoded({ limit: '25mb', extended: true }));
   app.use(cookieParser());
@@ -87,7 +89,7 @@ async function createServer() {
 
   // Phone OTP Auth
   app.post('/api/auth/send-otp', async (req, res) => {
-    const { phone } = req.body;
+    const phone = normalizePhone(req.body.phone);
     if (!phone || !/^09\d{9}$/.test(phone)) {
       return res.status(400).json({ error: 'شماره همراه وارد شده معتبر نمی‌باشد (نمونه: ۰۹۱۲۳۴۵۶۷۸۹)' });
     }
@@ -103,7 +105,8 @@ async function createServer() {
   });
 
   app.post('/api/auth/verify-otp', async (req, res) => {
-    const { phone, code, fullName } = req.body;
+    const { phone: rawPhone, code, fullName } = req.body;
+    const phone = normalizePhone(rawPhone);
     if (!phone || !code) {
       return res.status(400).json({ error: 'شماره همراه و کد تایید الزامی است.' });
     }
@@ -113,26 +116,32 @@ async function createServer() {
     }
 
     try {
-      // 1. Check if user exists in DB
+      // 1. Check if user exists in PostgreSQL DB (THE PRIMARY SOURCE OF TRUTH)
       let dbUser = await db.select().from(users).where(eq(users.phone, phone)).limit(1).then(r => r[0]);
 
-      // 2. If not in DB, check if user exists in serverData (Admin Panel)
+      // 2. If not in DB, check if user exists in serverData (configured by Admin in AdminUsersView)
       if (!dbUser) {
-        const userInStore = serverData.users.find(u => String(u.phone) === String(phone));
+        const userInStore = serverData.users.find(u => normalizePhone(u.phone) === phone);
         if (userInStore) {
+          const roleMap: Record<string, string> = {
+            'salon_owner': 'salon_admin',
+            'specialist': 'salon_specialist',
+            'independent_specialist': 'line_manager',
+          };
+          const mappedRole = roleMap[userInStore.role] || userInStore.role || 'customer';
           // Create in DB with role from store
           dbUser = await db.insert(users).values({
             uid: `phone_${phone}`,
             phone: phone,
-            fullName: userInStore.fullName || userInStore.name,
+            fullName: userInStore.fullName || userInStore.name || `کاربر ${phone.slice(-4)}`,
             email: userInStore.email || `${phone}@boya.ir`,
-            role: userInStore.role,
-            salonId: userInStore.salonId ? Number(userInStore.salonId) : null,
+            role: mappedRole as any,
+            salonId: userInStore.salonId ? String(userInStore.salonId) : null,
           }).returning().then(r => r[0]);
         }
       }
 
-      // 3. If still not found, create new user (defaulting to customer)
+      // 3. If still not found, create or get user by phone
       if (!dbUser) {
         dbUser = await getOrCreateUserByPhone(phone, fullName);
       }
@@ -140,7 +149,7 @@ async function createServer() {
       const token = `phone_${phone}`;
       res.json({ token, user: dbUser });
     } catch (err) {
-      console.error(err);
+      console.error('Error in /api/auth/verify-otp:', err);
       res.status(500).json({ error: 'خطایی در ثبت یا ورود کاربر رخ داد.' });
     }
   });
@@ -149,10 +158,6 @@ async function createServer() {
   app.get('/api/profile', requireAuth, (req: AuthRequest, res) => {
     res.json(req.dbUser);
   });
-
-  // Salons & Services
-  // Persistent Server DB State
-  let serverData = loadServerData();
 
   // --- Salons CRUD ---
   app.get('/api/salons', (req, res) => {
@@ -204,26 +209,59 @@ async function createServer() {
   app.post('/api/users', async (req, res) => {
     try {
       const newUser = req.body;
+      const phone = normalizePhone(newUser.phone);
+      if (!phone) {
+        return res.status(400).json({ error: 'شماره تلفن معتبر نیست' });
+      }
+
       if (!newUser.id) {
         newUser.id = `usr-${Date.now()}`;
       }
-      
-      // Update DB
-      await db.insert(users).values({
-        uid: `phone_${newUser.phone}`,
-        phone: newUser.phone,
-        fullName: newUser.fullName,
-        email: newUser.email || `${newUser.phone}@boya.ir`,
-        role: newUser.role,
-        salonId: newUser.salonId ? Number(newUser.salonId) : null,
-      });
+      newUser.phone = phone;
 
-      serverData.users = [newUser, ...serverData.users];
+      const roleMap: Record<string, string> = {
+        'salon_owner': 'salon_admin',
+        'specialist': 'salon_specialist',
+        'independent_specialist': 'line_manager',
+      };
+      const role = roleMap[newUser.role] || newUser.role || 'customer';
+      newUser.role = role;
+
+      const salonId = newUser.salonId ? String(newUser.salonId) : null;
+
+      // Update DB (check if already exists by phone)
+      const existingUser = await db.select().from(users).where(eq(users.phone, phone)).limit(1).then(r => r[0]);
+      if (existingUser) {
+        await db.update(users).set({
+          fullName: newUser.fullName || newUser.name || existingUser.fullName,
+          role: role as any,
+          salonId: salonId || existingUser.salonId,
+          email: newUser.email || existingUser.email,
+        }).where(eq(users.id, existingUser.id));
+      } else {
+        await db.insert(users).values({
+          uid: `phone_${phone}`,
+          phone,
+          fullName: newUser.fullName || newUser.name || `کاربر ${phone.slice(-4)}`,
+          email: newUser.email || `${phone}@boya.ir`,
+          role: role as any,
+          salonId,
+        });
+      }
+
+      // Upsert into serverData
+      const idx = serverData.users.findIndex(u => normalizePhone(u.phone) === phone || String(u.id) === String(newUser.id));
+      if (idx >= 0) {
+        serverData.users[idx] = { ...serverData.users[idx], ...newUser, phone, role, salonId };
+      } else {
+        serverData.users = [{ ...newUser, phone, role, salonId }, ...serverData.users];
+      }
       saveServerData(serverData);
+
       res.status(201).json(newUser);
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'خطا در ثبت کاربر جدید' });
+      console.error('Error saving user in /api/users:', err);
+      res.status(500).json({ error: 'خطا در ثبت کاربر جدید در دیتابیس' });
     }
   });
 
@@ -232,29 +270,58 @@ async function createServer() {
       const userId = req.params.id;
       const patch = req.body;
       
-      const user = serverData.users.find(u => String(u.id) === String(userId));
-      
-      // Update DB
-      if (user && user.phone) {
-        await db.update(users).set({
-          fullName: patch.fullName || user.fullName,
-          role: patch.role || user.role,
-          salonId: patch.salonId !== undefined ? (patch.salonId ? Number(patch.salonId) : null) : (user.salonId ? Number(user.salonId) : null),
-        }).where(eq(users.phone, user.phone));
+      const userIdx = serverData.users.findIndex(u => String(u.id) === String(userId));
+      const existingUser = userIdx >= 0 ? serverData.users[userIdx] : null;
+
+      const roleMap: Record<string, string> = {
+        'salon_owner': 'salon_admin',
+        'specialist': 'salon_specialist',
+        'independent_specialist': 'line_manager',
+      };
+      const targetRole = patch.role ? (roleMap[patch.role] || patch.role) : undefined;
+      const targetPhone = patch.phone ? normalizePhone(patch.phone) : undefined;
+      const userPhone = targetPhone || (existingUser ? normalizePhone(existingUser.phone) : null);
+
+      // Update DB if phone known
+      if (userPhone) {
+        const dbExisting = await db.select().from(users).where(eq(users.phone, userPhone)).limit(1).then(r => r[0]);
+        if (dbExisting) {
+          const dbUpdates: any = {};
+          if (patch.fullName || patch.name) dbUpdates.fullName = patch.fullName || patch.name;
+          if (targetRole) dbUpdates.role = targetRole;
+          if (patch.salonId !== undefined) dbUpdates.salonId = patch.salonId ? String(patch.salonId) : null;
+          if (patch.email) dbUpdates.email = patch.email;
+          if (Object.keys(dbUpdates).length > 0) {
+            await db.update(users).set(dbUpdates).where(eq(users.id, dbExisting.id));
+          }
+        }
       }
 
-      serverData.users = serverData.users.map((u) => (String(u.id) === String(userId) ? { ...u, ...patch } : u));
-      saveServerData(serverData);
+      if (userIdx >= 0) {
+        serverData.users[userIdx] = {
+          ...serverData.users[userIdx],
+          ...patch,
+          ...(targetRole ? { role: targetRole } : {}),
+          ...(targetPhone ? { phone: targetPhone } : {}),
+        };
+        saveServerData(serverData);
+      }
+
       res.json({ success: true, userId });
     } catch (err) {
-      console.error(err);
+      console.error('Error updating user in /api/users/:id:', err);
       res.status(500).json({ error: 'خطا در ویرایش کاربر' });
     }
   });
 
-  app.delete('/api/users/:id', (req, res) => {
+  app.delete('/api/users/:id', async (req, res) => {
     try {
       const userId = req.params.id;
+      const target = serverData.users.find((u) => String(u.id) === String(userId));
+      if (target && target.phone) {
+        const phone = normalizePhone(target.phone);
+        await db.delete(users).where(eq(users.phone, phone)).catch(() => {});
+      }
       serverData.users = serverData.users.filter((u) => String(u.id) !== String(userId));
       saveServerData(serverData);
       res.json({ success: true, deletedId: userId });
@@ -388,7 +455,10 @@ async function createServer() {
   let vite: any;
   if (!isProd) {
     vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

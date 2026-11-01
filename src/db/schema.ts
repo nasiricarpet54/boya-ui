@@ -34,7 +34,7 @@ export const users = pgTable('users', {
   fullName: text('full_name').notNull(),
   phone: text('phone').notNull(),
   role: userRoleEnum('role').default('customer').notNull(),
-  salonId: integer('salon_id').references(() => salons.id), // For salon_admin and line_manager
+  salonId: text('salon_id'), // For salon_admin, specialists, and line_manager
   managedLine: text('managed_line'), // For line_manager (e.g. 'hair', 'nail')
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

@@ -7,10 +7,10 @@ import { BookingModal } from '../components/modals/BookingModal';
 import { SpecialistPortfolioModal } from '../components/modals/SpecialistPortfolioModal';
 import { LocationSelectorModal } from '../components/modals/LocationSelectorModal';
 import { useUIStore } from '../stores/uiStore';
+import { useAuthStore } from '../stores/authStore';
 import { useModalStore } from '../stores/modalStore';
 import { useLocationStore } from '../stores/locationStore';
 import { useDataStore } from '../stores/dataStore';
-import { useAuthStore } from '../stores/authStore';
 import { QuickServicesModal } from '../components/modals/QuickServicesModal';
 import { ProtectedRoute } from '../components/guards/ProtectedRoute';
 import { AuthModal } from '../components/modals/AuthModal';
@@ -19,26 +19,13 @@ import { AuthModal } from '../components/modals/AuthModal';
 const Root = () => {
   const { 
     appMode, isMobileFrame, showSplashScreen, splashAppName, setShowSplashScreen,
-    toastMessage, isLocationModalOpen, setIsLocationModalOpen, showToast, setAppMode
+    toastMessage, isLocationModalOpen, setIsLocationModalOpen, showToast,
+    setAppMode // ✅
   } = useUIStore();
   
-  const { 
-    isBookingModalOpen, closeBookingModal, bookingData,
-    isPortfolioModalOpen, closePortfolioModal, portfolioSpecialist, portfolioSalon,
-    isQuickViewModalOpen, closeQuickViewModal, quickViewSalon,
-    isAuthModalOpen, closeAuthModal,
-    openBookingModal
-  } = useModalStore();
-  
-  const locationState = useLocationStore();
-  const { fetchServerData } = useDataStore();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore(); // ✅
 
-  React.useEffect(() => {
-    fetchServerData();
-  }, [fetchServerData]);
-
-  // تنظیم خودکار appMode بر اساس نقش کاربر
+  // ✅
   React.useEffect(() => {
     if (isAuthenticated && user) {
       if (user.role === 'super_admin') {
@@ -56,6 +43,21 @@ const Root = () => {
     }
   }, [isAuthenticated, user, setAppMode]);
 
+  const { 
+    isBookingModalOpen, closeBookingModal, bookingData,
+    isPortfolioModalOpen, closePortfolioModal, portfolioSpecialist, portfolioSalon,
+    isQuickViewModalOpen, closeQuickViewModal, quickViewSalon,
+    isAuthModalOpen, closeAuthModal,
+    openBookingModal
+  } = useModalStore();
+  
+  const locationState = useLocationStore();
+  const { fetchServerData } = useDataStore();
+
+  React.useEffect(() => {
+    fetchServerData();
+  }, [fetchServerData]);
+
   const handleConfirmBooking = (data: any) => {
     closeBookingModal();
     showToast(`نوبت در سالن «${data.salonName}» ثبت شد.`);
@@ -63,8 +65,7 @@ const Root = () => {
 
   const isAdminMode = appMode === 'admin_panel' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin'));
   const isSalonPanelMode = appMode === 'salon_panel' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/salon-admin'));
-
-  // حالت پنل سالن (مدیران و متخصصین)
+  
   if (isSalonPanelMode) {
     return (
       <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased selection:bg-[#D9A2B0] selection:text-[#173B3F]">
@@ -133,6 +134,7 @@ const Root = () => {
       <QuickServicesModal isOpen={isQuickViewModalOpen} onClose={closeQuickViewModal} salon={quickViewSalon} onSelectService={(service) => {
           if (quickViewSalon) {
             closeQuickViewModal();
+            // Default to first specialist for quick booking from this modal
             openBookingModal(quickViewSalon, service, quickViewSalon.specialists[0], quickViewSalon.availableSlots[0].date, quickViewSalon.availableSlots[0].slots.find(s => !s.booked)?.time || '۱۱:۰۰');
           }
       }} />
@@ -156,7 +158,7 @@ const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', com
 const salonsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salons', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><SalonsScreen /></Suspense> });
 const bookingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/bookings', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['customer']}><BookingsScreen /></ProtectedRoute></Suspense> });
 const savedRoute = createRoute({ getParentRoute: () => rootRoute, path: '/saved', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['customer']}><SavedScreen /></ProtectedRoute></Suspense> });
-const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['customer', 'salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager', 'super_admin']}><ProfileSupportScreen /></ProtectedRoute></Suspense> });
+const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['customer']}><ProfileSupportScreen /></ProtectedRoute></Suspense> });
 const salonAdminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']}><SalonAdminDashboard /></ProtectedRoute></Suspense> });
 const adminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['super_admin']}><AdminPanel /></ProtectedRoute></Suspense> });
 const notFoundRoute = createRoute({ getParentRoute: () => rootRoute, path: '*', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><HomeScreen /></Suspense> });
