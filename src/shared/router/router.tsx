@@ -66,63 +66,45 @@ const Root = () => {
   const isAdminMode = appMode === 'admin_panel' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin'));
   const isSalonPanelMode = appMode === 'salon_panel' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/salon-admin'));
   
-  if (isSalonPanelMode) {
-    return (
-      <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased selection:bg-[#D9A2B0] selection:text-[#173B3F]">
-        <main className="flex-1 w-full min-h-screen">
-          <Outlet />
-        </main>
-        {toastMessage && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#173B3F] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-[#D9A2B0]/40 flex items-center gap-2 animate-bounce">
-            <span>{toastMessage}</span>
-          </div>
-        )}
-        <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
-        <BoyaSplashScreen isOpen={showSplashScreen} appName={splashAppName} onFinish={() => setShowSplashScreen(false)} />
-      </div>
-    );
-  }
-
-  if (isAdminMode) {
-    return (
-      <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased selection:bg-[#D9A2B0] selection:text-[#173B3F]">
-        <main className="flex-1 w-full min-h-screen">
-          <Outlet />
-        </main>
-        {toastMessage && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#173B3F] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-[#D9A2B0]/40 flex items-center gap-2 animate-bounce">
-            <span>{toastMessage}</span>
-          </div>
-        )}
-        <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
-        <BoyaSplashScreen isOpen={showSplashScreen} appName={splashAppName} onFinish={() => setShowSplashScreen(false)} />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#E7E2DA] flex flex-col selection:bg-[#D9A2B0] selection:text-[#173B3F]">
-      <div className="flex justify-center w-full min-h-screen">
-        <div
-          className={`w-full bg-[#F7F3EE] min-h-screen text-[#1C1C1C] relative flex flex-col transition-all duration-300 ${
-            isMobileFrame
-              ? 'max-w-[430px] shadow-[0_0_50px_rgba(23,59,63,0.18)] my-0 sm:my-6 sm:rounded-[36px] overflow-hidden border-0 sm:border-[8px] sm:border-[#173B3F]'
-              : 'max-w-6xl shadow-sm'
-          }`}
-        >
-          <Header />
-          <main className="flex-1 px-4 pt-4 pb-20 overflow-y-auto">
+      {isSalonPanelMode ? (
+        <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased">
+          <main className="flex-1 w-full min-h-screen">
             <Outlet />
           </main>
-          {appMode === 'customer' && <BottomNav />}
-          {toastMessage && (
-            <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-[#173B3F] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-[#D9A2B0]/40 flex items-center gap-2 animate-bounce">
-              <span>{toastMessage}</span>
-            </div>
-          )}
         </div>
-      </div>
+      ) : isAdminMode ? (
+        <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased">
+          <main className="flex-1 w-full min-h-screen">
+            <Outlet />
+          </main>
+        </div>
+      ) : (
+        <div className="flex justify-center w-full min-h-screen">
+          <div
+            className={`w-full bg-[#F7F3EE] min-h-screen text-[#1C1C1C] relative flex flex-col transition-all duration-300 ${
+              isMobileFrame
+                ? 'max-w-[430px] shadow-[0_0_50px_rgba(23,59,63,0.18)] my-0 sm:my-6 sm:rounded-[36px] overflow-hidden border-0 sm:border-[8px] sm:border-[#173B3F]'
+                : 'max-w-6xl shadow-sm'
+            }`}
+          >
+            <Header />
+            <main className="flex-1 px-4 pt-4 pb-20 overflow-y-auto">
+              <Outlet />
+            </main>
+            {appMode === 'customer' && <BottomNav />}
+          </div>
+        </div>
+      )}
+
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#173B3F] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-[#D9A2B0]/40 flex items-center gap-2 animate-bounce">
+          <span>{toastMessage}</span>
+        </div>
+      )}
       
+      {/* Global Modals rendered unconditionally to maintain stable hook execution */}
       <BookingModal isOpen={isBookingModalOpen} onClose={closeBookingModal} bookingData={bookingData} onConfirmBooking={handleConfirmBooking} />
       <SpecialistPortfolioModal isOpen={isPortfolioModalOpen} onClose={closePortfolioModal} specialist={portfolioSpecialist} salon={portfolioSalon} onBookWithSpecialist={(spec, sal, service) => {
           const serv = service || sal.services.find(s => s.serviceLineId === spec.specialtyLine) || sal.services[0];
@@ -134,7 +116,6 @@ const Root = () => {
       <QuickServicesModal isOpen={isQuickViewModalOpen} onClose={closeQuickViewModal} salon={quickViewSalon} onSelectService={(service) => {
           if (quickViewSalon) {
             closeQuickViewModal();
-            // Default to first specialist for quick booking from this modal
             openBookingModal(quickViewSalon, service, quickViewSalon.specialists[0], quickViewSalon.availableSlots[0].date, quickViewSalon.availableSlots[0].slots.find(s => !s.booked)?.time || '۱۱:۰۰');
           }
       }} />
