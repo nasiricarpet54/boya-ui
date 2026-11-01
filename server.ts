@@ -111,14 +111,16 @@ async function createServer() {
       expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
-    // Prominent live backend server log for testing & inspection
-    console.log(`\n==================================================`);
-    console.log(`📲 [MELIPAYAMAK OTP LIVE BACKEND LOG]`);
-    console.log(`   گیرنده: ${phone}`);
-    console.log(`   کد تایید یکبار مصرف (OTP): ${otpCode}`);
-    console.log(`   مهلت اعتبار: ۵ دقیقه`);
-    console.log(`   زمان ارسال: ${new Date().toLocaleTimeString('fa-IR')}`);
-    console.log(`==================================================\n`);
+    // Prominent live backend server log for testing & inspection (Development/Test only)
+    if (!isProd) {
+      console.log(`\n==================================================`);
+      console.log(`📲 [MELIPAYAMAK OTP LIVE BACKEND LOG]`);
+      console.log(`   گیرنده: ${phone}`);
+      console.log(`   کد تایید یکبار مصرف (OTP): ${otpCode}`);
+      console.log(`   مهلت اعتبار: ۵ دقیقه`);
+      console.log(`   زمان ارسال: ${new Date().toLocaleTimeString('fa-IR')}`);
+      console.log(`==================================================\n`);
+    }
 
     // Attempt live sending via MeliPayamak
     await sendMeliPayamakSms(phone, `کد ورودی یکبار مصرف پلتفرم زیبایی بویا: ${otpCode}`);
