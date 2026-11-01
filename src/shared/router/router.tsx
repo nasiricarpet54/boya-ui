@@ -10,6 +10,7 @@ import { useUIStore } from '../stores/uiStore';
 import { useModalStore } from '../stores/modalStore';
 import { useLocationStore } from '../stores/locationStore';
 import { useDataStore } from '../stores/dataStore';
+import { useAuthStore } from '../stores/authStore';
 import { QuickServicesModal } from '../components/modals/QuickServicesModal';
 import { ProtectedRoute } from '../components/guards/ProtectedRoute';
 import { AuthModal } from '../components/modals/AuthModal';
@@ -18,7 +19,7 @@ import { AuthModal } from '../components/modals/AuthModal';
 const Root = () => {
   const { 
     appMode, isMobileFrame, showSplashScreen, splashAppName, setShowSplashScreen,
-    toastMessage, isLocationModalOpen, setIsLocationModalOpen, showToast
+    toastMessage, isLocationModalOpen, setIsLocationModalOpen, showToast, setAppMode
   } = useUIStore();
   
   const { 
@@ -31,10 +32,29 @@ const Root = () => {
   
   const locationState = useLocationStore();
   const { fetchServerData } = useDataStore();
+  const { user, isAuthenticated } = useAuthStore();
 
   React.useEffect(() => {
     fetchServerData();
   }, [fetchServerData]);
+
+  // تنظیم خودکار appMode بر اساس نقش کاربر
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'super_admin') {
+        setAppMode('admin_panel');
+      } else if (
+        user.role === 'salon_admin' || 
+        user.role === 'salon_specialist' || 
+        user.role === 'mobile_specialist' || 
+        user.role === 'line_manager'
+      ) {
+        setAppMode('salon_panel');
+      } else {
+        setAppMode('customer');
+      }
+    }
+  }, [isAuthenticated, user, setAppMode]);
 
   const handleConfirmBooking = (data: any) => {
     closeBookingModal();
@@ -42,6 +62,25 @@ const Root = () => {
   };
 
   const isAdminMode = appMode === 'admin_panel' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin'));
+  const isSalonPanelMode = appMode === 'salon_panel' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/salon-admin'));
+
+  // حالت پنل سالن (مدیران و متخصصین)
+  if (isSalonPanelMode) {
+    return (
+      <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased selection:bg-[#D9A2B0] selection:text-[#173B3F]">
+        <main className="flex-1 w-full min-h-screen">
+          <Outlet />
+        </main>
+        {toastMessage && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#173B3F] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-[#D9A2B0]/40 flex items-center gap-2 animate-bounce">
+            <span>{toastMessage}</span>
+          </div>
+        )}
+        <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
+        <BoyaSplashScreen isOpen={showSplashScreen} appName={splashAppName} onFinish={() => setShowSplashScreen(false)} />
+      </div>
+    );
+  }
 
   if (isAdminMode) {
     return (
@@ -94,7 +133,6 @@ const Root = () => {
       <QuickServicesModal isOpen={isQuickViewModalOpen} onClose={closeQuickViewModal} salon={quickViewSalon} onSelectService={(service) => {
           if (quickViewSalon) {
             closeQuickViewModal();
-            // Default to first specialist for quick booking from this modal
             openBookingModal(quickViewSalon, service, quickViewSalon.specialists[0], quickViewSalon.availableSlots[0].date, quickViewSalon.availableSlots[0].slots.find(s => !s.booked)?.time || '۱۱:۰۰');
           }
       }} />
