@@ -74,12 +74,14 @@ const Root = () => {
     <div className="min-h-screen bg-[#E7E2DA] flex flex-col selection:bg-[#D9A2B0] selection:text-[#173B3F]">
       {isSalonPanelMode ? (
         <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased">
+          <Header />
           <main className="flex-1 w-full min-h-screen">
             <Outlet />
           </main>
         </div>
       ) : isAdminMode ? (
         <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased">
+          <Header />
           <main className="flex-1 w-full min-h-screen">
             <Outlet />
           </main>
