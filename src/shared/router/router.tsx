@@ -154,7 +154,7 @@ const SalonsRouteComponent = () => (
 
 const BookingsRouteComponent = () => (
   <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری...</div>}>
-    <ProtectedRoute allowedRoles={['customer']}>
+    <ProtectedRoute allowedRoles={['customer', 'salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager', 'super_admin']}>
       <BookingsScreen />
     </ProtectedRoute>
   </Suspense>
@@ -162,7 +162,7 @@ const BookingsRouteComponent = () => (
 
 const SavedRouteComponent = () => (
   <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری...</div>}>
-    <ProtectedRoute allowedRoles={['customer']}>
+    <ProtectedRoute allowedRoles={['customer', 'salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager', 'super_admin']}>
       <SavedScreen />
     </ProtectedRoute>
   </Suspense>
@@ -170,7 +170,7 @@ const SavedRouteComponent = () => (
 
 const ProfileRouteComponent = () => (
   <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری...</div>}>
-    <ProtectedRoute allowedRoles={['customer']}>
+    <ProtectedRoute allowedRoles={['customer', 'salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager', 'super_admin']}>
       <ProfileSupportScreen />
     </ProtectedRoute>
   </Suspense>

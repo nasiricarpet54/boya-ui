@@ -5,6 +5,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { useLocationStore } from '../../stores/locationStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useModalStore } from '../../stores/modalStore';
+import { useNavigate } from '@tanstack/react-router';
 
 export const Header: React.FC = () => {
   const { 
@@ -17,6 +18,7 @@ export const Header: React.FC = () => {
   const { selectedCity, selectedProvince, customerLocation } = useLocationStore();
   const { user, isAuthenticated } = useAuthStore();
   const { openAuthModal } = useModalStore();
+  const navigate = useNavigate();
 
   const hasGpsActive = !!customerLocation.coords;
 
@@ -61,10 +63,14 @@ export const Header: React.FC = () => {
               >
                 شما هنوز وارد سامانه نشده اید
               </button>
-            ) : (
-              <div className="flex items-center gap-2">
+             ) : (
+              <button
+                onClick={() => navigate({ to: '/profile' })}
+                className="flex items-center gap-2 bg-white hover:bg-[#FAF7F2] border border-[#E7E2DA] px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-xs group"
+                title="مشاهده پروفایل و پشتیبانی"
+              >
                 <div className="hidden sm:block text-right">
-                  <span className="text-[10px] font-bold text-[#173B3F] block">{user?.fullName}</span>
+                  <span className="text-[10px] font-bold text-[#173B3F] block group-hover:text-[#0F3232]">{user?.fullName}</span>
                   <span className="text-[9px] text-[#6F9A8D] font-bold block">
                     {user?.role === 'super_admin' ? 'مدیر کل سیستم' :
                      user?.role === 'salon_admin' ? 'مدیر سالن' :
@@ -73,10 +79,10 @@ export const Header: React.FC = () => {
                      user?.role === 'line_manager' ? 'مدیر لاین' : 'مشتری'}
                   </span>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-[#D9A2B0] flex items-center justify-center text-[#173B3F] font-bold text-xs border border-[#173B3F]/10">
+                <div className="w-7 h-7 rounded-full bg-[#D9A2B0] text-[#173B3F] flex items-center justify-center font-bold text-xs border border-[#173B3F]/20 shadow-xs">
                   {user?.fullName?.charAt(0) || 'ک'}
                 </div>
-              </div>
+              </button>
             )}
 
             {/* Viewport Frame Mode Toggle */}
