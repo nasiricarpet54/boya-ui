@@ -20,6 +20,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [countdown, setCountdown] = useState(60);
   const [isTimerActive, setIsTimerActive] = useState(false);
 
+  const navigate = useNavigate();
+  const { setAppMode } = useUIStore();
   const { sendOtp, loginWithPhone, isLoading } = useAuthStore();
 
   useEffect(() => {
@@ -56,9 +58,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       setError(err.message || 'خطایی در ارسال کد تایید پیامکی رخ داد.');
     }
   };
-
-  const navigate = useNavigate(); // ✅
-  const { setAppMode } = useUIStore(); // ✅
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();

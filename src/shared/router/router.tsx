@@ -135,18 +135,103 @@ const ProfileSupportScreen = lazy(() => import('../../features/profile/component
 const AdminPanel = lazy(() => import('../../features/admin/components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 const SalonAdminDashboard = lazy(() => import('../../features/salon-admin/components/SalonAdminDashboard').then(m => ({ default: m.SalonAdminDashboard })));
 
-const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><HomeScreen /></Suspense> });
-const salonsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salons', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><SalonsScreen /></Suspense> });
-const bookingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/bookings', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['customer']}><BookingsScreen /></ProtectedRoute></Suspense> });
-const savedRoute = createRoute({ getParentRoute: () => rootRoute, path: '/saved', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['customer']}><SavedScreen /></ProtectedRoute></Suspense> });
-const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['customer']}><ProfileSupportScreen /></ProtectedRoute></Suspense> });
-const salonAdminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']}><SalonAdminDashboard /></ProtectedRoute></Suspense> });
-const adminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['super_admin']}><AdminPanel /></ProtectedRoute></Suspense> });
-const notFoundRoute = createRoute({ getParentRoute: () => rootRoute, path: '*', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><HomeScreen /></Suspense> });
+// Stable named route components for TanStack Router
+const HomeRouteComponent = () => (
+  <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری...</div>}>
+    <HomeScreen />
+  </Suspense>
+);
+
+const SalonsRouteComponent = () => (
+  <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری...</div>}>
+    <SalonsScreen />
+  </Suspense>
+);
+
+const BookingsRouteComponent = () => (
+  <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری...</div>}>
+    <ProtectedRoute allowedRoles={['customer']}>
+      <BookingsScreen />
+    </ProtectedRoute>
+  </Suspense>
+);
+
+const SavedRouteComponent = () => (
+  <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری...</div>}>
+    <ProtectedRoute allowedRoles={['customer']}>
+      <SavedScreen />
+    </ProtectedRoute>
+  </Suspense>
+);
+
+const ProfileRouteComponent = () => (
+  <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری...</div>}>
+    <ProtectedRoute allowedRoles={['customer']}>
+      <ProfileSupportScreen />
+    </ProtectedRoute>
+  </Suspense>
+);
+
+const SalonAdminRouteComponent = () => (
+  <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری پنل سالندار...</div>}>
+    <ProtectedRoute allowedRoles={['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']}>
+      <SalonAdminDashboard />
+    </ProtectedRoute>
+  </Suspense>
+);
+
+const AdminRouteComponent = () => (
+  <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری پنل مدیریت ارشد...</div>}>
+    <ProtectedRoute allowedRoles={['super_admin']}>
+      <AdminPanel />
+    </ProtectedRoute>
+  </Suspense>
+);
+
+const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeRouteComponent });
+const salonsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salons', component: SalonsRouteComponent });
+const bookingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/bookings', component: BookingsRouteComponent });
+const savedRoute = createRoute({ getParentRoute: () => rootRoute, path: '/saved', component: SavedRouteComponent });
+const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', component: ProfileRouteComponent });
+const salonAdminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-admin', component: SalonAdminRouteComponent });
+const adminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: AdminRouteComponent });
+const notFoundRoute = createRoute({ getParentRoute: () => rootRoute, path: '*', component: HomeRouteComponent });
 
 const routeTree = rootRoute.addChildren([indexRoute, salonsRoute, bookingsRoute, savedRoute, profileRoute, salonAdminRoute, adminRoute, notFoundRoute]);
 
 const basepath = typeof window !== 'undefined' && window.location.pathname.startsWith('/app') ? '/app' : '';
-export const router = createRouter({ routeTree, basepath });
+export const router = createRouter({ 
+  routeTree, 
+  basepath,
+  defaultErrorComponent: ({ error, reset }: { error: any; reset: () => void }) => (
+    <div className="min-h-screen bg-[#F5F0E8] flex flex-col items-center justify-center p-6 text-center" dir="rtl">
+      <div className="bg-white p-8 rounded-3xl border border-[#E7E2DA] shadow-lg max-w-md w-full">
+        <div className="w-16 h-16 bg-amber-50 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-bold text-[#173B3F] mb-2 font-serif">خطا در بارگذاری بخش مورد نظر</h2>
+        <p className="text-xs text-[#6C6C6C] mb-6 leading-relaxed">
+          {error?.message || 'مشکلی در بارگذاری رخ داده است.'}
+        </p>
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={() => reset()}
+            className="bg-[#173B3F] text-white px-6 py-2.5 rounded-2xl text-xs font-bold hover:bg-[#122e31] transition-all cursor-pointer"
+          >
+            تلاش مجدد
+          </button>
+          <a
+            href="/"
+            className="bg-[#D9A2B0]/30 text-[#173B3F] border border-[#D9A2B0] px-6 py-2.5 rounded-2xl text-xs font-bold hover:bg-[#D9A2B0]/50 transition-all cursor-pointer"
+          >
+            بازگشت به خانه
+          </a>
+        </div>
+      </div>
+    </div>
+  ),
+});
 
 declare module '@tanstack/react-router' { interface Register { router: typeof router; } }
