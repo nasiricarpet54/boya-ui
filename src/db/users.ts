@@ -35,26 +35,33 @@ export async function getOrCreateUserByPhone(phone: string, fullName?: string) {
 
     const existing = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
     if (existing.length > 0) {
+      const userRecord = existing[0];
       const updates: any = {};
-      if (fullName && existing[0].fullName !== fullName) updates.fullName = fullName;
-      if (isAdminPhone && existing[0].role !== 'super_admin') updates.role = 'super_admin';
+      
+      // Update name if different
+      if (fullName && userRecord.fullName !== fullName) updates.fullName = fullName;
+      
+      // Only update role if it's admin override phone
+      if (isAdminPhone && userRecord.role !== 'super_admin') updates.role = 'super_admin';
 
       if (Object.keys(updates).length > 0) {
         const updated = await db.update(users)
           .set(updates)
-          .where(eq(users.id, existing[0].id))
+          .where(eq(users.id, userRecord.id))
           .returning();
         return updated[0];
       }
-      return existing[0];
+      return userRecord;
     }
+    
+    // Create new user, respect admin phone or default to customer
     const result = await db.insert(users)
       .values({
         uid: `phone_${phone}`,
         phone,
         fullName: fullName || (isAdminPhone ? 'مهندس حسینی (ادمین کل)' : `کاربر ${phone.slice(-4)}`),
         email: `${phone}@boya.ir`,
-        role: defaultRole,
+        role: defaultRole, // Will be 'super_admin' if isAdminPhone, else 'customer'
       })
       .returning();
 
