@@ -121,8 +121,11 @@ const savedRoute = createRoute({ getParentRoute: () => rootRoute, path: '/saved'
 const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['customer', 'salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager', 'super_admin']}><ProfileSupportScreen /></ProtectedRoute></Suspense> });
 const salonAdminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']}><SalonAdminDashboard /></ProtectedRoute></Suspense> });
 const adminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><ProtectedRoute allowedRoles={['super_admin']}><AdminPanel /></ProtectedRoute></Suspense> });
+const notFoundRoute = createRoute({ getParentRoute: () => rootRoute, path: '*', component: () => <Suspense fallback={<div className="p-10 text-center">...</div>}><HomeScreen /></Suspense> });
 
-const routeTree = rootRoute.addChildren([indexRoute, salonsRoute, bookingsRoute, savedRoute, profileRoute, salonAdminRoute, adminRoute]);
-export const router = createRouter({ routeTree });
+const routeTree = rootRoute.addChildren([indexRoute, salonsRoute, bookingsRoute, savedRoute, profileRoute, salonAdminRoute, adminRoute, notFoundRoute]);
+
+const basepath = typeof window !== 'undefined' && window.location.pathname.startsWith('/app') ? '/app' : '';
+export const router = createRouter({ routeTree, basepath });
 
 declare module '@tanstack/react-router' { interface Register { router: typeof router; } }

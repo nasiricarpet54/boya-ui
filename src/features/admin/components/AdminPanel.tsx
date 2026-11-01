@@ -71,75 +71,55 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen w-full bg-[#F5F0E8] overflow-hidden text-[#1D1C17] antialiased">
-      <AdminSidebar
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        pendingApprovalsCount={pendingApprovalsCount}
-        openTicketsCount={openTicketsCount}
-        vipSalonsCount={vipSalonsCount}
-        activeNotificationsCount={activeNotificationsCount}
-        onSwitchToCustomerApp={onSwitchToCustomerApp}
-        onSwitchToSalonApp={onSwitchToSalonApp}
-      />
+      <div className={`fixed inset-y-0 right-0 z-50 w-64 bg-[#0F3232] shadow-2xl transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} lg:relative lg:translate-x-0`}>
+        <AdminSidebar
+          activeTab={activeTab}
+          onSelectTab={(tab) => { setActiveTab(tab); setIsSidebarOpen(false); }}
+          pendingApprovalsCount={pendingApprovalsCount}
+          openTicketsCount={openTicketsCount}
+          vipSalonsCount={vipSalonsCount}
+          activeNotificationsCount={activeNotificationsCount}
+          onSwitchToCustomerApp={onSwitchToCustomerApp}
+          onSwitchToSalonApp={onSwitchToSalonApp}
+        />
+      </div>
+      {isSidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <AdminHeader
-          title={getTabTitle()}
-          subtitle={getTabSubtitle()}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          pendingApprovalsCount={pendingApprovalsCount}
-          onNavigateToProfile={() => setActiveTab('admin_profile')}
-        />
+        <div className="lg:hidden p-4 bg-white border-b flex items-center justify-between">
+          <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-[#173B3F]">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+          <span className="font-bold text-xs">{getTabTitle()}</span>
+        </div>
 
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          {activeTab === 'dashboard' && (
-            <AdminDashboardView
-              onNavigateToTab={setActiveTab}
-            />
-          )}
+        <div className="hidden lg:block">
+          <AdminHeader
+            title={getTabTitle()}
+            subtitle={getTabSubtitle()}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            pendingApprovalsCount={pendingApprovalsCount}
+            onNavigateToProfile={() => setActiveTab('admin_profile')}
+          />
+        </div>
 
-          {activeTab === 'notifications' && (
-            <AdminNotificationsView />
-          )}
-
-          {activeTab === 'approvals' && (
-            <AdminApprovalsView />
-          )}
-
-          {activeTab === 'tenants' && (
-            <AdminTenantsView />
-          )}
-
-          {activeTab === 'search_ranking' && (
-            <AdminSearchRankingView />
-          )}
-
-          {activeTab === 'users' && (
-            <AdminUsersView />
-          )}
-
-          {activeTab === 'specialists' && (
-            <AdminSpecialistsView />
-          )}
-
-          {activeTab === 'support' && (
-            <AdminSupportView />
-          )}
-
-          {activeTab === 'audit_logs' && (
-            <AdminAuditLogsView />
-          )}
-
-          {activeTab === 'settings' && (
-            <AdminSettingsView />
-          )}
-
-          {activeTab === 'admin_profile' && (
-            <AdminProfileView />
-          )}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+          {activeTab === 'dashboard' && <AdminDashboardView onNavigateToTab={setActiveTab} />}
+          {activeTab === 'notifications' && <AdminNotificationsView />}
+          {activeTab === 'approvals' && <AdminApprovalsView />}
+          {activeTab === 'tenants' && <AdminTenantsView />}
+          {activeTab === 'search_ranking' && <AdminSearchRankingView />}
+          {activeTab === 'users' && <AdminUsersView />}
+          {activeTab === 'specialists' && <AdminSpecialistsView />}
+          {activeTab === 'support' && <AdminSupportView />}
+          {activeTab === 'audit_logs' && <AdminAuditLogsView />}
+          {activeTab === 'settings' && <AdminSettingsView />}
+          {activeTab === 'admin_profile' && <AdminProfileView />}
         </main>
       </div>
     </div>
