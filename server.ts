@@ -113,7 +113,30 @@ async function createServer() {
     }
 
     try {
-      const dbUser = await getOrCreateUserByPhone(phone, fullName);
+      // 1. Check if user exists in DB
+      let dbUser = await db.select().from(users).where(eq(users.phone, phone)).limit(1).then(r => r[0]);
+
+      // 2. If not in DB, check if user exists in serverData (Admin Panel)
+      if (!dbUser) {
+        const userInStore = serverData.users.find(u => String(u.phone) === String(phone));
+        if (userInStore) {
+          // Create in DB with role from store
+          dbUser = await db.insert(users).values({
+            uid: `phone_${phone}`,
+            phone: phone,
+            fullName: userInStore.fullName || userInStore.name,
+            email: userInStore.email || `${phone}@boya.ir`,
+            role: userInStore.role,
+            salonId: userInStore.salonId ? Number(userInStore.salonId) : null,
+          }).returning().then(r => r[0]);
+        }
+      }
+
+      // 3. If still not found, create new user (defaulting to customer)
+      if (!dbUser) {
+        dbUser = await getOrCreateUserByPhone(phone, fullName);
+      }
+
       const token = `phone_${phone}`;
       res.json({ token, user: dbUser });
     } catch (err) {
@@ -178,28 +201,53 @@ async function createServer() {
     res.json(serverData.users);
   });
 
-  app.post('/api/users', (req, res) => {
+  app.post('/api/users', async (req, res) => {
     try {
       const newUser = req.body;
       if (!newUser.id) {
         newUser.id = `usr-${Date.now()}`;
       }
+      
+      // Update DB
+      await db.insert(users).values({
+        uid: `phone_${newUser.phone}`,
+        phone: newUser.phone,
+        fullName: newUser.fullName,
+        email: newUser.email || `${newUser.phone}@boya.ir`,
+        role: newUser.role,
+        salonId: newUser.salonId ? Number(newUser.salonId) : null,
+      });
+
       serverData.users = [newUser, ...serverData.users];
       saveServerData(serverData);
       res.status(201).json(newUser);
     } catch (err) {
+      console.error(err);
       res.status(500).json({ error: 'خطا در ثبت کاربر جدید' });
     }
   });
 
-  app.patch('/api/users/:id', (req, res) => {
+  app.patch('/api/users/:id', async (req, res) => {
     try {
       const userId = req.params.id;
       const patch = req.body;
+      
+      const user = serverData.users.find(u => String(u.id) === String(userId));
+      
+      // Update DB
+      if (user && user.phone) {
+        await db.update(users).set({
+          fullName: patch.fullName || user.fullName,
+          role: patch.role || user.role,
+          salonId: patch.salonId !== undefined ? (patch.salonId ? Number(patch.salonId) : null) : (user.salonId ? Number(user.salonId) : null),
+        }).where(eq(users.phone, user.phone));
+      }
+
       serverData.users = serverData.users.map((u) => (String(u.id) === String(userId) ? { ...u, ...patch } : u));
       saveServerData(serverData);
       res.json({ success: true, userId });
     } catch (err) {
+      console.error(err);
       res.status(500).json({ error: 'خطا در ویرایش کاربر' });
     }
   });

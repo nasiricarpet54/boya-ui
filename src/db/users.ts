@@ -41,8 +41,10 @@ export async function getOrCreateUserByPhone(phone: string, fullName?: string) {
       // Update name if different
       if (fullName && userRecord.fullName !== fullName) updates.fullName = fullName;
       
-      // Only update role if it's admin override phone
-      if (isAdminPhone && userRecord.role !== 'super_admin') updates.role = 'super_admin';
+      // Update role from DB directly if not super_admin phone
+      if (isAdminPhone && userRecord.role !== 'super_admin') {
+          updates.role = 'super_admin';
+      }
 
       if (Object.keys(updates).length > 0) {
         const updated = await db.update(users)
