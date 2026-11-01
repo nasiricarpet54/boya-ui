@@ -1,0 +1,131 @@
+import { db } from './index.ts';
+import { users, salons, services, specialists } from './schema.ts';
+import { INITIAL_SALONS, INITIAL_USERS } from '../shared/data/marketplaceData.ts';
+import { eq } from 'drizzle-orm';
+import { normalizePhone } from '../shared/utils/persianUtils.ts';
+import { sanitizeRole } from './users.ts';
+
+export async function seedDatabase() {
+  console.log('[DB SEED] Starting database seeding...');
+
+  // 1. Seed Users
+  for (const u of INITIAL_USERS) {
+    const cleanPhone = normalizePhone(u.phone);
+    if (!cleanPhone) continue;
+
+    const existing = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1).then(r => r[0]);
+    const role = sanitizeRole(u.role);
+
+    if (!existing) {
+      await db.insert(users).values({
+        uid: `phone_${cleanPhone}`,
+        phone: cleanPhone,
+        fullName: u.name || u.fullName || `کاربر ${cleanPhone.slice(-4)}`,
+        email: u.email || `${cleanPhone}@boya.ir`,
+        role,
+        salonId: u.salonId ? String(u.salonId) : null,
+      }).catch(err => console.error('Seed user error:', err));
+    }
+  }
+
+  // Ensure default super_admin exists
+  const superAdmin = await db.select().from(users).where(eq(users.phone, '09123456789')).limit(1).then(r => r[0]);
+  if (!superAdmin) {
+    await db.insert(users).values({
+      uid: 'super_admin_main',
+      phone: '09123456789',
+      fullName: 'مهندس حسینی (مدیر ارشد)',
+      email: 'admin@boya.ir',
+      role: 'super_admin',
+      salonId: null,
+    }).catch(err => console.error('Seed superadmin error:', err));
+  }
+
+  // 2. Seed Salons, Services & Specialists
+  for (const s of INITIAL_SALONS) {
+    const tenantId = s.tenantId || String(s.id);
+    let salonRecord = await db.select().from(salons).where(eq(salons.tenantId, tenantId)).limit(1).then(r => r[0]);
+
+    if (!salonRecord) {
+      const inserted = await db.insert(salons).values({
+        tenantId,
+        name: s.name,
+        address: s.address || 'تهران',
+        phone: s.phone || '02100000000',
+        province: s.province || 'تهران',
+        city: s.city || 'تهران',
+        district: s.district || 'مرکز',
+        latitude: s.latitude ? String(s.latitude) : '35.7000',
+        longitude: s.longitude ? String(s.longitude) : '51.4000',
+        rating: String(s.rating || '5.00'),
+        reviewsCount: s.reviewsCount || 0,
+        isApproved: true,
+        isVip: Boolean(s.isVip),
+        vipBadgeLabel: s.vipBadgeLabel || null,
+        isMobileServiceActive: Boolean(s.isMobileServiceActive),
+        coverImage: s.coverImage || null,
+      }).returning().catch(err => {
+        console.error('Seed salon insert error:', err);
+        return [];
+      });
+      salonRecord = inserted[0];
+    }
+
+    if (!salonRecord) continue;
+
+    // Seed Services for this salon
+    for (const srv of s.services || []) {
+      const existingService = await db.select().from(services)
+        .where(eq(services.salonId, salonRecord.id))
+        .then(rows => rows.find(r => r.name === srv.name || r.serviceLineId === srv.serviceLineId));
+
+      if (!existingService) {
+        await db.insert(services).values({
+          salonId: salonRecord.id,
+          serviceLineId: srv.serviceLineId || 'hair',
+          name: srv.name,
+          description: srv.description || null,
+          price: String(srv.price || '300000'),
+          durationMinutes: srv.durationMinutes || 45,
+          isMobileAvailable: Boolean(srv.isMobileAvailable),
+          imageUrl: srv.imageUrl || null,
+        }).catch(err => console.error('Seed service error:', err));
+      }
+    }
+
+    // Seed Specialists for this salon
+    for (const sp of s.specialists || []) {
+      const spPhone = normalizePhone(sp.phone) || `0999${Math.floor(1000000 + Math.random() * 9000000)}`;
+      let spUser = await db.select().from(users).where(eq(users.phone, spPhone)).limit(1).then(r => r[0]);
+      if (!spUser) {
+        const [createdUser] = await db.insert(users).values({
+          uid: `phone_${spPhone}`,
+          phone: spPhone,
+          fullName: sp.name,
+          email: `${spPhone}@boya.ir`,
+          role: sp.isMobileSpecialist ? 'mobile_specialist' : 'salon_specialist',
+          salonId: String(salonRecord.id),
+        }).returning();
+        spUser = createdUser;
+      }
+
+      if (spUser) {
+        const existingSp = await db.select().from(specialists).where(eq(specialists.userId, spUser.id)).limit(1).then(r => r[0]);
+        if (!existingSp) {
+          await db.insert(specialists).values({
+            userId: spUser.id,
+            salonId: salonRecord.id,
+            specialtyLine: sp.specialtyLine || 'hair',
+            bio: sp.bio || 'متخصص زیبایی در سامانه بویا',
+            experienceYears: sp.experienceYears || 3,
+            isVerified: true,
+            isMobileActive: Boolean(sp.isMobileSpecialist),
+            avatarUrl: sp.avatar || null,
+          }).catch(err => console.error('Seed specialist error:', err));
+        }
+      }
+    }
+  }
+
+  console.log('[DB SEED] Seeding completed successfully!');
+}
