@@ -63,9 +63,15 @@ export const Header: React.FC = () => {
               </button>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="hidden sm:block text-left">
+                <div className="hidden sm:block text-right">
                   <span className="text-[10px] font-bold text-[#173B3F] block">{user?.fullName}</span>
-                  <span className="text-[9px] text-[#6C6C6C] block uppercase">{user?.role?.replace('_', ' ')}</span>
+                  <span className="text-[9px] text-[#6F9A8D] font-bold block">
+                    {user?.role === 'super_admin' ? 'مدیر کل سیستم' :
+                     user?.role === 'salon_admin' ? 'مدیر سالن' :
+                     user?.role === 'salon_specialist' ? 'متخصص سالن' :
+                     user?.role === 'mobile_specialist' ? 'متخصص سیار' :
+                     user?.role === 'line_manager' ? 'مدیر لاین' : 'مشتری'}
+                  </span>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-[#D9A2B0] flex items-center justify-center text-[#173B3F] font-bold text-xs border border-[#173B3F]/10">
                   {user?.fullName?.charAt(0) || 'ک'}

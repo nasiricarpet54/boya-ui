@@ -32,7 +32,7 @@ export const users = pgTable('users', {
   uid: text('uid').notNull().unique(), // Firebase UID
   email: text('email').notNull(),
   fullName: text('full_name').notNull(),
-  phone: text('phone').notNull(),
+  phone: text('phone').notNull().unique(),
   role: userRoleEnum('role').default('customer').notNull(),
   salonId: text('salon_id'), // For salon_admin, specialists, and line_manager
   managedLine: text('managed_line'), // For line_manager (e.g. 'hair', 'nail')

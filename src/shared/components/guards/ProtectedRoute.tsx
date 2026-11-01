@@ -9,20 +9,19 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { isAuthenticated, user, setAuth } = useAuthStore();
+  const { isAuthenticated, user, isSessionVerified, isLoading } = useAuthStore();
   const { openAuthModal } = useModalStore();
   const location = useLocation();
 
-  const handleQuickAdminLogin = () => {
-    setAuth({
-      id: 1,
-      uid: 'admin-super-1',
-      fullName: 'مهندس حسینی (مدیر ارشد)',
-      role: 'super_admin',
-      phone: '09123456789',
-      email: 'admin@boya.ir'
-    }, 'token_super_admin_mock');
-  };
+  // Wait for server session verification from /api/profile
+  if (isLoading || (!isSessionVerified && isAuthenticated)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[350px] p-6 text-center" dir="rtl">
+        <div className="w-8 h-8 border-3 border-[#173B3F] border-t-transparent rounded-full animate-spin mb-3 mx-auto"></div>
+        <p className="text-xs font-bold text-[#173B3F]">در حال اعتبارسنجی نشست کاربری با سرور...</p>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -32,22 +31,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
         </div>
-        <h3 className="text-xl font-extrabold text-[#173B3F] mb-2">شما هنوز وارد سامانه نشده اید</h3>
-        <p className="text-xs text-[#6C6C6C] mb-6">برای دسترسی به پنل مدیریت و امکانات سامانه بویا، لطفاً وارد حساب کاربری خود شوید یا از ورود سریع ادمین استفاده کنید.</p>
-        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-          <button 
-            onClick={() => openAuthModal()}
-            className="flex-1 bg-[#173B3F] text-white px-6 py-3 rounded-2xl font-bold text-xs shadow-sm hover:bg-[#122e31] transition-all cursor-pointer"
-          >
-            ورود با شماره موبایل
-          </button>
-          <button 
-            onClick={handleQuickAdminLogin}
-            className="flex-1 bg-[#D9A2B0]/30 text-[#173B3F] border border-[#D9A2B0] px-6 py-3 rounded-2xl font-bold text-xs hover:bg-[#D9A2B0]/50 transition-all cursor-pointer"
-          >
-            ورود سریع ادمین کل
-          </button>
-        </div>
+        <h3 className="text-xl font-extrabold text-[#173B3F] mb-2 font-serif">شما هنوز وارد سامانه نشده اید</h3>
+        <p className="text-xs text-[#6C6C6C] mb-6 max-w-sm leading-relaxed">برای دسترسی به پنل مدیریت و امکانات سامانه بویا، لطفاً با شماره همراه خود احراز هویت نمایید.</p>
+        <button 
+          onClick={() => openAuthModal()}
+          className="bg-[#173B3F] text-white px-8 py-3 rounded-2xl font-bold text-xs shadow-sm hover:bg-[#122e31] transition-all cursor-pointer"
+        >
+          ورود با شماره موبایل و کد تایید پیامکی
+        </button>
       </div>
     );
   }

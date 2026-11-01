@@ -9,16 +9,16 @@ export const otpSchema = z.object({
   otp: z.string().length(5, 'کد تایید باید ۵ رقم باشد'),
 });
 
-// Booking schemas
+// Booking schemas (supporting both string and numeric IDs)
 export const bookingSchema = z.object({
-  salonId: z.string(),
-  serviceId: z.string(),
-  specialistId: z.string(),
+  salonId: z.union([z.string(), z.number()]),
+  serviceId: z.union([z.string(), z.number()]),
+  specialistId: z.union([z.string(), z.number()]),
   date: z.string(),
   time: z.string(),
-  customerName: z.string().min(3, 'نام باید حداقل ۳ حرف باشد'),
-  customerPhone: z.string().regex(/^09\d{9}$/, 'شماره موبایل معتبر نیست'),
-  customerAddress: z.string().min(5, 'آدرس الزامی است').optional().or(z.literal('')),
+  customerName: z.string().min(2, 'نام باید حداقل ۲ حرف باشد'),
+  customerPhone: z.string().regex(/^09\d{9}$/, 'شماره موبایل معتبر نیست (مثال: ۰۹۱۲۳۴۵۶۷۸۹)'),
+  customerAddress: z.string().optional().or(z.literal('')),
   notes: z.string().optional(),
 });
 

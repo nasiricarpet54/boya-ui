@@ -23,9 +23,13 @@ const Root = () => {
     setAppMode // ✅
   } = useUIStore();
   
-  const { user, isAuthenticated } = useAuthStore(); // ✅
+  const { user, isAuthenticated, verifySession } = useAuthStore();
 
-  // ✅
+  // Security A-07: Always verify session and role against PostgreSQL server on mount
+  React.useEffect(() => {
+    verifySession();
+  }, [verifySession]);
+
   React.useEffect(() => {
     if (isAuthenticated && user) {
       if (user.role === 'super_admin') {

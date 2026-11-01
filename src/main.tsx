@@ -31,6 +31,24 @@ const ErrorFallback = ({ error }: FallbackProps) => (
   </div>
 );
 
+// Suppress benign Vite HMR WebSocket connection warnings in AI Studio preview iframe
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    const msg = String(event.reason?.message || event.reason || '');
+    if (msg.includes('WebSocket') || msg.includes('vite') || msg.includes('createWebSocketModuleRunnerTransport')) {
+      event.preventDefault();
+    }
+  });
+
+  window.addEventListener('error', (event) => {
+    const msg = String(event.message || '');
+    const filename = String(event.filename || '');
+    if (msg.includes('WebSocket') || filename.includes('@vite/client') || msg.includes('createWebSocketModuleRunnerTransport')) {
+      event.preventDefault();
+    }
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary FallbackComponent={ErrorFallback}>

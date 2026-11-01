@@ -5,7 +5,7 @@ import { INITIAL_SALONS, INITIAL_USERS, INITIAL_TICKETS } from '../shared/data/m
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_FILE_PATH = path.resolve(__dirname, '../../public/data/platform_store.json');
+const DATA_FILE_PATH = path.resolve(__dirname, '../../server-data/platform_store.json');
 
 interface PlatformServerData {
   salons: any[];

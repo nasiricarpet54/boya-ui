@@ -470,20 +470,44 @@ export const SalonAdminDashboard: React.FC = () => {
             <div className="flex items-center gap-2">
               <Building2 className="w-4 h-4 text-[#173B3F]" />
               <span className="text-xs font-bold text-[#173B3F]">انتخاب سالن آزمایشی:</span>
-              <select
-                value={selectedSalonId}
-                onChange={(e) => handleSelectSalon(e.target.value)}
-                className="text-xs font-bold bg-[#FAF7F2] border border-[#E7E2DA] text-[#173B3F] rounded-xl px-2.5 py-1.5 outline-none focus:border-[#173B3F]"
-              >
-                {salonsData.map((s: any) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.district || s.city}) {s.isVip ? '★ VIP' : ''}
-                  </option>
-                ))}
-              </select>
+              {user?.role === 'super_admin' ? (
+                <select
+                  value={selectedSalonId}
+                  onChange={(e) => handleSelectSalon(e.target.value)}
+                  className="text-xs font-bold bg-[#FAF7F2] border border-[#E7E2DA] text-[#173B3F] rounded-xl px-2.5 py-1.5 outline-none focus:border-[#173B3F]"
+                >
+                  {salonsData.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.district || s.city}) {s.isVip ? '★ VIP' : ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs font-bold text-[#173B3F] bg-[#FAF7F2] px-3 py-1.5 rounded-xl border border-[#E7E2DA]">
+                  {currentSalon?.name || 'سالن اختصاصی من'}
+                </span>
+              )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {user && (
+                <div className="flex items-center gap-2 pr-3 border-r border-[#E7E2DA]">
+                  <div className="w-8 h-8 rounded-full bg-[#173B3F] text-[#D9A2B0] flex items-center justify-center font-bold text-xs border border-[#D9A2B0]/40 overflow-hidden shadow-xs">
+                    {user.fullName?.charAt(0) || 'ک'}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-bold text-[#173B3F] block">{user.fullName}</span>
+                    <span className="text-[10px] text-[#6F9A8D] font-bold block">
+                      {user.role === 'super_admin' ? 'مدیر کل سیستم' :
+                       user.role === 'salon_admin' ? 'مدیر سالن' :
+                       user.role === 'salon_specialist' ? 'متخصص سالن' :
+                       user.role === 'mobile_specialist' ? 'متخصص سیار' :
+                       user.role === 'line_manager' ? 'مدیر لاین' : 'مشتری'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={onSwitchToCustomerApp}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D9A2B0] hover:bg-[#E6B5C0] text-[#173B3F] text-xs font-bold transition-all shadow-xs cursor-pointer"

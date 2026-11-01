@@ -21,9 +21,11 @@ interface AuthState {
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isSessionVerified: boolean;
   
   setAuth: (user: User, accessToken: string) => void;
   clearAuth: () => void;
+  verifySession: () => Promise<User | null>;
   sendOtp: (phone: string) => Promise<{ success: boolean; message: string; devCode?: string }>;
   loginWithPhone: (phone: string, code: string, fullName?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -36,11 +38,77 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       isAuthenticated: false,
       isLoading: false,
+      isSessionVerified: false,
 
-      setAuth: (user, accessToken) => set({ user, accessToken, isAuthenticated: true, isLoading: false }),
+      setAuth: (user, accessToken) => {
+        set({ user, accessToken, isAuthenticated: true, isLoading: false, isSessionVerified: true });
+        // Automatically sync appMode based on strictly verified server role
+        const uiStore = useUIStore.getState();
+        if (user.role === 'super_admin') {
+          uiStore.setAppMode('admin_panel');
+        } else if (['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager'].includes(user.role)) {
+          uiStore.setAppMode('salon_panel');
+        } else {
+          uiStore.setAppMode('customer');
+        }
+      },
+
       clearAuth: () => {
-        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
+        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false, isSessionVerified: true });
         useUIStore.getState().setAppMode('customer');
+        // Clear HttpOnly cookie on backend as well
+        fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+      },
+
+      // Security A-07: Always verify session and role against PostgreSQL server on app start
+      verifySession: async () => {
+        const token = get().accessToken;
+        set({ isLoading: true });
+        try {
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+
+          const response = await fetch('/api/profile', {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          });
+
+          if (!response.ok) {
+            // Token is invalid, expired, or missing
+            get().clearAuth();
+            return null;
+          }
+
+          const verifiedUser: User = await response.json();
+          // Update client user with strictly server-verified database data
+          set({
+            user: verifiedUser,
+            isAuthenticated: true,
+            isLoading: false,
+            isSessionVerified: true,
+          });
+
+          // Sync verified role to UI mode
+          const uiStore = useUIStore.getState();
+          if (verifiedUser.role === 'super_admin') {
+            uiStore.setAppMode('admin_panel');
+          } else if (['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager'].includes(verifiedUser.role)) {
+            uiStore.setAppMode('salon_panel');
+          } else {
+            uiStore.setAppMode('customer');
+          }
+
+          return verifiedUser;
+        } catch (err) {
+          console.error('[AUTH VERIFY SESSION ERROR]', err);
+          get().clearAuth();
+          return null;
+        } finally {
+          set({ isLoading: false, isSessionVerified: true });
+        }
       },
 
       sendOtp: async (phone: string) => {
@@ -70,6 +138,7 @@ export const useAuthStore = create<AuthState>()(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: cleanPhone, code: code.trim(), fullName }),
+            credentials: 'include',
           });
           const data = await response.json();
           if (!response.ok) {
@@ -86,11 +155,20 @@ export const useAuthStore = create<AuthState>()(
       },
       
       logout: async () => {
-        get().clearAuth();
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        } finally {
+          get().clearAuth();
+        }
       },
     }),
     {
       name: 'boya-auth-storage',
+      // Security A-07: Only persist accessToken. Never trust client-cached roles.
+      // Roles are always verified fresh from server /api/profile.
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+      }),
     }
   )
 );

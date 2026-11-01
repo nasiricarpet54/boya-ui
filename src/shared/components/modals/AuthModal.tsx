@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, ShieldCheck, Smartphone, KeyRound, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
-import { toPersianDigits } from '../../utils/persianUtils';
+import { toPersianDigits, normalizePhone } from '../../utils/persianUtils';
 import { useNavigate } from '@tanstack/react-router';
 
 interface AuthModalProps {
@@ -42,7 +42,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     e.preventDefault();
     setError(null);
 
-    const cleanPhone = phoneNumber.trim();
+    const cleanPhone = normalizePhone(phoneNumber);
     if (!/^09\d{9}$/.test(cleanPhone)) {
       setError('لطفاً شماره همراه ۱۱ رقمی معتبر با پیش‌شماره ۰۹ وارد کنید (مانند ۰۹۱۲۳۴۵۶۷۸۹).');
       return;

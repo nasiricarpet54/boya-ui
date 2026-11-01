@@ -3,6 +3,7 @@ import { Search, ShieldCheck, Database, Radio, Bell, UserCog } from 'lucide-reac
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { useDataStore } from '../../../shared/stores/dataStore';
 import { useAuthStore } from '../../../shared/stores/authStore';
+import { useUIStore } from '../../../shared/stores/uiStore';
 
 interface AdminHeaderProps {
   title: string;
@@ -65,23 +66,38 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             شما هنوز وارد سامانه نشده اید
           </span>
         ) : (
-          <button
-            onClick={onNavigateToProfile}
-            className="flex items-center gap-2 pr-2 border-r border-[#E7E2DA] hover:bg-[#FAF7F2] p-1 rounded-xl transition-all text-right group cursor-pointer"
-            title="مشاهده و ویرایش پروفایل"
-          >
-            <div className="w-8 h-8 rounded-full bg-[#173B3F] text-[#D9A2B0] flex items-center justify-center font-bold text-xs border border-[#D9A2B0]/40">
-              {user?.fullName?.charAt(0) || adminProfile.fullName?.charAt(0) || 'ادمین'}
-            </div>
-            <div className="text-right">
-              <span className="text-xs font-bold text-[#173B3F] block group-hover:text-[#0F3232]">
-                {user?.fullName || adminProfile.fullName || 'مهندس حسینی'}
-              </span>
-              <span className="text-[10px] text-[#6F9A8D] font-bold block -mt-0.5">
-                {user?.role || adminProfile.positionTitle || 'Super Admin'}
-              </span>
-            </div>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onNavigateToProfile}
+              className="flex items-center gap-2 pr-2 border-r border-[#E7E2DA] hover:bg-[#FAF7F2] p-1 rounded-xl transition-all text-right group cursor-pointer"
+              title="مشاهده و ویرایش پروفایل"
+            >
+              <div className="w-8 h-8 rounded-full bg-[#173B3F] text-[#D9A2B0] flex items-center justify-center font-bold text-xs border border-[#D9A2B0]/40">
+                {user?.fullName?.charAt(0) || adminProfile.fullName?.charAt(0) || 'ادمین'}
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-bold text-[#173B3F] block group-hover:text-[#0F3232]">
+                  {user?.fullName || adminProfile.fullName || 'مهندس حسینی'}
+                </span>
+                <span className="text-[10px] text-[#6F9A8D] font-bold block -mt-0.5">
+                  {user?.role === 'super_admin' ? 'مدیر کل سیستم' : (user?.role || adminProfile.positionTitle || 'Super Admin')}
+                </span>
+              </div>
+            </button>
+            <button
+              onClick={() => {
+                const { clearAuth } = useAuthStore.getState();
+                const { setAppMode } = useUIStore.getState();
+                clearAuth();
+                setAppMode('customer');
+                window.location.href = '/';
+              }}
+              className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all border border-rose-200 shadow-xs cursor-pointer"
+              title="خروج از حساب"
+            >
+              خروج
+            </button>
+          </div>
         )}
       </div>
     </header>

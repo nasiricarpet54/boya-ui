@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, CheckCircle2, MapPin, User, Car, ShieldCheck, Sparkles, Phone, CalendarDays } from 'lucide-react';
+import { X, Calendar, Clock, CheckCircle2, MapPin, User, Car, ShieldCheck, Sparkles, Phone, Lock, LogIn } from 'lucide-react';
 import { Salon, SalonService, Specialist } from '../../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../../utils/persianUtils';
 import { BeautyActivityIcon } from '../../components/ui/BeautyActivityIcon';
@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { bookingSchema } from '../../utils/validation';
 import { useAuthStore } from '../../stores/authStore';
+import { useModalStore } from '../../stores/modalStore';
 import api from '../../api/apiClient';
 import { JalaliDatePicker } from '../ui/JalaliDatePicker';
 import { getSlotsForArbitraryDate } from '../../utils/dateSlotGenerator';
@@ -31,43 +32,86 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   bookingData,
   onConfirmBooking,
 }) => {
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const { openAuthModal } = useModalStore();
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [generatedTrackingCode, setGeneratedTrackingCode] = useState('');
   const [isMobileService, setIsMobileService] = useState(false);
 
   // Dynamic Date and Time selection
-  const [selectedDate, setSelectedDate] = useState<string>(bookingData?.date || '');
-  const [selectedTime, setSelectedTime] = useState<string>(bookingData?.time || '');
+  const [selectedDate, setSelectedDate] = useState<string>('شنبه ۵ آبان');
+  const [selectedTime, setSelectedTime] = useState<string>('۱۱:۳۰');
 
-  useEffect(() => {
-    if (bookingData) {
-      setSelectedDate(bookingData.date || 'شنبه ۵ آبان');
-      setSelectedTime(bookingData.time || '۱۱:۳۰');
-    }
-  }, [bookingData]);
-
-  const { register, handleSubmit, formState: { errors }, watch } = useForm({
+  const { register, handleSubmit, formState: { errors }, watch, reset, setValue } = useForm({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
-      salonId: bookingData?.salon.id || '',
-      serviceId: bookingData?.service.id || '',
-      specialistId: bookingData?.specialist.id || '',
+      salonId: String(bookingData?.salon?.id || ''),
+      serviceId: String(bookingData?.service?.id || ''),
+      specialistId: String(bookingData?.specialist?.id || ''),
       date: selectedDate,
       time: selectedTime,
       customerName: user?.fullName || '',
       customerPhone: user?.phone || '',
+      customerAddress: '',
       notes: '',
-    }
+    },
   });
+
+  // 1. Reset all modal states and initialize form when modal opens or bookingData changes
+  useEffect(() => {
+    if (isOpen && bookingData) {
+      setIsProcessing(false);
+      setIsConfirmed(false);
+      setGeneratedTrackingCode('');
+      setIsMobileService(false);
+
+      const initialDate = bookingData.date || 'شنبه ۵ آبان';
+      const initialTime = bookingData.time || '۱۱:۳۰';
+      setSelectedDate(initialDate);
+      setSelectedTime(initialTime);
+
+      reset({
+        salonId: String(bookingData.salon.id || ''),
+        serviceId: String(bookingData.service.id || ''),
+        specialistId: String(bookingData.specialist.id || ''),
+        date: initialDate,
+        time: initialTime,
+        customerName: user?.fullName || '',
+        customerPhone: user?.phone || '',
+        customerAddress: '',
+        notes: '',
+      });
+    }
+  }, [isOpen, bookingData, reset]);
+
+  // 2. Automatically update & reset form values when user logs in
+  useEffect(() => {
+    if (user) {
+      setValue('customerName', user.fullName || '');
+      setValue('customerPhone', user.phone || '');
+    }
+  }, [user, setValue]);
+
+  // Sync date/time selection to form state
+  useEffect(() => {
+    setValue('date', selectedDate);
+    setValue('time', selectedTime);
+  }, [selectedDate, selectedTime, setValue]);
 
   if (!isOpen || !bookingData) return null;
 
   const { salon, service, specialist } = bookingData;
   const availableSlots = getSlotsForArbitraryDate(selectedDate, salon.availableSlots);
 
-  const handleConfirm = async (data: any) => {
+  const handleConfirm = async (formData: any) => {
+    // 3. Pre-booking login check: Must be authenticated
+    if (!isAuthenticated || !user) {
+      openAuthModal();
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const response = await api.post('/bookings', {
@@ -76,15 +120,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         specialistId: specialist.id,
         date: selectedDate,
         time: selectedTime,
-        customerName: data.customerName,
+        customerName: formData.customerName,
         isMobileBooking: isMobileService,
-        customerAddress: data.customerAddress,
-        notes: data.notes,
+        customerAddress: formData.customerAddress,
+        notes: formData.notes,
         price: service.price.toString(),
       });
-      
-      setGeneratedTrackingCode(response.data.trackingCode);
+
+      const tracking = response.data?.trackingCode || `BY-${Math.floor(100000 + Math.random() * 900000)}`;
+      setGeneratedTrackingCode(tracking);
       setIsConfirmed(true);
+      onConfirmBooking({
+        ...response.data,
+        salonName: salon.name,
+      });
     } catch (err: any) {
       console.error(err);
       alert(err.response?.data?.error || 'خطایی در ثبت نوبت رخ داد.');
@@ -94,7 +143,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn" dir="rtl">
       <div className="relative w-full max-w-lg bg-white rounded-3xl border border-[#E7E2DA] overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-[#E7E2DA] flex items-center justify-between bg-white">
@@ -137,7 +186,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <CheckCircle2 className="w-8 h-8 text-[#6F9A8D]" />
               </div>
               <h4 className="text-lg font-bold text-[#173B3F] font-serif">
-                نوبت شما در سامانه بویا ثبت گردید
+                نوبت شما در سامانه بویا با موفقیت ثبت شد
               </h4>
               <p className="text-xs text-[#6C6C6C] max-w-sm mx-auto leading-relaxed">
                 پیامک تایید نوبت و جزئیات سانس از طریق سامانه ملی‌پیامک به شماره {toPersianDigits(watch('customerPhone'))} ارسال گردید.
@@ -183,12 +232,30 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   onClick={onClose}
                   className="px-6 py-2.5 rounded-full bg-[#173B3F] text-white text-xs font-bold hover:bg-[#0F3232] transition-colors shadow-sm"
                 >
-                  مشاهده در لیست نوبت‌های من
+                  بستن و ادامه در بویا
                 </button>
               </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit(handleConfirm)} className="space-y-4">
+              {/* Login Banner Prompt if unauthenticated */}
+              {!isAuthenticated && (
+                <div className="bg-[#EAF2EF] p-3.5 rounded-2xl border border-[#6F9A8D]/40 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-[#2E5E52]">
+                    <Lock className="w-4 h-4 text-[#173B3F]" />
+                    <span className="font-bold">برای ثبت نوبت، لطفاً وارد حساب خود شوید:</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal()}
+                    className="bg-[#173B3F] text-white px-3.5 py-1.5 rounded-xl font-bold text-[11px] hover:bg-[#122e31] transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <LogIn className="w-3.5 h-3.5 text-[#D9A2B0]" />
+                    <span>ورود با شماره همراه</span>
+                  </button>
+                </div>
+              )}
+
               {/* Service & Salon banner with Activity Icon */}
               <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E7E2DA] space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -250,7 +317,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                             key={slot.time}
                             type="button"
                             onClick={() => setSelectedTime(slot.time)}
-                            className={`py-1.5 px-1 rounded-xl text-xs font-bold transition-all border text-center ${
+                            className={`py-1.5 px-1 rounded-xl text-xs font-bold transition-all border text-center cursor-pointer ${
                               isSelected
                                 ? 'bg-[#173B3F] text-white border-[#173B3F] shadow-xs'
                                 : 'bg-emerald-50 text-[#173B3F] border-emerald-200 hover:bg-emerald-100'
@@ -306,6 +373,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <input
                     {...register('customerName')}
                     type="text"
+                    placeholder="مثال: مریم کریمی"
                     className="w-full h-11 px-3 rounded-xl border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] focus:outline-none"
                   />
                   {errors.customerName && <p className="text-red-500 text-[10px] pr-2 mt-1">{errors.customerName.message}</p>}
@@ -313,11 +381,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
                 <div>
                   <label className="text-xs font-semibold text-[#1C1C1C] block mb-1">
-                    شماره همراه (جهت دریافت پیامک تایید و رمز یکبار مصرف OTP):
+                    شماره همراه (جهت دریافت پیامک تایید و رهگیری):
                   </label>
                   <input
                     {...register('customerPhone')}
                     type="text"
+                    placeholder="۰۹۱۲۳۴۵۶۷۸۹"
                     className="w-full h-11 px-3 rounded-xl border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] focus:outline-none"
                     dir="ltr"
                   />
@@ -362,13 +431,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
               {/* Submit Button */}
               <div className="pt-2">
-                <button
-                  type="submit"
-                  className="w-full h-12 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-[#173B3F]/20 transition-all"
-                >
-                  <CheckCircle2 className="w-4 h-4 text-[#D9A2B0]" />
-                  <span>ثبت نوبت قطعی و صدور پیامک تایید</span>
-                </button>
+                {!isAuthenticated ? (
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal()}
+                    className="w-full h-12 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-[#173B3F]/20 transition-all cursor-pointer"
+                  >
+                    <LogIn className="w-4 h-4 text-[#D9A2B0]" />
+                    <span>ورود به حساب جهت ثبت نوبت</span>
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="w-full h-12 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-[#173B3F]/20 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-[#D9A2B0]" />
+                    <span>ثبت نوبت قطعی و صدور پیامک تایید</span>
+                  </button>
+                )}
               </div>
             </form>
           )}
