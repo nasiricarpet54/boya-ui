@@ -118,20 +118,7 @@ export const ProfileSupportScreen: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {user?.role === 'super_admin' && (
-            <button 
-              onClick={() => {
-                setSplashAppName('ورود به وب پنل ادمین اصلی کل');
-                setShowSplashScreen(true);
-                setAppMode('admin_panel');
-                navigate({ to: '/admin' });
-              }} 
-              className="flex flex-col items-center p-2 rounded-2xl bg-[#173B3F] text-white hover:bg-[#0F3232] transition-all min-w-[70px]"
-            >
-              <ShieldCheck className="w-5 h-5 mb-0.5 text-[#D9A2B0]" />
-              <span className="text-[10px] font-bold">پنل ادمین</span>
-            </button>
-          )}
+
 
           {(user?.role === 'salon_admin' || user?.role === 'salon_specialist' || user?.role === 'mobile_specialist' || user?.role === 'line_manager') && (
             <button 

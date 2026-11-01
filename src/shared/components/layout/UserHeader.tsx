@@ -85,15 +85,7 @@ export const UserHeader: React.FC = () => {
             <span>پروفایل من</span>
           </button>
 
-          {user.role === 'super_admin' && (
-            <button
-              onClick={() => { setIsOpen(false); navigate({ to: '/admin' }); }}
-              className="w-full px-4 py-2 text-right text-xs font-bold text-[#173B3F] hover:bg-[#FAF7F2] flex items-center gap-2.5 transition-colors cursor-pointer"
-            >
-              <ShieldCheck className="w-4 h-4 text-[#C99558]" />
-              <span>پنل مدیریت کل</span>
-            </button>
-          )}
+
 
           <div className="border-t border-[#E7E2DA] my-1" />
 
