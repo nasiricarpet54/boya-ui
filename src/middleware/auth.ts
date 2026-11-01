@@ -38,10 +38,8 @@ export const requireAuth = async (
         dbUser = await db.select().from(users).where(eq(users.id, jwtPayload.id)).limit(1).then(r => r[0]);
       }
       if (dbUser) {
-        // A-09: Check if user account is suspended via serverData store
-        const serverData = loadServerData();
-        const userInStore = serverData.users.find((u: any) => normalizePhone(u.phone) === normalizePhone(dbUser.phone));
-        if (userInStore && userInStore.status === 'suspended') {
+        // A-09: Check if user account is suspended
+        if (dbUser.status === 'suspended') {
           return res.status(403).json({ error: 'حساب کاربری شما توسط مدیریت مسدود (Suspended) شده است.' });
         }
         req.dbUser = dbUser;

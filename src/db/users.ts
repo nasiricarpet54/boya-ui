@@ -35,6 +35,7 @@ export async function getOrCreateUser(uid: string, email: string, fullName: stri
         fullName,
         phone: '',
         role: 'customer',
+        status: 'active',
 
       })
       .onConflictDoUpdate({
@@ -73,6 +74,7 @@ export async function getOrCreateUserByPhone(rawPhone: string, fullName?: string
         fullName: resolvedName,
         email: `${phone}@boya.ir`,
         role: 'customer',
+        status: 'active',
 
         salonId: null,
       })

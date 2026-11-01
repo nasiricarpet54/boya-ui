@@ -26,6 +26,11 @@ export const paymentStatusEnum = pgEnum('payment_status', [
   'refunded'
 ]);
 
+export const userStatusEnum = pgEnum('user_status', [
+  'active',
+  'suspended'
+]);
+
 // Tables
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -34,6 +39,7 @@ export const users = pgTable('users', {
   fullName: text('full_name').notNull(),
   phone: text('phone').notNull().unique(),
   role: userRoleEnum('role').default('customer').notNull(),
+  status: userStatusEnum('status').default('active').notNull(),
   salonId: text('salon_id'), // For salon_admin, specialists, and line_manager
   managedLine: text('managed_line'), // For line_manager (e.g. 'hair', 'nail')
   createdAt: timestamp('created_at').defaultNow().notNull(),

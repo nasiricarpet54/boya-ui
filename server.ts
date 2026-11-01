@@ -126,7 +126,6 @@ async function createServer() {
     res.json({
       success: true,
       message: 'کد تایید پیامکی از طریق سامانه ملی پیامک ارسال گردید.',
-      devCode: otpCode,
     });
   });
 
@@ -157,7 +156,7 @@ async function createServer() {
       let dbUser = await db.select().from(users).where(eq(users.phone, phone)).limit(1).then(r => r[0]);
 
       const userInStore = serverData.users.find(u => normalizePhone(u.phone) === phone);
-      if (userInStore && userInStore.status === 'suspended') {
+      if ((dbUser && dbUser.status === 'suspended') || (userInStore && userInStore.status === 'suspended')) {
         return res.status(403).json({ error: 'حساب کاربری شما توسط مدیریت مسدود شده است.' });
       }
 
@@ -610,9 +609,12 @@ async function createServer() {
       serverData.bookings = serverData.bookings.map((b) => (String(b.id) === String(bookingId) ? { ...b, status } : b));
       saveServerData(serverData);
 
+      const customerRecord = existingBooking.customerId ? await db.select().from(users).where(eq(users.id, existingBooking.customerId)).limit(1).then(r => r[0]) : null;
+      const customerPhone = customerRecord?.phone || '09120000000';
+
       await sendMeliPayamakSms(
-        req.dbUser.phone || '09120000000',
-        `وضعیت نوبت شما با کد رهگیری ${updated?.trackingCode || bookingId} به ${status} تغییر یافت.`
+        customerPhone,
+        `وضعیت نوبت شما در بویا با کد رهگیری ${updated?.trackingCode || bookingId} به ${status} تغییر یافت.`
       );
 
       res.json(updated);
