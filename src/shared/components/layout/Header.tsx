@@ -6,6 +6,7 @@ import { useLocationStore } from '../../stores/locationStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useModalStore } from '../../stores/modalStore';
 import { useNavigate } from '@tanstack/react-router';
+import { UserHeader } from './UserHeader';
 
 export const Header: React.FC = () => {
   const { 
@@ -54,36 +55,8 @@ export const Header: React.FC = () => {
               </button>
             )}
 
-            {/* Auth / Login status or User details */}
-            {!isAuthenticated ? (
-              <button
-                onClick={() => openAuthModal()}
-                className="text-[11px] font-bold text-[#173B3F] bg-[#D9A2B0]/20 hover:bg-[#D9A2B0]/30 px-3 py-1.5 rounded-full border border-[#D9A2B0]/40 transition-all cursor-pointer"
-                title="برای ورود کلیک کنید"
-              >
-                شما هنوز وارد سامانه نشده اید
-              </button>
-             ) : (
-              <button
-                onClick={() => navigate({ to: '/profile' })}
-                className="flex items-center gap-2 bg-white hover:bg-[#FAF7F2] border border-[#E7E2DA] px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-xs group"
-                title="مشاهده پروفایل و پشتیبانی"
-              >
-                <div className="hidden sm:block text-right">
-                  <span className="text-[10px] font-bold text-[#173B3F] block group-hover:text-[#0F3232]">{user?.fullName}</span>
-                  <span className="text-[9px] text-[#6F9A8D] font-bold block">
-                    {user?.role === 'super_admin' ? 'مدیر کل سیستم' :
-                     user?.role === 'salon_admin' ? 'مدیر سالن' :
-                     user?.role === 'salon_specialist' ? 'متخصص سالن' :
-                     user?.role === 'mobile_specialist' ? 'متخصص سیار' :
-                     user?.role === 'line_manager' ? 'مدیر لاین' : 'مشتری'}
-                  </span>
-                </div>
-                <div className="w-7 h-7 rounded-full bg-[#D9A2B0] text-[#173B3F] flex items-center justify-center font-bold text-xs border border-[#173B3F]/20 shadow-xs">
-                  {user?.fullName?.charAt(0) || 'ک'}
-                </div>
-              </button>
-            )}
+            {/* Reusable UserHeader Component with dropdown menu */}
+            <UserHeader />
 
             {/* Viewport Frame Mode Toggle */}
             <button

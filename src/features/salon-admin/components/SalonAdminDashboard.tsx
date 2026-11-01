@@ -57,6 +57,7 @@ import { BeautyActivityIcon } from '../../../shared/components/ui/BeautyActivity
 import { SpecialistFinancialsView } from '../../../shared/components/ui/SpecialistFinancialsView';
 import { SafeHtml } from '../../../shared/components/ui/SafeHtml';
 import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
+import { UserHeader } from '../../../shared/components/layout/UserHeader';
 
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useDataStore } from '../../../shared/stores/dataStore';
@@ -490,24 +491,6 @@ export const SalonAdminDashboard: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              {user && (
-                <div className="flex items-center gap-2 pr-3 border-r border-[#E7E2DA]">
-                  <div className="w-8 h-8 rounded-full bg-[#173B3F] text-[#D9A2B0] flex items-center justify-center font-bold text-xs border border-[#D9A2B0]/40 overflow-hidden shadow-xs">
-                    {user.fullName?.charAt(0) || 'ک'}
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-bold text-[#173B3F] block">{user.fullName}</span>
-                    <span className="text-[10px] text-[#6F9A8D] font-bold block">
-                      {user.role === 'super_admin' ? 'مدیر کل سیستم' :
-                       user.role === 'salon_admin' ? 'مدیر سالن' :
-                       user.role === 'salon_specialist' ? 'متخصص سالن' :
-                       user.role === 'mobile_specialist' ? 'متخصص سیار' :
-                       user.role === 'line_manager' ? 'مدیر لاین' : 'مشتری'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
               <button
                 onClick={onSwitchToCustomerApp}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D9A2B0] hover:bg-[#E6B5C0] text-[#173B3F] text-xs font-bold transition-all shadow-xs cursor-pointer"
@@ -515,14 +498,9 @@ export const SalonAdminDashboard: React.FC = () => {
                 <UserCheck className="w-3.5 h-3.5" />
                 <span>مشاهده ویترین مشتری بویا</span>
               </button>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all border border-rose-200 shadow-xs cursor-pointer"
-                title="خروج از حساب"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>خروج</span>
-              </button>
+              
+              {/* Reusable UserHeader Component with dropdown */}
+              <UserHeader />
             </div>
           </div>
 

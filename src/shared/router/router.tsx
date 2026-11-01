@@ -89,7 +89,7 @@ const Root = () => {
           <div
             className={`w-full bg-[#F7F3EE] min-h-screen text-[#1C1C1C] relative flex flex-col transition-all duration-300 ${
               isMobileFrame
-                ? 'max-w-[430px] shadow-[0_0_50px_rgba(23,59,63,0.18)] my-0 sm:my-6 sm:rounded-[36px] overflow-hidden border-0 sm:border-[8px] sm:border-[#173B3F]'
+                ? 'max-w-[430px] shadow-[0_0_50px_rgba(23,59,63,0.18)] my-0 sm:my-6 sm:rounded-[36px] overflow-x-hidden overflow-y-auto border-0 sm:border-[8px] sm:border-[#173B3F]'
                 : 'max-w-6xl shadow-sm'
             }`}
           >
