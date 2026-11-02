@@ -97,12 +97,16 @@ async function createServer() {
   // Apply Rate Limiter to all API routes
   app.use('/api/', apiLimiter);
 
-  // Synchronous database seeding on startup
-  try {
-    await seedDatabase();
-    console.log('[DB BOOT] Database tables and seed data synchronized successfully.');
-  } catch (err) {
-    console.error('[DB BOOT CRITICAL ERROR]', err);
+  // Synchronous database seeding on startup if RUN_SEED is enabled
+  if (process.env.RUN_SEED === 'true') {
+    try {
+      await seedDatabase();
+      console.log('[DB BOOT] Database tables and seed data synchronized successfully.');
+    } catch (err) {
+      console.error('[DB BOOT CRITICAL ERROR]', err);
+    }
+  } else {
+    console.log('[DB BOOT] Skipping seed execution (RUN_SEED != true).');
   }
 
   // Support both /app/uploads (Docker volume) and public/uploads
@@ -168,7 +172,9 @@ async function createServer() {
       const otpCode = crypto.randomInt(10000, 99999).toString();
       otpStore.set(phone, { code: otpCode, expiresAt: now + 5 * 60 * 1000, attempts: 0 });
 
-      if (!isProd) console.log(`📲 [OTP LOG] ${phone} -> ${otpCode}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`📲 [OTP LOG] ${phone} -> ${otpCode}`);
+      }
 
       try {
         await sendMeliPayamakSms(phone, `کد تایید بویا: ${otpCode}`);

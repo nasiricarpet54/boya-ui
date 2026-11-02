@@ -10,6 +10,7 @@ export default defineConfig(() => {
       alias: {
         '@': path.resolve(import.meta.dirname || '.', '.'),
       },
+      dedupe: ['date-fns'],
     },
     server: {
       // HMR is disabled in AI Studio to prevent WebSocket connection errors in iframe
