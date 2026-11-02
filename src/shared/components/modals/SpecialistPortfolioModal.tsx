@@ -86,7 +86,7 @@ export const SpecialistPortfolioModal: React.FC<SpecialistPortfolioModalProps> =
                 <div className="flex items-center gap-1 text-[#C99558] shrink-0 bg-white px-2 py-0.5 rounded-full border border-[#E7E2DA]">
                   <Star className="w-3.5 h-3.5 fill-current" />
                   <span className="text-xs font-black text-[#1C1C1C]">
-                    {toPersianDigits(specialist.rating.toFixed(2))}
+                    {toPersianDigits(Number(specialist?.rating || 5).toFixed(2))}
                   </span>
                 </div>
               </div>

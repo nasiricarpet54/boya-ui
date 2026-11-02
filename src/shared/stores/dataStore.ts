@@ -84,20 +84,51 @@ export const useDataStore = create<DataState>()(
       fetchServerData: async () => {
         try {
           set({ isLoadingServerData: true });
-          const [salonsRes, usersRes, notifsRes, adminRes, bookingsRes] = await Promise.all([
+          const authState = (await import('./authStore')).useAuthStore.getState();
+          const authUser = authState.user;
+          const isAuth = authState.isAuthenticated;
+
+          const [salonsRes, notifsRes] = await Promise.all([
             api.get('/salons').catch(() => ({ data: [] })),
-            api.get('/users').catch(() => ({ data: [] })),
             api.get('/notifications').catch(() => ({ data: [] })),
-            api.get('/admin/profile').catch(() => ({ data: null })),
-            api.get('/bookings').catch(() => ({ data: [] })),
           ]);
+
+          let usersData: any[] = [];
+          let adminData: any = null;
+          let bookingsData: any[] = [];
+
+          if (isAuth && authUser) {
+            const authRequests: Promise<any>[] = [
+              api.get('/bookings').catch(() => ({ data: [] })),
+            ];
+
+            const canViewUsers = ['super_admin', 'salon_admin', 'line_manager'].includes(authUser.role);
+            if (canViewUsers) {
+              authRequests.push(api.get('/users').catch(() => ({ data: [] })));
+            }
+            if (authUser.role === 'super_admin') {
+              authRequests.push(api.get('/admin/profile').catch(() => ({ data: null })));
+            }
+
+            const results = await Promise.all(authRequests);
+            bookingsData = Array.isArray(results[0]?.data) ? results[0].data : [];
+
+            let resultIndex = 1;
+            if (canViewUsers) {
+              usersData = Array.isArray(results[resultIndex]?.data) ? results[resultIndex].data : [];
+              resultIndex++;
+            }
+            if (authUser.role === 'super_admin') {
+              adminData = results[resultIndex]?.data || null;
+            }
+          }
 
           set({
             salons: Array.isArray(salonsRes.data) ? salonsRes.data : [],
-            users: Array.isArray(usersRes.data) ? usersRes.data : [],
+            users: usersData,
             notifications: Array.isArray(notifsRes.data) ? notifsRes.data : [],
-            adminProfile: adminRes.data,
-            bookings: Array.isArray(bookingsRes.data) ? bookingsRes.data : [],
+            adminProfile: adminData,
+            bookings: bookingsData,
           });
         } catch (err) {
           console.error('[DATA STORE FETCH ERROR]', err);

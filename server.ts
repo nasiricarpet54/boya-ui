@@ -210,9 +210,37 @@ async function createServer() {
 
   app.get('/api/salons', async (req, res) => {
     try {
-      const list = await db.select().from(salons);
-      res.json(list.map(({ phone, ...rest }) => rest));
+      const list = await db.query.salons.findMany({
+        with: {
+          services: true,
+          specialists: {
+            with: {
+              user: true,
+              portfolio: true,
+            },
+          },
+        },
+      });
+      res.json(list.map(({ phone, ...rest }) => ({
+        ...rest,
+        rating: Number(rest.rating) || 5,
+        reviewsCount: Number(rest.reviewsCount) || 0,
+        services: (rest.services || []).map(srv => ({
+          ...srv,
+          price: Number(srv.price) || 0,
+        })),
+        specialists: (rest.specialists || []).map(sp => ({
+          ...sp,
+          name: sp.user?.fullName || 'متخصص زیبایی',
+          phone: sp.user?.phone || '',
+          rating: 5,
+          reviewsCount: 1,
+          user: sp.user ? redactUserPII(sp.user, (req as any).dbUser || { role: 'guest' }) : null,
+          portfolio: sp.portfolio || [],
+        })),
+      })));
     } catch (err) {
+      console.error('[API SALONS ERROR]', err);
       res.status(500).json({ error: 'خطا در دریافت لیست.' });
     }
   });

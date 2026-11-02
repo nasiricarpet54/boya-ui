@@ -68,7 +68,7 @@ const Root = () => {
   };
 
   const isAdminMode = appMode === 'admin_panel' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin'));
-  const isSalonPanelMode = appMode === 'salon_panel' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/salon-admin'));
+  const isSalonPanelMode = appMode === 'salon_panel' || (typeof window !== 'undefined' && (window.location.pathname.startsWith('/salon-admin') || window.location.pathname.startsWith('/salon') || window.location.pathname.startsWith('/salon-panel')));
   
   return (
     <div className="min-h-screen bg-[#E7E2DA] flex flex-col selection:bg-[#D9A2B0] selection:text-[#173B3F]">
@@ -200,10 +200,12 @@ const bookingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/boo
 const savedRoute = createRoute({ getParentRoute: () => rootRoute, path: '/saved', component: SavedRouteComponent });
 const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', component: ProfileRouteComponent });
 const salonAdminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-admin', component: SalonAdminRouteComponent });
+const salonRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon', component: SalonAdminRouteComponent });
+const salonPanelRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-panel', component: SalonAdminRouteComponent });
 const adminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: AdminRouteComponent });
 const notFoundRoute = createRoute({ getParentRoute: () => rootRoute, path: '*', component: HomeRouteComponent });
 
-const routeTree = rootRoute.addChildren([indexRoute, salonsRoute, bookingsRoute, savedRoute, profileRoute, salonAdminRoute, adminRoute, notFoundRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, salonsRoute, bookingsRoute, savedRoute, profileRoute, salonAdminRoute, salonRoute, salonPanelRoute, adminRoute, notFoundRoute]);
 
 const basepath = typeof window !== 'undefined' && window.location.pathname.startsWith('/app') ? '/app' : '';
 export const router = createRouter({ 

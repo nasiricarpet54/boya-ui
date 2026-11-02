@@ -134,10 +134,18 @@ export const SalonAdminDashboard: React.FC = () => {
     id: 1,
     name: 'سالن زیبایی',
     address: 'تهران',
+    province: 'تهران',
+    city: 'تهران',
+    district: 'مرکز',
+    tenantId: 'tenant-1',
+    rating: 5,
+    reviewsCount: 0,
     coverImage: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80',
     gallery: [],
     services: [],
     specialists: [],
+    isApproved: true,
+    isVip: false,
   };
 
   // Salon Manager tab navigation
@@ -205,11 +213,13 @@ export const SalonAdminDashboard: React.FC = () => {
 
   // Sync state when salon switches
   useEffect(() => {
-    setEditableSalonName(currentSalon.name);
-    setEditableSalonAddress(currentSalon.address);
-    setSalonGallery(currentSalon.gallery || [currentSalon.coverImage]);
-    setSalonServices(currentSalon.services);
-    setSpecialistsList(currentSalon.specialists);
+    if (currentSalon) {
+      setEditableSalonName(currentSalon.name || '');
+      setEditableSalonAddress(currentSalon.address || '');
+      setSalonGallery(currentSalon.gallery || (currentSalon.coverImage ? [currentSalon.coverImage] : []));
+      setSalonServices(currentSalon.services || []);
+      setSpecialistsList(currentSalon.specialists || []);
+    }
   }, [currentSalon]);
 
   const isSpecialistRole = user?.role === 'salon_specialist' || user?.role === 'mobile_specialist' || user?.role === 'line_manager';
@@ -648,12 +658,12 @@ export const SalonAdminDashboard: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
                     <span className="flex items-center gap-1 text-[#C99558]">
                       <Star className="w-3.5 h-3.5 fill-current" />
-                      <span className="font-bold text-white">{toPersianDigits((activeSpecialistView.rating || 5).toFixed(2))}</span>
-                      <span className="text-[#E8F0EF]/70">({toPersianDigits(activeSpecialistView.reviewsCount || 0)} نظر ثبت شده)</span>
+                      <span className="font-bold text-white">{toPersianDigits(Number(activeSpecialistView?.rating || 5).toFixed(2))}</span>
+                      <span className="text-[#E8F0EF]/70">({toPersianDigits(activeSpecialistView?.reviewsCount || 0)} نظر ثبت شده)</span>
                     </span>
                     <span>•</span>
                     <span className="text-[#E8F0EF]">
-                      {toPersianDigits(activeSpecialistView.experienceYears || 0)} سال سابقه حرفه‌ای
+                      {toPersianDigits(activeSpecialistView?.experienceYears || 0)} سال سابقه حرفه‌ای
                     </span>
                     <span>•</span>
                     <span className="text-[#D9A2B0] font-mono text-xs">
@@ -1694,8 +1704,8 @@ export const SalonAdminDashboard: React.FC = () => {
                     <span>•</span>
                     <span className="flex items-center gap-1 text-[#C99558]">
                       <Star className="w-3.5 h-3.5 fill-current" />
-                      <span className="font-bold text-white">{toPersianDigits(currentSalon.rating.toFixed(2))}</span>
-                      <span className="text-[#E8F0EF]/80">({toPersianDigits(currentSalon.reviewsCount)} نظر ثبت شده)</span>
+                      <span className="font-bold text-white">{toPersianDigits(Number(currentSalon?.rating || 5).toFixed(2))}</span>
+                      <span className="text-[#E8F0EF]/80">({toPersianDigits(currentSalon?.reviewsCount || 0)} نظر ثبت شده)</span>
                     </span>
                   </div>
                 </div>
@@ -1902,7 +1912,7 @@ export const SalonAdminDashboard: React.FC = () => {
                               <h4 className="text-xs font-bold text-[#1C1C1C] truncate">{spec.user?.fullName}</h4>
                               <div className="flex items-center gap-0.5 text-[#C99558]">
                                 <Star className="w-3 h-3 fill-current" />
-                                <span className="text-[11px] font-bold text-[#1C1C1C]">{toPersianDigits((spec.rating || 5).toFixed(2))}</span>
+                                <span className="text-[11px] font-bold text-[#1C1C1C]">{toPersianDigits(Number(spec?.rating || 5).toFixed(2))}</span>
                               </div>
                             </div>
                             <span className="text-[11px] text-[#173B3F] font-semibold block truncate">{spec.user?.role}</span>
@@ -2415,7 +2425,7 @@ export const SalonAdminDashboard: React.FC = () => {
                             <div className="flex items-center gap-3 mt-1.5 text-xs text-[#6C6C6C]">
                               <span className="flex items-center gap-1 text-[#C99558]">
                                 <Star className="w-3.5 h-3.5 fill-current" />
-                                <span className="font-bold text-[#1C1C1C]">{toPersianDigits((spec.rating || 5).toFixed(2))}</span>
+                                <span className="font-bold text-[#1C1C1C]">{toPersianDigits(Number(spec?.rating || 5).toFixed(2))}</span>
                               </span>
                               <span>•</span>
                               <span>{toPersianDigits(spec.experienceYears || 0)} سال سابقه</span>
