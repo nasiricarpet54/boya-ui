@@ -18,15 +18,14 @@ export interface User {
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isSessionVerified: boolean;
   
-  setAuth: (user: User, accessToken: string) => void;
+  setAuth: (user: User) => void;
   clearAuth: () => void;
   verifySession: () => Promise<User | null>;
-  sendOtp: (phone: string) => Promise<{ success: boolean; message: string; devCode?: string }>;
+  sendOtp: (phone: string) => Promise<{ success: boolean; message: string }>;
   loginWithPhone: (phone: string, code: string, fullName?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -35,14 +34,12 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      accessToken: null,
       isAuthenticated: false,
       isLoading: false,
       isSessionVerified: false,
 
-      setAuth: (user, accessToken) => {
-        set({ user, accessToken, isAuthenticated: true, isLoading: false, isSessionVerified: true });
-        // Automatically sync appMode based on strictly verified server role
+      setAuth: (user) => {
+        set({ user, isAuthenticated: true, isLoading: false, isSessionVerified: true });
         const uiStore = useUIStore.getState();
         if (user.role === 'super_admin') {
           uiStore.setAppMode('admin_panel');
@@ -54,36 +51,25 @@ export const useAuthStore = create<AuthState>()(
       },
 
       clearAuth: () => {
-        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false, isSessionVerified: true });
+        set({ user: null, isAuthenticated: false, isLoading: false, isSessionVerified: true });
         useUIStore.getState().setAppMode('customer');
-        // Clear HttpOnly cookie on backend as well
-        fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
       },
 
-      // Security A-07: Always verify session and role against PostgreSQL server on app start
       verifySession: async () => {
-        const token = get().accessToken;
         set({ isLoading: true });
         try {
-          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-
           const response = await fetch('/api/profile', {
             method: 'GET',
-            headers,
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
           });
 
           if (!response.ok) {
-            // Token is invalid, expired, or missing
             get().clearAuth();
             return null;
           }
 
           const verifiedUser: User = await response.json();
-          // Update client user with strictly server-verified database data
           set({
             user: verifiedUser,
             isAuthenticated: true,
@@ -91,7 +77,6 @@ export const useAuthStore = create<AuthState>()(
             isSessionVerified: true,
           });
 
-          // Sync verified role to UI mode
           const uiStore = useUIStore.getState();
           if (verifiedUser.role === 'super_admin') {
             uiStore.setAppMode('admin_panel');
@@ -103,7 +88,6 @@ export const useAuthStore = create<AuthState>()(
 
           return verifiedUser;
         } catch (err) {
-          console.error('[AUTH VERIFY SESSION ERROR]', err);
           get().clearAuth();
           return null;
         } finally {
@@ -121,9 +105,7 @@ export const useAuthStore = create<AuthState>()(
             body: JSON.stringify({ phone: cleanPhone }),
           });
           const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || 'ارسال کد تایید پیامکی ناموفق بود.');
-          }
+          if (!response.ok) throw new Error(data.error || 'ارسال کد تایید پیامکی ناموفق بود.');
           return data;
         } finally {
           set({ isLoading: false });
@@ -141,12 +123,9 @@ export const useAuthStore = create<AuthState>()(
             credentials: 'include',
           });
           const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || 'کد تایید معتبر نمی‌باشد.');
-          }
-          get().setAuth(data.user, data.token || '');
+          if (!response.ok) throw new Error(data.error || 'کد تایید معتبر نمی‌باشد.');
+          get().setAuth(data.user);
         } catch (error) {
-          console.error('Phone login failed:', error);
           get().clearAuth();
           throw error;
         } finally {
@@ -159,14 +138,13 @@ export const useAuthStore = create<AuthState>()(
           await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         } finally {
           get().clearAuth();
+          window.location.href = '/';
         }
       },
     }),
     {
       name: 'boya-auth-storage',
-      // Security: Do NOT persist accessToken or credentials in localStorage to prevent XSS token theft.
-      // Authentication tokens are stored strictly in HttpOnly cookies managed by the server.
-      partialize: () => ({}),
+      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
     }
   )
 );

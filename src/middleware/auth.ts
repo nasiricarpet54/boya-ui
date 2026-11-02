@@ -1,9 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { db } from '../db/index.ts';
-import { users } from '../db/schema.ts';
+import { users, revokedTokens } from '../db/schema.ts';
 import { eq } from 'drizzle-orm';
 import { verifyJwtToken } from '../lib/jwt.ts';
-import { loadServerData } from '../lib/serverDataStore.ts';
 import { normalizePhone } from '../shared/utils/persianUtils.ts';
 
 export interface AuthRequest extends Request {
@@ -27,6 +26,12 @@ export const requireAuth = async (
   }
 
   try {
+    // 0. Check if token is revoked (Blacklisted)
+    const isRevoked = await db.select().from(revokedTokens).where(eq(revokedTokens.token, token)).limit(1).then(r => r.length > 0);
+    if (isRevoked) {
+      return res.status(401).json({ error: 'خطای احراز هویت: نشست شما منقضی یا ابطال شده است.' });
+    }
+
     // 1. Check JWT verification
     const jwtPayload = verifyJwtToken(token);
     if (jwtPayload) {
@@ -58,12 +63,6 @@ export const requireRole = (allowedRoles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.dbUser) {
       return res.status(401).json({ error: 'خطای احراز هویت: ابتدا وارد حساب کاربری خود شوید.' });
-    }
-
-    const serverData = loadServerData();
-    const userInStore = serverData.users.find((u: any) => normalizePhone(u.phone) === normalizePhone(req.dbUser.phone));
-    if (userInStore && userInStore.status === 'suspended') {
-      return res.status(403).json({ error: 'حساب کاربری شما مسدود شده است.' });
     }
     
     // Super admin has global unrestricted privileges

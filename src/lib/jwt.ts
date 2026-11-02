@@ -1,11 +1,12 @@
 import jwt from 'jsonwebtoken';
 
-const isProd = process.env.NODE_ENV === 'production';
-const JWT_SECRET = process.env.JWT_SECRET || 'boya-beauty-jwt-secret-platform-2026-key-secure-v2-fallback';
+const JWT_SECRET = process.env.JWT_SECRET || 'boya-beauty-fallback-secret-key-2026-secure-v3';
 
-if (isProd && !process.env.JWT_SECRET) {
-  console.warn('⚠️ WARNING: JWT_SECRET is not defined in environment variables. Using internal fallback secret. This is not recommended for live production.');
+if (!process.env.JWT_SECRET) {
+  console.warn('\x1b[33m%s\x1b[0m', '⚠️ WARNING: JWT_SECRET environment variable is missing.');
+  console.warn('\x1b[33m%s\x1b[0m', 'Using internal fallback secret. This is not secure for live production.');
 }
+
 const JWT_EXPIRES_IN = '30d';
 
 export interface JwtUserPayload {
@@ -25,14 +26,14 @@ export function generateJwtToken(payload: JwtUserPayload): string {
       role: payload.role,
       salonId: payload.salonId || null,
     },
-    JWT_SECRET,
+    JWT_SECRET!,
     { expiresIn: JWT_EXPIRES_IN }
   );
 }
 
 export function verifyJwtToken(token: string): JwtUserPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, JWT_SECRET!) as any;
     if (decoded && (decoded.phone || decoded.id)) {
       return {
         id: Number(decoded.id),
@@ -43,7 +44,7 @@ export function verifyJwtToken(token: string): JwtUserPayload | null {
       };
     }
     return null;
-  } catch {
+  } catch (err) {
     return null;
   }
 }

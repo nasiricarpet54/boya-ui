@@ -6,15 +6,6 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor: Attach Auth token if present
-api.interceptors.request.use(async (config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 // Response interceptor: On 401 Unauthorized, automatically purge auth state
 api.interceptors.response.use(
   (response) => response,

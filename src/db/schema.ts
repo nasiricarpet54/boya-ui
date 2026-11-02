@@ -203,3 +203,55 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
     references: [bookings.id],
   }),
 }));
+
+export const revokedTokens = pgTable('revoked_tokens', {
+  id: serial('id').primaryKey(),
+  token: text('token').notNull().unique(),
+  revokedAt: timestamp('revoked_at').defaultNow().notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+});
+
+export const notifications = pgTable('notifications', {
+  id: serial('id').primaryKey(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  type: text('type').notNull(), // 'promotional', 'informational', 'alert', 'discount'
+  targetAudience: text('target_audience').notNull(), // 'customer', 'salon', 'all'
+  channel: text('channel').notNull(), // 'in_app', 'sms', 'push', 'both'
+  actionUrl: text('action_url'),
+  actionText: text('action_text'),
+  badgeText: text('badge_text'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  expiresAt: timestamp('expires_at'),
+  viewsCount: integer('views_count').default(0).notNull(),
+  clicksCount: integer('clicks_count').default(0).notNull(),
+});
+
+export const adminProfile = pgTable('admin_profile', {
+  id: serial('id').primaryKey(),
+  fullName: text('full_name').notNull(),
+  phone: text('phone').notNull(),
+  email: text('email').notNull(),
+  emergencyPhone: text('emergency_phone'),
+  positionTitle: text('position_title'),
+  adminCode: text('admin_code'),
+  avatarUrl: text('avatar_url'),
+  bio: text('bio'),
+  province: text('province'),
+  city: text('city'),
+  securityAlertSms: boolean('security_alert_sms').default(true).notNull(),
+  newSalonsNotifySms: boolean('new_salons_notify_sms').default(true).notNull(),
+  weeklyReportsEmail: boolean('weekly_reports_email').default(true).notNull(),
+  twoFactorEnabled: boolean('two_factor_enabled').default(true).notNull(),
+});
+
+export const auditLogs = pgTable('audit_logs', {
+  id: serial('id').primaryKey(),
+  actorId: integer('actor_id').references(() => users.id),
+  targetId: text('target_id'), // User ID, Salon ID, or other entity ID
+  action: text('action').notNull(), // 'LOGIN', 'ROLE_CHANGE', 'SUSPENSION', 'DELETE_USER', etc.
+  details: text('details'), // JSON string with payload or context
+  ipAddress: text('ip_address'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

@@ -1,7 +1,8 @@
 import { db } from './index.ts';
 import { bookings, salons, services, specialists, users } from './schema.ts';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and } from 'drizzle-orm';
 import { normalizeToIsoDate } from '../shared/utils/dateIsoConverter.ts';
+import crypto from 'crypto';
 
 export async function createBooking(data: {
   customerId: number;
@@ -16,59 +17,49 @@ export async function createBooking(data: {
   price: string | number;
 }) {
   try {
-    const trackingCode = `BY-${Math.floor(100000 + Math.random() * 900000)}`;
+    // SECURITY: Use cryptographically secure random integers for tracking codes
+    const randomSuffix = crypto.randomInt(100000, 999999);
+    const trackingCode = `BY-${randomSuffix}`;
+    
     const isoDate = normalizeToIsoDate(data.date);
 
-    // 1. Resolve Salon ID
+    // 1. Resolve Salon ID (Strict - No fallbacks)
     let resolvedSalonId = Number(data.salonId);
     if (isNaN(resolvedSalonId)) {
       const s = await db.select().from(salons)
         .where(eq(salons.tenantId, String(data.salonId)))
         .limit(1)
         .then(r => r[0]);
-      if (s) {
-        resolvedSalonId = s.id;
-      } else {
-        // Fallback to first salon
-        const firstSalon = await db.select().from(salons).limit(1).then(r => r[0]);
-        resolvedSalonId = firstSalon ? firstSalon.id : 1;
-      }
-    }
-
-    // 2. Resolve Service ID & Fetch authoritative price from DB (B-07 fix)
-    let resolvedServiceId = Number(data.serviceId);
-    let srvRecord: any = null;
-    if (isNaN(resolvedServiceId)) {
-      srvRecord = await db.select().from(services)
-        .where(eq(services.salonId, resolvedSalonId))
-        .limit(1)
-        .then(r => r[0]);
-      if (srvRecord) {
-        resolvedServiceId = srvRecord.id;
-      } else {
-        srvRecord = await db.select().from(services).limit(1).then(r => r[0]);
-        resolvedServiceId = srvRecord ? srvRecord.id : 1;
-      }
+      if (!s) throw new Error('SALON_NOT_FOUND');
+      resolvedSalonId = s.id;
     } else {
-      srvRecord = await db.select().from(services).where(eq(services.id, resolvedServiceId)).limit(1).then(r => r[0]);
+      const s = await db.select().from(salons).where(eq(salons.id, resolvedSalonId)).limit(1).then(r => r[0]);
+      if (!s) throw new Error('SALON_NOT_FOUND');
     }
 
-    // 3. Resolve Specialist ID
-    let resolvedSpecialistId = Number(data.specialistId);
-    if (isNaN(resolvedSpecialistId)) {
-      const sp = await db.select().from(specialists)
-        .where(eq(specialists.salonId, resolvedSalonId))
-        .limit(1)
-        .then(r => r[0]);
-      if (sp) {
-        resolvedSpecialistId = sp.id;
-      } else {
-        const anySp = await db.select().from(specialists).limit(1).then(r => r[0]);
-        resolvedSpecialistId = anySp ? anySp.id : 1;
-      }
-    }
+    // 2. Resolve Service ID & Validate ownership (Strict)
+    const resolvedServiceId = Number(data.serviceId);
+    if (isNaN(resolvedServiceId)) throw new Error('INVALID_SERVICE_ID');
+    
+    const srvRecord = await db.select().from(services)
+      .where(and(eq(services.id, resolvedServiceId), eq(services.salonId, resolvedSalonId)))
+      .limit(1)
+      .then(r => r[0]);
+    
+    if (!srvRecord) throw new Error('SERVICE_NOT_FOUND_IN_SALON');
 
-    const cleanPrice = srvRecord ? String(srvRecord.price) : String(Number(data.price) || 350000);
+    // 3. Resolve Specialist ID & Validate ownership (Strict)
+    const resolvedSpecialistId = Number(data.specialistId);
+    if (isNaN(resolvedSpecialistId)) throw new Error('INVALID_SPECIALIST_ID');
+    
+    const spRecord = await db.select().from(specialists)
+      .where(and(eq(specialists.id, resolvedSpecialistId), eq(specialists.salonId, resolvedSalonId)))
+      .limit(1)
+      .then(r => r[0]);
+    
+    if (!spRecord) throw new Error('SPECIALIST_NOT_FOUND_IN_SALON');
+
+    const cleanPrice = String(srvRecord.price);
 
     // Insert booking into PostgreSQL database
     const [newBooking] = await db.insert(bookings).values({
@@ -98,184 +89,139 @@ export async function createBooking(data: {
             user: true,
           },
         },
-        customer: true,
       },
     });
 
-    return formatBookingResponse(fullBooking || newBooking);
-  } catch (error: any) {
-    if (error.code === '23505') {
-      throw new Error('این بازه زمانی قبلاً توسط کاربر دیگری رزرو شده است.');
-    }
-    console.error('Database operation failed (createBooking):', error);
-    throw new Error('خطایی در ثبت رزرو در پایگاه‌داده رخ داد.', { cause: error });
+    return fullBooking;
+  } catch (error) {
+    console.error('Create booking failed:', error);
+    throw error;
   }
 }
 
-export async function updateBookingStatus(id: number, status: 'pending' | 'confirmed' | 'completed' | 'cancelled') {
-  try {
-    const [updated] = await db.update(bookings)
-      .set({ status })
-      .where(eq(bookings.id, id))
-      .returning();
+export async function getBookingsForUser(user: any) {
+  const { id, role, salonId, managedLine } = user;
+  let dbBookings: any[] = [];
 
-    const fullBooking = await db.query.bookings.findFirst({
-      where: eq(bookings.id, id),
+  if (role === 'super_admin') {
+    dbBookings = await db.query.bookings.findMany({
       with: {
         salon: true,
         service: true,
+        customer: true,
         specialist: {
           with: {
             user: true,
           },
         },
-        customer: true,
       },
+      orderBy: (table, { desc }) => [desc(table.createdAt)],
     });
-
-    return formatBookingResponse(fullBooking || updated);
-  } catch (error) {
-    throw new Error('Failed to update booking status.', { cause: error });
-  }
-}
-
-export async function getBookingsForUser(dbUser: any) {
-  try {
-    const { role, id, salonId, managedLine } = dbUser;
-
-    let dbBookings: any[] = [];
-
-    if (role === 'super_admin') {
-      dbBookings = await db.query.bookings.findMany({
-        with: {
-          salon: true,
-          service: true,
-          customer: true,
-          specialist: {
-            with: {
-              user: true,
-            },
+  } else if (role === 'customer') {
+    dbBookings = await db.query.bookings.findMany({
+      where: eq(bookings.customerId, id),
+      with: {
+        salon: true,
+        service: true,
+        customer: true,
+        specialist: {
+          with: {
+            user: true,
           },
         },
-        orderBy: (table, { desc }) => [desc(table.createdAt)],
-      });
-    } else if (role === 'salon_admin') {
-      // Resolve numeric salonId if salonId is string or tenantId
-      let sid = Number(salonId);
-      if ((isNaN(sid) || !sid) && salonId) {
-        const s = await db.select().from(salons).where(eq(salons.tenantId, String(salonId))).limit(1).then(r => r[0]);
-        if (s) sid = s.id;
-      }
-
-      // CRITICAL MULTI-TENANT GUARD: If salon_admin has NO valid assigned salon, return 403!
-      if (!sid || isNaN(sid)) {
-        throw new Error('FORBIDDEN_NO_SALON');
-      }
-
-      dbBookings = await db.query.bookings.findMany({
-        where: eq(bookings.salonId, sid),
-        with: {
-          salon: true,
-          service: true,
-          customer: true,
-          specialist: {
-            with: {
-              user: true,
-            },
-          },
-        },
-        orderBy: (table, { desc }) => [desc(table.createdAt)],
-      });
-    } else if (role === 'salon_specialist' || role === 'mobile_specialist') {
-      dbBookings = await db.query.bookings.findMany({
-        where: sql`${bookings.specialistId} IN (SELECT id FROM specialists WHERE user_id = ${id})`,
-        with: {
-          salon: true,
-          service: true,
-          customer: true,
-          specialist: {
-            with: {
-              user: true,
-            },
-          },
-        },
-        orderBy: (table, { desc }) => [desc(table.createdAt)],
-      });
-    } else if (role === 'line_manager') {
-      let sid = Number(salonId);
-      if ((isNaN(sid) || !sid) && salonId) {
-        const s = await db.select().from(salons).where(eq(salons.tenantId, String(salonId))).limit(1).then(r => r[0]);
-        if (s) sid = s.id;
-      }
-
-      if (!sid || isNaN(sid)) {
-        throw new Error('FORBIDDEN_NO_SALON');
-      }
-
-      const rawList = await db.query.bookings.findMany({
-        where: eq(bookings.salonId, sid),
-        with: {
-          salon: true,
-          service: true,
-          customer: true,
-          specialist: {
-            with: {
-              user: true,
-            },
-          },
-        },
-        orderBy: (table, { desc }) => [desc(table.createdAt)],
-      });
-      dbBookings = managedLine ? rawList.filter(b => b.service?.serviceLineId === managedLine) : rawList;
-    } else {
-      // Customer: strictly their own bookings
-      dbBookings = await db.query.bookings.findMany({
-        where: eq(bookings.customerId, id),
-        with: {
-          salon: true,
-          service: true,
-          customer: true,
-          specialist: {
-            with: {
-              user: true,
-            },
-          },
-        },
-        orderBy: (table, { desc }) => [desc(table.createdAt)],
-      });
+      },
+      orderBy: (table, { desc }) => [desc(table.createdAt)],
+    });
+  } else if (role === 'salon_admin') {
+    let sid = Number(salonId);
+    if ((isNaN(sid) || !sid) && salonId) {
+      const s = await db.select().from(salons).where(eq(salons.tenantId, String(salonId))).limit(1).then(r => r[0]);
+      if (s) sid = s.id;
     }
 
-    return dbBookings.map(formatBookingResponse);
-  } catch (error) {
-    console.error('Error in getBookingsForUser:', error);
-    throw new Error('Failed to fetch bookings for user context.');
+    // CRITICAL MULTI-TENANT GUARD: If salon_admin has NO valid assigned salon, return 403!
+    if (!sid || isNaN(sid)) {
+      throw new Error('FORBIDDEN_NO_SALON');
+    }
+
+    dbBookings = await db.query.bookings.findMany({
+      where: eq(bookings.salonId, sid),
+      with: {
+        salon: true,
+        service: true,
+        customer: true,
+        specialist: {
+          with: {
+            user: true,
+          },
+        },
+      },
+      orderBy: (table, { desc }) => [desc(table.createdAt)],
+    });
+  } else if (role === 'salon_specialist' || role === 'mobile_specialist') {
+    dbBookings = await db.query.bookings.findMany({
+      where: sql`${bookings.specialistId} IN (SELECT id FROM specialists WHERE user_id = ${id})`,
+      with: {
+        salon: true,
+        service: true,
+        customer: true,
+        specialist: {
+          with: {
+            user: true,
+          },
+        },
+      },
+      orderBy: (table, { desc }) => [desc(table.createdAt)],
+    });
+  } else if (role === 'line_manager') {
+    let sid = Number(salonId);
+    if ((isNaN(sid) || !sid) && salonId) {
+      const s = await db.select().from(salons).where(eq(salons.tenantId, String(salonId))).limit(1).then(r => r[0]);
+      if (s) sid = s.id;
+    }
+
+    if (!sid || isNaN(sid)) {
+      throw new Error('FORBIDDEN_NO_SALON');
+    }
+
+    const rawList = await db.query.bookings.findMany({
+      where: eq(bookings.salonId, sid),
+      with: {
+        salon: true,
+        service: true,
+        customer: true,
+        specialist: {
+          with: {
+            user: true,
+          },
+        },
+      },
+      orderBy: (table, { desc }) => [desc(table.createdAt)],
+    });
+    dbBookings = managedLine ? rawList.filter(b => b.service?.serviceLineId === managedLine) : rawList;
   }
+
+  return dbBookings;
 }
 
-function formatBookingResponse(b: any) {
-  if (!b) return null;
-  return {
-    id: String(b.id),
-    trackingCode: b.trackingCode || `BY-${b.id}`,
-    salonId: String(b.salonId),
-    salonName: b.salon?.name || 'سالن زیبایی بویا',
-    salonAddress: b.salon?.address || 'تهران',
-    serviceId: String(b.serviceId),
-    serviceName: b.service?.name || 'خدمت زیبایی',
-    serviceLineId: b.service?.serviceLineId || 'hair',
-    specialistId: String(b.specialistId),
-    specialistName: b.specialist?.user?.fullName || 'متخصص بویا',
-    customerId: b.customerId,
-    customerName: b.customer?.fullName || 'کاربر بویا',
-    customerPhone: b.customer?.phone || '',
-    date: b.date, // Gregorian ISO YYYY-MM-DD
-    time: b.time,
-    status: b.status,
-    paymentStatus: b.paymentStatus,
-    price: Number(b.price) || 0,
-    isMobileBooking: Boolean(b.isMobileBooking),
-    customerAddress: b.customerAddress || '',
-    notes: b.notes || '',
-    createdAt: b.createdAt ? new Date(b.createdAt).toISOString() : new Date().toISOString(),
-  };
+export async function updateBookingStatus(bookingId: number, status: any) {
+  const [updated] = await db.update(bookings)
+    .set({ status })
+    .where(eq(bookings.id, bookingId))
+    .returning();
+
+  if (!updated) return null;
+
+  return db.query.bookings.findFirst({
+    where: eq(bookings.id, updated.id),
+    with: {
+      salon: true,
+      service: true,
+      specialist: {
+        with: {
+          user: true,
+        },
+      },
+    },
+  });
 }

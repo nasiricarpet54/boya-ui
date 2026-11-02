@@ -49,8 +49,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     }
 
     try {
-      const res = await sendOtp(cleanPhone);
-      setDevOtpCode(res.devCode || '12345');
+      await sendOtp(cleanPhone);
       setStep('otp');
       setCountdown(60);
       setIsTimerActive(true);
@@ -102,8 +101,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     if (isTimerActive) return;
     setError(null);
     try {
-      const res = await sendOtp(phoneNumber.trim());
-      setDevOtpCode(res.devCode || '12345');
+      await sendOtp(phoneNumber.trim());
       setCountdown(60);
       setIsTimerActive(true);
     } catch (err: any) {
