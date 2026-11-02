@@ -78,7 +78,7 @@ const DAYS_OF_WEEK = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنب
 export const SalonAdminDashboard: React.FC = () => {
   const { setAppMode, setShowSplashScreen, setSplashAppName, showToast } = useUIStore();
   const { user } = useAuthStore();
-  const { salons, updateSalon } = useDataStore();
+  const { salons, updateSalon, createService } = useDataStore();
   const queryClient = useQueryClient();
 
   // Fetch real data
@@ -344,34 +344,19 @@ export const SalonAdminDashboard: React.FC = () => {
     : [];
 
   // Handler: Add service (Specialist can only add in their specialty line)
+  const [serviceError, setServiceError] = useState('');
+  const [serviceBusy, setServiceBusy] = useState(false);
   const handleAddService = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newServiceName.trim()) return;
-
-    const lineId = activeSpecialistView ? activeSpecialistView.specialtyLine : newServiceLineId;
-
+    e.preventDefault(); if (!newServiceName.trim()) return;
+    if (!['salon_admin', 'super_admin', 'salon_specialist', 'mobile_specialist'].includes(user?.role || '')) { showToast('حساب شما مجاز به پیشنهاد خدمت نیست.'); return; }
+    setServiceBusy(true); setServiceError('');
     try {
-      await api.post('/services', {
-        salonId: currentSalon?.id ? Number(currentSalon.id) : 1,
-        serviceLineId: lineId,
-        name: newServiceName.trim(),
-        durationMinutes: Number(newServiceDuration),
-        price: Number(newServicePrice),
-        description: activeSpecialistView
-          ? `سرویس اختصاصی ارائه شده توسط ${activeSpecialistView.user?.fullName}`
-          : 'سرویس ثبت شده توسط مدیریت سالن در پلتفرم بویا',
-        isMobileAvailable: newServiceMobile,
-        imageUrl: newServiceImage,
-      });
-
+      const lineId = activeSpecialistView ? activeSpecialistView.specialtyLine : newServiceLineId;
+      const created = await createService({ salonId: Number(currentSalon.id), serviceLineId: lineId, name: newServiceName.trim(), durationMinutes: Number(newServiceDuration), price: Number(newServicePrice), description: 'سرویس ثبت شده توسط مدیریت سالن در پلتفرم بویا', isMobileAvailable: newServiceMobile, imageUrl: newServiceImage });
+      setSalonServices((prev) => [created, ...prev]); setIsAddingService(false); setNewServiceName(''); showToast('خدمت با موفقیت در سرور ثبت شد.');
       await queryClient.invalidateQueries({ queryKey: ['salons'] });
-      showToast('خدمت جدید با موفقیت ثبت شد.');
-      setIsAddingService(false);
-      setNewServiceName('');
-    } catch (err: any) {
-      console.error('Failed to add service:', err);
-      showToast(err?.response?.data?.error || 'خطا در ثبت خدمت.');
-    }
+    } catch (err: any) { setServiceError(err?.response?.data?.error || err?.message || 'خطا در ثبت خدمت.'); }
+    finally { setServiceBusy(false); }
   };
 
   // Handler: Add Portfolio Item (Saved permanently in PostgreSQL portfolio_items table)
@@ -570,10 +555,10 @@ export const SalonAdminDashboard: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ['salons'] });
           queryClient.invalidateQueries({ queryKey: ['profile'] });
 
-          showToast('تصویر پروفایل با موفقیت در پایگاه‌داده ذخیره شد.', 'success');
+          showToast('تصویر پروفایل با موفقیت در پایگاه‌داده ذخیره شد.');
         } catch (uploadErr) {
           console.error('Avatar upload failed', uploadErr);
-          showToast('خطا در ذخیره‌سازی تصویر پروفایل.', 'error');
+          showToast('خطا در ذخیره‌سازی تصویر پروفایل.');
         } finally {
           setIsUploadingAvatar(false);
         }
@@ -581,7 +566,7 @@ export const SalonAdminDashboard: React.FC = () => {
       reader.readAsDataURL(file);
     } catch (err) {
       setIsUploadingAvatar(false);
-      showToast('خطا در پردازش فایل تصویر.', 'error');
+      showToast('خطا در پردازش فایل تصویر.');
     }
   };
 
@@ -601,10 +586,10 @@ export const SalonAdminDashboard: React.FC = () => {
           await updateSalon(currentSalon.id, { coverImage: coverUrl });
           queryClient.invalidateQueries({ queryKey: ['salons'] });
 
-          showToast('تصویر کاور سالن با موفقیت ذخیره شد.', 'success');
+          showToast('تصویر کاور سالن با موفقیت ذخیره شد.');
         } catch (uploadErr) {
           console.error('Cover upload failed', uploadErr);
-          showToast('خطا در ذخیره تصویر کاور سالن.', 'error');
+          showToast('خطا در ذخیره تصویر کاور سالن.');
         } finally {
           setIsUploadingCover(false);
         }
@@ -612,7 +597,7 @@ export const SalonAdminDashboard: React.FC = () => {
       reader.readAsDataURL(file);
     } catch (err) {
       setIsUploadingCover(false);
-      showToast('خطا در پردازش تصویر کاور.', 'error');
+      showToast('خطا در پردازش تصویر کاور.');
     }
   };
 
@@ -1150,6 +1135,7 @@ export const SalonAdminDashboard: React.FC = () => {
               </div>
 
               {/* Add Service Form locked to specialist's specialty line */}
+              {serviceError && <div role="alert" className="p-3 bg-rose-50 text-rose-700 rounded-xl">{serviceError}</div>}
               {isAddingService && (
                 <form onSubmit={handleAddService} className="p-4 bg-white rounded-3xl border border-[#173B3F] space-y-3 shadow-sm">
                   <div className="flex items-center justify-between">
@@ -1232,7 +1218,7 @@ export const SalonAdminDashboard: React.FC = () => {
 
                   <div className="flex gap-2 pt-1">
                     <button
-                      type="submit"
+                      type="submit" disabled={serviceBusy}
                       className="px-4 py-2 rounded-full bg-[#173B3F] text-white text-xs font-bold hover:bg-[#0F3232]"
                     >
                       ثبت خدمت در ویترین بویا
@@ -1255,7 +1241,7 @@ export const SalonAdminDashboard: React.FC = () => {
                     هنوز خدمتی در این لاین تعریف نکرده‌اید. از دکمه «تعریف خدمت جدید در لاین شما» استفاده کنید.
                   </div>
                 ) : (
-                  specialistServices.map((serv) => (
+                  specialistServices.map((serv: any) => (
                     <div
                       key={serv.id}
                       className="p-3.5 bg-white rounded-2xl border border-[#E7E2DA] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs hover:border-[#173B3F] transition-all"
@@ -2482,6 +2468,7 @@ export const SalonAdminDashboard: React.FC = () => {
                 </button>
               </div>
 
+              {serviceError && <div role="alert" className="p-3 bg-rose-50 text-rose-700 rounded-xl">{serviceError}</div>}
               {isAddingService && (
                 <form onSubmit={handleAddService} className="p-4 bg-white rounded-3xl border border-[#173B3F] space-y-3 shadow-sm">
                   <h4 className="text-xs font-bold text-[#173B3F]">فرم تعریف خدمت جدید در پلتفرم بویا</h4>
@@ -2567,7 +2554,7 @@ export const SalonAdminDashboard: React.FC = () => {
 
                   <div className="flex gap-2 pt-1">
                     <button
-                      type="submit"
+                      type="submit" disabled={serviceBusy}
                       className="px-4 py-2 rounded-full bg-[#173B3F] text-white text-xs font-bold hover:bg-[#0F3232]"
                     >
                       ثبت و انتشار در ویترین

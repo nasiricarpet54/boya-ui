@@ -66,6 +66,12 @@ export interface DataState {
   toggleNotification: (id: string | number) => Promise<void>;
   deleteNotification: (id: string | number) => Promise<void>;
   updateAdminProfile: (patch: Partial<AdminProfileData>) => Promise<void>;
+  createSpecialist: (payload: any) => Promise<any>;
+  updateSpecialist: (id: string | number, patch: any) => Promise<any>;
+  deleteSpecialist: (id: string | number) => Promise<void>;
+  createService: (payload: any) => Promise<any>;
+  updateService: (id: string | number, patch: any) => Promise<any>;
+  deleteService: (id: string | number) => Promise<void>;
 }
 
 export const useDataStore = create<DataState>()(
@@ -88,8 +94,10 @@ export const useDataStore = create<DataState>()(
           const authUser = authState.user;
           const isAuth = authState.isAuthenticated;
 
+          const staffRoles = ['super_admin', 'salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager'];
+          const salonsEndpoint = isAuth && authUser && staffRoles.includes(authUser.role) ? '/managed/salons' : '/salons';
           const [salonsRes, notifsRes] = await Promise.all([
-            api.get('/salons').catch(() => ({ data: [] })),
+            api.get(salonsEndpoint).catch(() => ({ data: [] })),
             api.get('/notifications').catch(() => ({ data: [] })),
           ]);
 
@@ -166,6 +174,7 @@ export const useDataStore = create<DataState>()(
           }));
         } catch (err) {
           console.error('Error updating salon:', err);
+          throw err;
         }
       },
 
@@ -177,6 +186,7 @@ export const useDataStore = create<DataState>()(
           }));
         } catch (err) {
           console.error('Error deleting salon:', err);
+          throw err;
         }
       },
 
@@ -266,6 +276,13 @@ export const useDataStore = create<DataState>()(
           console.error('Error deleting notification:', err);
         }
       },
+
+      createSpecialist: async (payload) => { const { data } = await api.post('/specialists', payload); await get().fetchServerData(); return data; },
+      updateSpecialist: async (id, patch) => { const { data } = await api.patch(`/specialists/${id}`, patch); await get().fetchServerData(); return data; },
+      deleteSpecialist: async (id) => { await api.delete(`/specialists/${id}`); await get().fetchServerData(); },
+      createService: async (payload) => { const { data } = await api.post('/services', payload); await get().fetchServerData(); return data; },
+      updateService: async (id, patch) => { const { data } = await api.patch(`/services/${id}`, patch); await get().fetchServerData(); return data; },
+      deleteService: async (id) => { await api.delete(`/services/${id}`); await get().fetchServerData(); },
 
       updateAdminProfile: async (patch) => {
         try {

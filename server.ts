@@ -15,7 +15,7 @@ import { ZodError } from 'zod';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { requireAuth, requireRole, type AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
-import { users, salons, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems } from './src/db/schema.ts';
+import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems } from './src/db/schema.ts';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
@@ -282,25 +282,10 @@ async function createServer() {
       const { title, imageUrl, category, specialistId } = req.body;
       if (!title || !imageUrl) return res.status(400).json({ error: 'عنوان و تصویر الزامی است.' });
 
-      // Find specialist record for this user or by ID if provided
-      let spec = await db.select().from(specialists).where(eq(specialists.userId, req.dbUser.id)).limit(1).then(r => r[0]);
-      if (!spec && specialistId) {
-        spec = await db.select().from(specialists).where(eq(specialists.id, Number(specialistId))).limit(1).then(r => r[0]);
-      }
-      if (!spec) {
-        // If specialist record does not exist yet (e.g. mobile specialist), create one!
-        const [newSpec] = await db.insert(specialists).values({
-          userId: req.dbUser.id,
-          salonId: req.dbUser.salonId || 1,
-          specialtyLine: req.dbUser.managedLine || 'hair',
-          bio: 'متخصص در سامانه بویا',
-          experienceYears: 3,
-          isVerified: true,
-          isMobileActive: req.dbUser.role === 'mobile_specialist',
-          avatarUrl: req.dbUser.avatar || null,
-        }).returning();
-        spec = newSpec;
-      }
+      // Portfolio items belong only to the authenticated specialist; never create a verified profile implicitly.
+      const spec = await db.select().from(specialists).where(eq(specialists.userId, req.dbUser.id)).limit(1).then(r => r[0]);
+      if (!spec) return res.status(403).json({ error: 'پروفایل متخصص تاییدشده یافت نشد.' });
+      if (specialistId && Number(specialistId) !== spec.id) return res.status(403).json({ error: 'عدم دسترسی به پروفایل متخصص.' });
 
       const [item] = await db.insert(portfolioItems).values({
         specialistId: spec.id,
@@ -337,47 +322,63 @@ async function createServer() {
 
   // --- Salons ---
 
-  app.get('/api/salons', async (req: any, res) => {
+  // Staff need a private view of unpublished records for review and management.
+  // Customer discovery remains on /api/salons, which applies publication filters.
+  app.get('/api/managed/salons', requireAuth, requireRole(['super_admin', 'salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']), async (req: AuthRequest, res) => {
     try {
-      // If user is super_admin or query has all=true, return all salons, otherwise filter approved only for customers
-      const isSuperAdmin = req.cookies?.token ? verifyJwtToken(req.cookies.token)?.role === 'super_admin' : false;
-      const showAll = isSuperAdmin || req.query.all === 'true';
+      const salonId = req.dbUser.salonId;
+      if (req.dbUser.role !== 'super_admin' && !salonId) return res.status(403).json({ error: 'سالن به حساب شما متصل نیست.' });
+      const rows = await db.query.salons.findMany({
+        where: req.dbUser.role === 'super_admin' ? undefined : eq(salons.id, Number(salonId)),
+        with: { services: true, specialists: { with: { user: true, portfolio: true } } },
+      });
+      res.json(rows.map((salon) => ({
+        ...salon,
+        services: salon.services.map((service) => ({ ...service, price: Number(service.price) || 0 })),
+        specialists: salon.specialists.map((specialist) => ({
+          ...specialist,
+          name: specialist.user?.fullName || 'متخصص زیبایی',
+          phone: specialist.user?.phone || '',
+          role: 'متخصص زیبایی',
+          specialistType: specialist.user?.role,
+          verified: specialist.isVerified,
+          isMobileSpecialist: specialist.isMobileActive,
+          avatar: specialist.avatarUrl,
+          user: specialist.user ? { id: specialist.user.id, fullName: specialist.user.fullName, phone: specialist.user.phone, role: specialist.user.role, status: specialist.user.status } : null,
+        })),
+      })));
+    } catch (err) {
+      console.error('[API MANAGED SALONS ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت اطلاعات مدیریتی سالن.' });
+    }
+  });
 
+  app.get('/api/salons', async (_req, res) => {
+    try {
       const list = await db.query.salons.findMany({
-        where: showAll ? undefined : eq(salons.isApproved, true),
+        where: eq(salons.isApproved, true),
         with: {
           services: true,
-          specialists: {
-            with: {
-              user: true,
-              portfolio: true,
-            },
-          },
+          specialists: { with: { user: true, portfolio: true } },
         },
       });
-
       res.json(list.map((salon) => ({
-        ...salon,
-        phone: salon.phone || '',
-        rating: Number(salon.rating) || 5,
-        reviewsCount: Number(salon.reviewsCount) || 0,
-        gallery: salon.gallery
-          ? (typeof salon.gallery === 'string'
-              ? (salon.gallery.startsWith('[') ? JSON.parse(salon.gallery) : [salon.gallery])
-              : salon.gallery)
-          : (salon.coverImage ? [salon.coverImage] : []),
-        services: (salon.services || []).map(srv => ({
-          ...srv,
-          price: Number(srv.price) || 0,
+        id: salon.id, name: salon.name, address: salon.address, province: salon.province,
+        city: salon.city, district: salon.district, latitude: salon.latitude, longitude: salon.longitude,
+        rating: Number(salon.rating) || 5, reviewsCount: salon.reviewsCount,
+        isVip: salon.isVip, vipBadgeLabel: salon.vipBadgeLabel, isMobileServiceActive: salon.isMobileServiceActive,
+        coverImage: salon.coverImage,
+        gallery: salon.gallery ? (salon.gallery.startsWith('[') ? JSON.parse(salon.gallery) : [salon.gallery]) : (salon.coverImage ? [salon.coverImage] : []),
+        services: salon.services.filter(s => s.publicationStatus === 'active').map(s => ({
+          id: s.id, salonId: s.salonId, serviceLineId: s.serviceLineId, name: s.name,
+          description: s.description, price: Number(s.price) || 0, durationMinutes: s.durationMinutes,
+          isMobileAvailable: s.isMobileAvailable, imageUrl: s.imageUrl,
         })),
-        specialists: (salon.specialists || []).map(sp => ({
-          ...sp,
+        specialists: salon.specialists.filter(sp => sp.isVerified && sp.publicationStatus === 'active' && sp.user?.status === 'active').map(sp => ({
+          id: sp.id, salonId: sp.salonId, specialtyLine: sp.specialtyLine, bio: sp.bio,
+          experienceYears: sp.experienceYears, avatarUrl: sp.avatarUrl,
           name: sp.user?.fullName || 'متخصص زیبایی',
-          phone: sp.user?.phone || '',
-          rating: 5,
-          reviewsCount: 1,
-          user: sp.user ? redactUserPII(sp.user, req.dbUser || { role: 'guest' }) : null,
-          portfolio: sp.portfolio || [],
+          portfolio: sp.portfolio.map(item => ({ id: item.id, title: item.title, imageUrl: item.imageUrl, category: item.category })),
         })),
       })));
     } catch (err) {
@@ -395,14 +396,14 @@ async function createServer() {
 
       if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== target.id) return res.status(403).json({ error: 'عدم دسترسی.' });
 
+      if (req.dbUser.role !== 'super_admin' && (data.isApproved !== undefined || data.isVip !== undefined || data.vipBadgeLabel !== undefined)) return res.status(403).json({ error: 'تغییر تایید یا نشان VIP فقط توسط مدیر کل مجاز است.' });
+
       const patchData: any = { ...data };
-      if (req.dbUser.role === 'salon_admin') {
-        // Salon admin cannot change approval status or VIP status
+      if (req.dbUser.role !== 'super_admin') {
         delete patchData.isApproved;
         delete patchData.isVip;
         delete patchData.vipBadgeLabel;
       }
-
       if (Array.isArray(patchData.gallery)) {
         patchData.gallery = JSON.stringify(patchData.gallery);
       }
@@ -424,7 +425,7 @@ async function createServer() {
         phone: normalizePhone(data.phone),
         tenantId,
         district: data.district || '',
-        isApproved: true,
+        isApproved: false,
       }).returning();
 
       res.status(201).json({
@@ -443,7 +444,7 @@ async function createServer() {
     } catch (err: any) {
       console.error('[POST SALONS ERROR]', err);
       if (err instanceof ZodError) {
-        return res.status(400).json({ error: err.errors[0]?.message || 'اطلاعات سالن نامعتبر است.' });
+        return res.status(400).json({ error: err.issues[0]?.message || 'اطلاعات سالن نامعتبر است.' });
       }
       res.status(500).json({ error: err.message || 'خطا در ایجاد سالن در دیتابیس.' });
     }
@@ -460,116 +461,71 @@ async function createServer() {
   });
 
   // --- Services CRUD ---
-
-  app.post('/api/services', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+  app.get('/api/services', requireAuth, async (req: AuthRequest, res) => {
+    const rows = await db.select().from(services);
+    const scoped = req.dbUser.role === 'super_admin' ? rows : rows.filter(row => row.salonId === req.dbUser.salonId);
+    res.json(scoped);
+  });
+  app.post('/api/services', requireAuth, requireRole(['super_admin', 'salon_admin', 'salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
     try {
       const { salonId, serviceLineId, name, description, price, durationMinutes, isMobileAvailable, imageUrl } = req.body;
-      const targetSalonId = salonId ? Number(salonId) : (req.dbUser.salonId || 1);
-      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== targetSalonId) {
-        return res.status(403).json({ error: 'عدم دسترسی به این سالن.' });
+      const ownerSalonId = req.dbUser.role === 'super_admin' ? Number(salonId) : Number(req.dbUser.salonId);
+      if (!ownerSalonId || (req.dbUser.role !== 'super_admin' && salonId !== undefined && Number(salonId) !== ownerSalonId)) return res.status(403).json({ error: 'عدم دسترسی به tenant.' });
+      if (['salon_specialist', 'mobile_specialist'].includes(req.dbUser.role)) {
+        const specialist = await db.select().from(specialists).where(eq(specialists.userId, req.dbUser.id)).limit(1).then(r => r[0]);
+        if (!specialist || specialist.salonId !== ownerSalonId || specialist.specialtyLine !== serviceLineId) return res.status(403).json({ error: 'متخصص فقط می‌تواند خدمت مرتبط با سالن و لاین تخصصی خود پیشنهاد دهد.' });
       }
-      if (!name) return res.status(400).json({ error: 'نام خدمت الزامی است.' });
-
-      const [newService] = await db.insert(services).values({
-        salonId: targetSalonId,
-        serviceLineId: serviceLineId || 'hair',
-        name: String(name).trim(),
-        description: description ? String(description).trim() : null,
-        price: String(price || 0),
-        durationMinutes: Number(durationMinutes || 30),
-        isMobileAvailable: Boolean(isMobileAvailable),
-        imageUrl: imageUrl || null,
-      }).returning();
-
-      res.status(201).json(newService);
-    } catch (err) {
-      console.error('[SERVICE CREATE ERROR]', err);
-      res.status(500).json({ error: 'خطا در ثبت خدمت.' });
-    }
+      if (typeof name !== 'string' || !name.trim() || !serviceLineId || !Number.isFinite(Number(price)) || Number(price) < 0 || !Number.isInteger(Number(durationMinutes)) || Number(durationMinutes) < 1) return res.status(400).json({ error: 'اطلاعات خدمت نامعتبر است.' });
+      const [row] = await db.insert(services).values({ salonId: ownerSalonId, serviceLineId, name: name.trim(), description: typeof description === 'string' ? description : null, price: String(price), durationMinutes: Number(durationMinutes), isMobileAvailable: !!isMobileAvailable, imageUrl, publicationStatus: 'pending' }).returning();
+      res.status(201).json(row);
+    } catch { res.status(400).json({ error: 'اطلاعات خدمت نامعتبر است.' }); }
   });
-
+  app.patch('/api/services/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    const id = Number(req.params.id), row = await db.select().from(services).where(eq(services.id, id)).limit(1).then(r => r[0]);
+    if (!row) return res.status(404).json({ error: 'یافت نشد.' });
+    if (req.dbUser.role !== 'super_admin' && row.salonId !== req.dbUser.salonId) return res.status(403).json({ error: 'عدم دسترسی.' });
+    const { salonId, publicationStatus, ...data } = req.body;
+    if (salonId !== undefined && Number(salonId) !== row.salonId) return res.status(403).json({ error: 'تغییر tenant مجاز نیست.' });
+    const [updated] = await db.update(services).set({ ...data, ...(req.dbUser.role === 'super_admin' && publicationStatus ? { publicationStatus } : {}) }).where(eq(services.id, id)).returning();
+    res.json(updated);
+  });
   app.delete('/api/services/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      const serv = await db.select().from(services).where(eq(services.id, id)).limit(1).then(r => r[0]);
-      if (!serv) return res.status(404).json({ error: 'خدمت یافت نشد.' });
-      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== serv.salonId) {
-        return res.status(403).json({ error: 'عدم دسترسی.' });
-      }
-      await db.delete(services).where(eq(services.id, id));
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ error: 'خطا در حذف خدمت.' });
-    }
+    const id = Number(req.params.id), row = await db.select().from(services).where(eq(services.id, id)).limit(1).then(r => r[0]);
+    if (!row) return res.status(404).json({ error: 'یافت نشد.' });
+    if (req.dbUser.role !== 'super_admin' && row.salonId !== req.dbUser.salonId) return res.status(403).json({ error: 'عدم دسترسی.' });
+    await db.delete(services).where(eq(services.id, id)); res.json({ success: true });
   });
 
   // --- Specialists CRUD ---
-
+  app.get('/api/specialists', requireAuth, async (req: AuthRequest, res) => {
+    const rows = await db.select().from(specialists);
+    res.json(req.dbUser.role === 'super_admin' ? rows : rows.filter(row => row.salonId === req.dbUser.salonId));
+  });
   app.post('/api/specialists', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
       const { userId, salonId, specialtyLine, bio, experienceYears, isMobileActive, avatarUrl } = req.body;
-      const targetSalonId = salonId ? Number(salonId) : (req.dbUser.salonId || 1);
-      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== targetSalonId) {
-        return res.status(403).json({ error: 'عدم دسترسی.' });
-      }
-      if (!userId) return res.status(400).json({ error: 'شناسه کاربر الزامی است.' });
-
-      const [newSpec] = await db.insert(specialists).values({
-        userId: Number(userId),
-        salonId: targetSalonId,
-        specialtyLine: specialtyLine || 'hair',
-        bio: bio || '',
-        experienceYears: Number(experienceYears || 1),
-        isVerified: req.dbUser.role === 'super_admin',
-        isMobileActive: Boolean(isMobileActive),
-        avatarUrl: avatarUrl || null,
-      }).returning();
-
-      res.status(201).json(newSpec);
-    } catch (err) {
-      console.error('[SPECIALIST CREATE ERROR]', err);
-      res.status(500).json({ error: 'خطا در ثبت متخصص.' });
-    }
+      const ownerSalonId = req.dbUser.role === 'super_admin' ? Number(salonId) : Number(req.dbUser.salonId);
+      if (!ownerSalonId || (req.dbUser.role !== 'super_admin' && salonId !== undefined && Number(salonId) !== ownerSalonId)) return res.status(403).json({ error: 'عدم دسترسی به tenant.' });
+      const user = await db.select().from(users).where(eq(users.id, Number(userId))).limit(1).then(r => r[0]);
+      if (!user || user.salonId !== ownerSalonId || !['salon_specialist','mobile_specialist'].includes(user.role)) return res.status(400).json({ error: 'حساب متخصص معتبر نیست.' });
+      const [row] = await db.insert(specialists).values({ userId: Number(userId), salonId: ownerSalonId, specialtyLine, bio, experienceYears: Number(experienceYears || 0), isMobileActive: !!isMobileActive, avatarUrl, isVerified: false, publicationStatus: 'pending' }).returning();
+      res.status(201).json(row);
+    } catch { res.status(400).json({ error: 'اطلاعات متخصص نامعتبر است.' }); }
   });
-
   app.patch('/api/specialists/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      const spec = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1).then(r => r[0]);
-      if (!spec) return res.status(404).json({ error: 'متخصص یافت نشد.' });
-      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== spec.salonId) {
-        return res.status(403).json({ error: 'عدم دسترسی.' });
-      }
-      const { specialtyLine, bio, experienceYears, isVerified, isMobileActive, avatarUrl } = req.body;
-      const patchData: any = {};
-      if (specialtyLine !== undefined) patchData.specialtyLine = specialtyLine;
-      if (bio !== undefined) patchData.bio = bio;
-      if (experienceYears !== undefined) patchData.experienceYears = Number(experienceYears);
-      if (isMobileActive !== undefined) patchData.isMobileActive = Boolean(isMobileActive);
-      if (avatarUrl !== undefined) patchData.avatarUrl = avatarUrl;
-      if (isVerified !== undefined && req.dbUser.role === 'super_admin') {
-        patchData.isVerified = Boolean(isVerified);
-      }
-      const [updated] = await db.update(specialists).set(patchData).where(eq(specialists.id, id)).returning();
-      res.json({ success: true, specialist: updated });
-    } catch (err) {
-      res.status(500).json({ error: 'خطا در ویرایش متخصص.' });
-    }
+    const id = Number(req.params.id), row = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1).then(r => r[0]);
+    if (!row) return res.status(404).json({ error: 'یافت نشد.' });
+    if (req.dbUser.role !== 'super_admin' && row.salonId !== req.dbUser.salonId) return res.status(403).json({ error: 'عدم دسترسی.' });
+    const { salonId, isVerified, publicationStatus, userId, ...data } = req.body;
+    if (salonId !== undefined && Number(salonId) !== row.salonId || userId !== undefined && Number(userId) !== row.userId) return res.status(403).json({ error: 'تغییر مالکیت مجاز نیست.' });
+    const approval = req.dbUser.role === 'super_admin' ? { ...(isVerified !== undefined ? { isVerified: !!isVerified } : {}), ...(publicationStatus ? { publicationStatus } : {}) } : {};
+    const [updated] = await db.update(specialists).set({ ...data, ...approval }).where(eq(specialists.id, id)).returning(); res.json(updated);
   });
-
   app.delete('/api/specialists/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      const spec = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1).then(r => r[0]);
-      if (!spec) return res.status(404).json({ error: 'متخصص یافت نشد.' });
-      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== spec.salonId) {
-        return res.status(403).json({ error: 'عدم دسترسی.' });
-      }
-      await db.delete(specialists).where(eq(specialists.id, id));
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ error: 'خطا در حذف متخصص.' });
-    }
+    const id = Number(req.params.id), row = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1).then(r => r[0]);
+    if (!row) return res.status(404).json({ error: 'یافت نشد.' });
+    if (req.dbUser.role !== 'super_admin' && row.salonId !== req.dbUser.salonId) return res.status(403).json({ error: 'عدم دسترسی.' });
+    await db.delete(specialists).where(eq(specialists.id, id)); res.json({ success: true });
   });
 
   // --- Users ---
@@ -593,6 +549,9 @@ async function createServer() {
   app.post('/api/users', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
       const data = schemas.userCreateSchema.parse(req.body);
+      const isSuper = req.dbUser.role === 'super_admin';
+      if (!isSuper && (data.role !== 'customer' && data.role !== 'salon_specialist' && data.role !== 'mobile_specialist')) return res.status(403).json({ error: 'ایجاد این نقش مجاز نیست.' });
+      if (!isSuper && (!req.dbUser.salonId || (data.salonId !== undefined && Number(data.salonId) !== req.dbUser.salonId))) return res.status(403).json({ error: 'عدم دسترسی به tenant.' });
       
       // Check if user already exists by phone
       const existing = await db.select().from(users).where(eq(users.phone, data.phone)).limit(1).then(r => r[0]);
@@ -603,8 +562,8 @@ async function createServer() {
         fullName: data.fullName,
         phone: data.phone,
         email: data.email || `${data.phone}@boya.ir`,
-        role: data.role as any,
-        salonId: data.salonId ? Number(data.salonId) : null,
+        role: isSuper ? data.role as any : (data.role || 'customer') as any,
+        salonId: isSuper ? (data.salonId ? Number(data.salonId) : null) : req.dbUser.salonId,
         status: 'active',
       }).returning();
 
@@ -666,7 +625,10 @@ async function createServer() {
         delete (patch as any).role;
         delete (patch as any).status;
         delete (patch as any).salonId;
-        if (!isSalonAdmin) delete (patch as any).managedLine;
+        delete (patch as any).managedLine;
+      }
+      if (req.dbUser.id === target.id && !isSuper) {
+        delete (patch as any).role; delete (patch as any).status; delete (patch as any).salonId;
       }
 
       const [updated] = await db.update(users).set(patch as any).where(eq(users.id, id)).returning();
@@ -686,6 +648,14 @@ async function createServer() {
     try {
       const data = schemas.bookingCreateSchema.parse(req.body);
       
+      const salonId = Number(data.salonId), serviceId = Number(data.serviceId), specialistId = Number(data.specialistId);
+      const salon = await db.select().from(salons).where(eq(salons.id, salonId)).limit(1).then(r => r[0]);
+      const service = await db.select().from(services).where(eq(services.id, serviceId)).limit(1).then(r => r[0]);
+      const specialist = await db.select().from(specialists).where(eq(specialists.id, specialistId)).limit(1).then(r => r[0]);
+      const specialistUser = specialist ? await db.select().from(users).where(eq(users.id, specialist.userId)).limit(1).then(r => r[0]) : null;
+      if (!salon || !salon.isApproved || !service || service.salonId !== salonId || service.publicationStatus !== 'active' || !specialist || specialist.salonId !== salonId || !specialist.isVerified || specialist.publicationStatus !== 'active' || specialistUser?.status !== 'active') return res.status(400).json({ error: 'سالن، خدمت یا متخصص برای رزرو منتشر/تایید نشده است.' });
+      if (data.isMobileBooking && (!salon.isMobileServiceActive || !service.isMobileAvailable || !specialist.isMobileActive)) return res.status(400).json({ error: 'رزرو سیار برای این ترکیب فعال نیست.' });
+
       // Check for double booking race condition explicitly before insert
       const existingSlot = await db.select().from(bookingsTable).where(and(
         eq(bookingsTable.specialistId, Number(data.specialistId)),

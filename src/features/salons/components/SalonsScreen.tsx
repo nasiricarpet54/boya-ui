@@ -53,6 +53,11 @@ export const SalonsScreen: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   const savedSalonIds: any[] = [];
+  const publishedSalons = useMemo(() => salons.filter((salon: any) =>
+    salon?.isApproved !== false && salon?.isActive !== false && salon?.active !== false &&
+    (salon?.publicationStatus == null || salon.publicationStatus === 'active') &&
+    (salon?.status == null || salon.status === 'active'),
+  ), [salons]);
 
   // Counties for active province
   const currentProvinceData = IRAN_PROVINCES.find((p) => p.name === selectedProvince);
@@ -61,7 +66,7 @@ export const SalonsScreen: React.FC = () => {
   const availableDistricts: string[] = currentCountyData?.districts || [];
 
   const processedSalons = useMemo(() => {
-    const list = salons
+    const list = publishedSalons
       .map((salon: any) => {
         let distanceKm: number | undefined;
         if (customerLocation.coords) {
@@ -101,7 +106,7 @@ export const SalonsScreen: React.FC = () => {
     });
 
     return list;
-  }, [salons, selectedProvince, selectedCity, selectedDistrict, customerLocation, maxDistanceKm, sortByDistance, onlyVipFilter, onlyMobileService, selectedServiceLine, searchQuery, sortByOption]);
+  }, [publishedSalons, selectedProvince, selectedCity, selectedDistrict, customerLocation, maxDistanceKm, sortByDistance, onlyVipFilter, onlyMobileService, selectedServiceLine, searchQuery, sortByOption]);
 
   const handleToggleWishlistSalon = (id: string) => {
     showToast('وضعیت علاقه‌مندی به‌روز شد.');

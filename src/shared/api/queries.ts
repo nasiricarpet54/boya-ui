@@ -2,21 +2,39 @@ import { useQuery } from '@tanstack/react-query';
 import api from './apiClient';
 import { useDataStore } from '../stores/dataStore';
 
+const isExplicitlyInactive = (item: any) =>
+  item?.isActive === false || item?.active === false ||
+  (item?.publicationStatus != null && item.publicationStatus !== 'active') ||
+  (item?.status != null && item.status !== 'active');
+
+/** The backend is authoritative; this excludes any explicitly unpublished nested records too. */
+const filterPublishedSalons = (items: any[]) => items
+  .filter((salon) => salon?.isApproved !== false && !isExplicitlyInactive(salon))
+  .map((salon) => ({
+    ...salon,
+    services: (Array.isArray(salon.services) ? salon.services : []).filter(
+      (service: any) => service?.isAvailable !== false && service?.available !== false && !isExplicitlyInactive(service),
+    ),
+    specialists: (Array.isArray(salon.specialists) ? salon.specialists : []).filter(
+      (specialist: any) => specialist?.verified !== false && specialist?.isVerified !== false &&
+        specialist?.isActive !== false && !isExplicitlyInactive(specialist),
+    ),
+  }));
+
 export const useSalons = () => {
   return useQuery({
     queryKey: ['salons'],
     queryFn: async () => {
-      try {
-        const { data } = await api.get('/salons');
-        if (Array.isArray(data) && data.length > 0) {
-          useDataStore.getState().setSalons(data);
-          return data;
-        }
-      } catch (e) {
-        console.error('Fetch salons error:', e);
+      const { data } = await api.get('/salons');
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid salons response: expected an array');
       }
-      return useDataStore.getState().salons;
+      const publishedSalons = filterPublishedSalons(data);
+      useDataStore.getState().setSalons(publishedSalons);
+      return publishedSalons;
     },
+    staleTime: 1000 * 60,
+    refetchOnWindowFocus: true,
   });
 };
 

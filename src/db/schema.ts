@@ -31,6 +31,12 @@ export const userStatusEnum = pgEnum('user_status', [
   'suspended'
 ]);
 
+export const publicationStatusEnum = pgEnum('publication_status', [
+  'pending',
+  'approved',
+  'active'
+]);
+
 // Tables
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -40,7 +46,7 @@ export const users = pgTable('users', {
   phone: text('phone').notNull().unique(),
   role: userRoleEnum('role').default('customer').notNull(),
   status: userStatusEnum('status').default('active').notNull(),
-  salonId: integer('salon_id'), // For salon_admin, specialists, and line_manager
+  salonId: integer('salon_id').references(() => salons.id), // For salon_admin, specialists, and line_manager
   managedLine: text('managed_line'), // For line_manager (e.g. 'hair', 'nail')
   avatar: text('avatar'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -65,6 +71,7 @@ export const salons = pgTable('salons', {
   isMobileServiceActive: boolean('is_mobile_service_active').default(false).notNull(),
   coverImage: text('cover_image'),
   gallery: text('gallery'),
+  licenseDocUrl: text('license_doc_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -77,6 +84,7 @@ export const services = pgTable('services', {
   price: decimal('price', { precision: 12, scale: 0 }).notNull(), // In Toman
   durationMinutes: integer('duration_minutes').notNull(),
   isMobileAvailable: boolean('is_mobile_available').default(false).notNull(),
+  publicationStatus: publicationStatusEnum('publication_status').default('pending').notNull(),
   imageUrl: text('image_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -89,6 +97,7 @@ export const specialists = pgTable('specialists', {
   bio: text('bio'),
   experienceYears: integer('experience_years').default(0).notNull(),
   isVerified: boolean('is_verified').default(false).notNull(),
+  publicationStatus: publicationStatusEnum('publication_status').default('pending').notNull(),
   isMobileActive: boolean('is_mobile_active').default(false).notNull(),
   avatarUrl: text('avatar_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -137,6 +146,10 @@ export const portfolioItems = pgTable('portfolio_items', {
 
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
+  salon: one(salons, {
+    fields: [users.salonId],
+    references: [salons.id],
+  }),
   bookings: many(bookings),
   specialistProfile: one(specialists, {
     fields: [users.id],

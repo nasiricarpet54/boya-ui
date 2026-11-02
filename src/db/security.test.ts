@@ -1,80 +1,111 @@
-import { describe, it, expect, vi } from 'vitest';
-import { getBookingsForUser } from './bookings';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getBookingsForUser, createBooking } from './bookings';
 
-// Mock drizzle and DB
-vi.mock('./index.ts', () => ({
-  db: {
-    query: {
-      bookings: {
-        findMany: vi.fn(),
-      },
+const dbMock = vi.hoisted(() => ({
+  query: {
+    bookings: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
     },
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue([]),
   },
+  select: vi.fn(),
+  insert: vi.fn(),
 }));
 
-import { db } from './index.ts';
+vi.mock('./index.ts', () => ({ db: dbMock }));
 
-describe('Security: Tenant Isolation Logic', () => {
-  it('should restrict salon_admin to their own salonId', async () => {
-    const mockUser = {
-      id: 1,
-      role: 'salon_admin',
-      salonId: 10,
-    };
+import { db as realDb } from './index.ts';
+const db = realDb as unknown as typeof dbMock;
 
-    const spy = vi.spyOn(db.query.bookings, 'findMany').mockResolvedValue([]);
+const eqValue = (condition: any): unknown => {
+  const chunks = condition?.queryChunks ?? [];
+  return chunks.find((chunk: any) => chunk?.constructor?.name === 'Param')?.value;
+};
 
-    await getBookingsForUser(mockUser);
+describe('booking visibility and tenant isolation', () => {
+  afterEach(() => vi.clearAllMocks());
 
-    // Verify that the query included a filter for salonId 10
-    const callArgs = spy.mock.calls[0][0] as any;
-    // The where clause should contain the salonId check
-    expect(callArgs.where).toBeDefined();
+  it('limits a customer to their own bookings', async () => {
+    db.query.bookings.findMany.mockResolvedValue([]);
+    await getBookingsForUser({ id: 100, role: 'customer' });
+    const where = db.query.bookings.findMany.mock.calls[0][0].where;
+    expect(eqValue(where)).toBe(100);
   });
 
-  it('should throw error if salon_admin has no salonId', async () => {
-    const mockUser = {
-      id: 1,
-      role: 'salon_admin',
-      salonId: null,
-    };
-
-    await expect(getBookingsForUser(mockUser)).rejects.toThrow('FORBIDDEN_NO_SALON');
+  it('limits salon admins to the assigned salon and rejects missing tenant identity', async () => {
+    db.query.bookings.findMany.mockResolvedValue([]);
+    await getBookingsForUser({ id: 1, role: 'salon_admin', salonId: 10 });
+    expect(eqValue(db.query.bookings.findMany.mock.calls[0][0].where)).toBe(10);
+    await expect(getBookingsForUser({ id: 1, role: 'salon_admin', salonId: null }))
+      .rejects.toThrow('FORBIDDEN_NO_SALON');
+    expect(db.query.bookings.findMany).toHaveBeenCalledTimes(1);
   });
 
-  it('should restrict specialist to their own assigned bookings via subquery/join', async () => {
-    const mockUser = {
-      id: 5,
-      role: 'salon_specialist',
-      salonId: 10,
-    };
+  it('restricts specialists to bookings assigned to their user-linked specialist profile', async () => {
+    db.query.bookings.findMany.mockResolvedValue([]);
+    await getBookingsForUser({ id: 5, role: 'salon_specialist', salonId: 10 });
+    const where = db.query.bookings.findMany.mock.calls[0][0].where;
+    expect(where.queryChunks.some((chunk: any) => chunk?.constructor?.name === 'StringChunk' && chunk.value.join('').includes('specialists'))).toBe(true);
+    expect(where.queryChunks).toContain(5);
+  });
+});
 
-    const spy = vi.spyOn(db.query.bookings, 'findMany').mockResolvedValue([]);
+describe('booking relationship validation and persistence', () => {
+  const base = {
+    customerId: 3, salonId: 10, serviceId: 20, specialistId: 30,
+    date: '2026-11-10', time: '11:30', isMobileBooking: false, price: 999,
+  };
 
-    await getBookingsForUser(mockUser);
+  function selectResults(...results: unknown[][]) {
+    const chain = { where: vi.fn(), limit: vi.fn() };
+    chain.where.mockReturnValue(chain);
+    chain.limit.mockImplementation(() => Promise.resolve(results.shift() ?? []));
+    db.select.mockReturnValue({ from: vi.fn().mockReturnValue(chain) });
+    return chain;
+  }
 
-    const callArgs = spy.mock.calls[spy.mock.calls.length - 1][0] as any;
-    // Should filter by specialistId linked to user.id 5
-    expect(callArgs.where).toBeDefined();
+  it('rejects an unknown salon without attempting service lookup or insert', async () => {
+    selectResults([]);
+    await expect(createBooking(base)).rejects.toThrow('SALON_NOT_FOUND');
+    expect(db.insert).not.toHaveBeenCalled();
   });
 
-  it('should prevent privilege escalation: customer cannot see all bookings', async () => {
-    const mockUser = {
-      id: 100,
-      role: 'customer',
-    };
+  it('rejects a service belonging to another salon', async () => {
+    selectResults([{ id: 10 }], []);
+    await expect(createBooking(base)).rejects.toThrow('SERVICE_NOT_FOUND_IN_SALON');
+    expect(db.insert).not.toHaveBeenCalled();
+  });
 
-    const spy = vi.spyOn(db.query.bookings, 'findMany').mockResolvedValue([]);
+  it('rejects a specialist belonging to another salon', async () => {
+    selectResults([{ id: 10 }], [{ id: 20, price: '1250' }], []);
+    await expect(createBooking(base)).rejects.toThrow('SPECIALIST_NOT_FOUND_IN_SALON');
+    expect(db.insert).not.toHaveBeenCalled();
+  });
 
-    await getBookingsForUser(mockUser);
+  it('persists a valid booking using the catalog price rather than a client-supplied price', async () => {
+    selectResults(
+      [{ id: 10 }],
+      [{ id: 20, salonId: 10, price: '1250' }],
+      [{ id: 30, salonId: 10 }],
+    );
+    const booking = { id: 1, ...base, price: '1250', trackingCode: 'BY-123456' };
+    const returning = vi.fn().mockResolvedValue([booking]);
+    const values = vi.fn().mockReturnValue({ returning });
+    db.insert.mockReturnValue({ values });
+    db.query.bookings.findFirst.mockResolvedValue(booking);
 
-    const callArgs = spy.mock.calls[spy.mock.calls.length - 1][0] as any;
-    // Where clause should be restricted to customerId 100
-    expect(callArgs.where).toBeDefined();
-    // In a real DB it would be eq(bookings.customerId, 100)
+    await expect(createBooking(base)).resolves.toEqual(booking);
+    const inserted = values.mock.calls[0][0];
+    expect(inserted).toMatchObject({
+      customerId: 3, salonId: 10, serviceId: 20, specialistId: 30,
+      status: 'pending', paymentStatus: 'unpaid', price: '1250',
+    });
+    expect(inserted.trackingCode).toMatch(/^BY-\d{6}$/);
+  });
+
+  it('propagates storage failures instead of returning a successful booking', async () => {
+    selectResults([{ id: 10 }], [{ id: 20, salonId: 10, price: '1250' }], [{ id: 30, salonId: 10 }]);
+    db.insert.mockImplementation(() => { throw new Error('database unavailable'); });
+    await expect(createBooking(base)).rejects.toThrow('database unavailable');
   });
 });

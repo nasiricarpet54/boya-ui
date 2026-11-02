@@ -1,19 +1,16 @@
 import React, { useState } from 'react';
 import { Scissors, Star, CheckCircle2, Car, Plus, Edit, Trash2, Building2, Phone, X, ShieldCheck, UserCheck } from 'lucide-react';
-import { useDataStore } from '../../../shared/stores/dataStore';
-import { useSalons } from '../../../shared/api/queries';
-import api from '../../../shared/api/apiClient';
+import { useAuthStore } from '../../../shared/stores/authStore';
 import { useUIStore } from '../../../shared/stores/uiStore';
-import { useQueryClient } from '@tanstack/react-query';
+import api from '../../../shared/api/apiClient';
+import { useDataStore } from '../../../shared/stores/dataStore';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { Specialist, Salon } from '../../../shared/data/marketplaceData';
 
 export const AdminSpecialistsView: React.FC = () => {
-  const { salons, setSalons, fetchServerData } = useDataStore();
-  const { data: querySalons } = useSalons();
-  const { showToast } = useUIStore();
-  const queryClient = useQueryClient();
-
+  const { salons, updateSpecialist, createSpecialist, deleteSpecialist } = useDataStore();
+  const { user } = useAuthStore(); const { showToast } = useUIStore();
+  const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [mobileOnly, setMobileOnly] = useState(false);
   const [typeFilter, setTypeFilter] = useState<'all' | 'salon_specialist' | 'independent_specialist' | 'mobile_specialist'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,11 +32,9 @@ export const AdminSpecialistsView: React.FC = () => {
   const [workingHours, setWorkingHours] = useState('۱۰:۰۰ الی ۱۹:۰۰');
   const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80');
 
-  const activeSalons = (salons && salons.length > 0) ? salons : (querySalons || []);
-
   // Extract all specialists across all salons
   const allSpecialists: { specialist: Specialist; salon: Salon }[] = [];
-  activeSalons.forEach((sal: any) => {
+  salons.forEach((sal: any) => {
     (sal.specialists || []).forEach((sp: any) => {
       allSpecialists.push({ specialist: sp, salon: sal });
     });
@@ -77,7 +72,7 @@ export const AdminSpecialistsView: React.FC = () => {
 
   const handleOpenEdit = (sp: Specialist, salon: Salon) => {
     setEditingSpecialist(sp);
-    setSelectedSalonId(String(salon.id));
+    setSelectedSalonId(salon.id);
     setName(sp.name);
     setPhone(sp.phone || '');
     setRoleTitle(sp.role);
@@ -92,83 +87,46 @@ export const AdminSpecialistsView: React.FC = () => {
   };
 
   const handleSaveSpecialist = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !phone.trim() || !selectedSalonId) return;
-
+    e.preventDefault(); if (!name.trim() || !phone.trim() || !selectedSalonId) return;
+    setBusy(true); setError('');
     try {
+      const payload = { specialtyLine, bio: bio.trim(), experienceYears: Number(experienceYears), isMobileActive: isMobileSpecialist || specialistType === 'mobile_specialist', avatarUrl: avatar };
       if (editingSpecialist) {
-        await api.patch(`/specialists/${editingSpecialist.id}`, {
-          salonId: Number(selectedSalonId),
-          specialtyLine,
-          bio: bio.trim(),
-          experienceYears: Number(experienceYears),
-          isMobileActive: isMobileSpecialist || specialistType === 'mobile_specialist',
-          avatarUrl: avatar,
-        });
-        showToast('تغییرات متخصص با موفقیت ذخیره شد.');
+        await updateSpecialist(editingSpecialist.id, payload);
       } else {
-        // Find or create user for this phone first if needed, or send phone
-        // For now, create/link via /specialists
-        await api.post('/specialists', {
-          userId: 1, // Fallback user or resolved
-          salonId: Number(selectedSalonId),
-          specialtyLine,
-          bio: bio.trim(),
-          experienceYears: Number(experienceYears),
-          isMobileActive: isMobileSpecialist || specialistType === 'mobile_specialist',
-          avatarUrl: avatar,
-        });
-        showToast('متخصص جدید با موفقیت ثبت شد.');
+        const { data: users = [] } = await api.get('/users');
+        let candidate = users.find((u: any) => String(u.phone) === phone.trim() && String(u.salonId) === String(selectedSalonId) && ['salon_specialist', 'mobile_specialist'].includes(u.role));
+        if (!candidate) {
+          const role = specialistType === 'mobile_specialist' ? 'mobile_specialist' : 'salon_specialist';
+          const { data: createdUser } = await api.post('/users', { fullName: name.trim(), phone: phone.trim(), role, ...(user?.role === 'super_admin' ? { salonId: Number(selectedSalonId) } : {}) });
+          candidate = createdUser;
+        }
+        await createSpecialist({ ...payload, userId: candidate.id, salonId: Number(selectedSalonId) });
       }
-
-      await queryClient.invalidateQueries({ queryKey: ['salons'] });
-      await fetchServerData();
-      setIsAddModalOpen(false);
-      resetForm();
-    } catch (err: any) {
-      console.error('Failed to save specialist:', err);
-      showToast(err?.response?.data?.error || 'خطا در ذخیره متخصص.');
-    }
+      showToast('اطلاعات متخصص با موفقیت در سرور ذخیره شد.'); setIsAddModalOpen(false); resetForm();
+    } catch (err: any) { setError(err?.response?.data?.error || err?.message || 'خطا در ذخیره متخصص.'); }
+    finally { setBusy(false); }
   };
 
-  const handleDeleteSpecialist = async (spId: string, salonId: string, spName: string) => {
-    if (window.confirm(`آیا از حذف متخصص «${spName}» اطمینان دارید؟`)) {
-      try {
-        await api.delete(`/specialists/${spId}`);
-        await queryClient.invalidateQueries({ queryKey: ['salons'] });
-        await fetchServerData();
-        showToast('متخصص با موفقیت حذف شد.');
-      } catch (err: any) {
-        console.error('Failed to delete specialist:', err);
-        showToast('خطا در حذف متخصص.');
-      }
-    }
+  const handleDeleteSpecialist = async (spId: string, _salonId: string, spName: string) => {
+    if (!window.confirm(`آیا از حذف متخصص «${spName}» اطمینان دارید؟`)) return;
+    try { await deleteSpecialist(spId); showToast('متخصص از سرور حذف شد.'); }
+    catch (err: any) { setError(err?.response?.data?.error || err?.message || 'خطا در حذف متخصص.'); }
   };
 
   const onToggleSpecialistVerified = async (id: string) => {
-    try {
-      // Find current verified state
-      let currentVerified = false;
-      allSpecialists.forEach(item => {
-        if (String(item.specialist.id) === String(id)) {
-          currentVerified = !!item.specialist.verified;
-        }
-      });
-
-      await api.patch(`/specialists/${id}`, {
-        isVerified: !currentVerified,
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ['salons'] });
-      await fetchServerData();
-      showToast('وضعیت تایید متخصص به‌روزرسانی شد.');
-    } catch (err) {
-      console.error('Failed to toggle verified:', err);
-    }
+    if (user?.role !== 'super_admin') { setError('تأیید نهایی متخصص فقط توسط مدیر کل انجام می‌شود.'); return; }
+    const specialist = allSpecialists.find((item) => String(item.specialist.id) === String(id))?.specialist;
+    if (!specialist) return;
+    try { await updateSpecialist(id, { isVerified: !specialist.verified, publicationStatus: specialist.verified ? 'pending' : 'active' }); showToast('وضعیت تایید در سرور ذخیره شد.'); }
+    catch (err: any) { setError(err?.response?.data?.error || err?.message || 'خطا در تغییر وضعیت تایید.'); }
   };
+
+  if (!['super_admin', 'salon_admin'].includes(user?.role || '')) return <div role="alert" className="p-6 text-rose-700">دسترسی مجاز نیست.</div>;
 
   return (
     <div className="space-y-6">
+      {error && <div role="alert" className="p-3 bg-rose-50 text-rose-700 rounded-xl">{error}</div>}
       {/* Header Bar */}
       <div className="bg-white p-5 rounded-3xl border border-[#E7E2DA] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
         <div>
@@ -281,6 +239,7 @@ export const AdminSpecialistsView: React.FC = () => {
             {/* Actions */}
             <div className="pt-2 border-t border-[#E7E2DA] flex items-center justify-between text-xs">
               <button
+                disabled={user?.role !== 'super_admin'}
                 onClick={() => onToggleSpecialistVerified(specialist.id)}
                 className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border transition-all ${
                   specialist.verified
@@ -343,6 +302,7 @@ export const AdminSpecialistsView: React.FC = () => {
                 </select>
               </div>
 
+              {error && <div role="alert" className="text-rose-700 bg-rose-50 p-2 rounded">{error}</div>}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-[#1C1C1C] block mb-1">نام و نام خانوادگی متخصص:</label>
@@ -456,7 +416,7 @@ export const AdminSpecialistsView: React.FC = () => {
                 </button>
 
                 <button
-                  type="submit"
+                  type="submit" disabled={busy}
                   className="px-6 py-2.5 bg-[#173B3F] hover:bg-[#0F3232] text-white rounded-xl font-bold text-xs shadow-md"
                 >
                   {editingSpecialist ? 'ذخیره تغییرات متخصص' : 'افزودن قطعی متخصص'}

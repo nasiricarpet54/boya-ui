@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, ShieldCheck, FileText, Upload, X, Building2, Eye, AlertCircle } from 'lucide-react';
+import { useAuthStore } from '../../../shared/stores/authStore';
+import { useUIStore } from '../../../shared/stores/uiStore';
 import { useDataStore } from '../../../shared/stores/dataStore';
 import { useSalons } from '../../../shared/api/queries';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
@@ -7,33 +9,42 @@ import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUpload
 import { Salon } from '../../../shared/data/marketplaceData';
 
 export const AdminApprovalsView: React.FC = () => {
-  const { salons, updateSalon } = useDataStore();
+  const { salons, updateSalon, updateService } = useDataStore();
+  const { user } = useAuthStore();
+  const { showToast } = useUIStore();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [serviceBusyId, setServiceBusyId] = useState<string | number | null>(null);
+  if (user?.role !== 'super_admin') return <div role="alert" className="p-6 text-rose-700">دسترسی فقط برای مدیر کل مجاز است.</div>;
   const { data: querySalons } = useSalons();
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string>('');
 
   const allSalons = (salons && salons.length > 0) ? salons : (querySalons || []);
   const pendingTenants = allSalons.filter((s) => !s.isApproved || s.status === 'pending');
-  const approvedTenants = allSalons.filter((s) => s.isApproved && s.status === 'active');
-
-  const onApproveTenant = (id: string, docUrl?: string) => {
-    updateSalon(id, {
-      isApproved: true,
-      status: 'active',
-      licenseDocUrl: docUrl || undefined,
-    });
-    setSelectedSalon(null);
-    setDocumentUrl('');
+  const approvedTenants = allSalons.filter((s) => s.isApproved);
+  const pendingServices = allSalons.flatMap((salon: any) => (salon.services || [])
+    .filter((service: any) => service.publicationStatus === 'pending')
+    .map((service: any) => ({ ...service, salonName: salon.name })));
+  const publishService = async (service: any) => {
+    setServiceBusyId(service.id); setError('');
+    try { await updateService(service.id, { publicationStatus: 'active' }); showToast('خدمت پس از بررسی منتشر شد.'); }
+    catch (e: any) { setError(e?.response?.data?.error || e?.message || 'خطا در انتشار خدمت.'); }
+    finally { setServiceBusyId(null); }
   };
 
-  const onRejectTenant = (id: string) => {
-    updateSalon(id, { isApproved: false, status: 'suspended' });
-    setSelectedSalon(null);
-    setDocumentUrl('');
+  const onApproveTenant = async (id: string, docUrl?: string) => {
+    setBusy(true); setError('');
+    try { await updateSalon(id, { isApproved: true, licenseDocUrl: docUrl || undefined }); showToast('پرونده با موفقیت تایید شد.'); setSelectedSalon(null); setDocumentUrl(''); } catch (e: any) { setError(e?.response?.data?.error || e?.message || 'خطا در ثبت تایید.'); } finally { setBusy(false); }
+  };
+
+  const onRejectTenant = async (id: string) => {
+    setBusy(true); setError(''); try { await updateSalon(id, { isApproved: false }); showToast('درخواست رد شد.'); setSelectedSalon(null); setDocumentUrl(''); } catch (e: any) { setError(e?.response?.data?.error || e?.message || 'خطا در رد درخواست.'); } finally { setBusy(false); }
   };
 
   return (
     <div className="space-y-6">
+      {error && <div role="alert" className="p-3 bg-rose-50 text-rose-700 rounded-xl">{error}</div>}
       {/* Header Bar */}
       <div className="bg-white p-5 rounded-3xl border border-[#E7E2DA] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
         <div>
@@ -115,14 +126,14 @@ export const AdminApprovalsView: React.FC = () => {
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => onRejectTenant(t.id)}
+                    disabled={busy} onClick={() => onRejectTenant(t.id)}
                     className="px-3 py-1.5 text-rose-600 hover:bg-rose-50 rounded-xl font-bold border border-transparent hover:border-rose-200 transition-all"
                   >
                     رد درخواست
                   </button>
 
                   <button
-                    onClick={() => onApproveTenant(t.id)}
+                    disabled={busy} onClick={() => onApproveTenant(t.id)}
                     className="px-4 py-1.5 bg-[#173B3F] hover:bg-[#0F3232] text-white rounded-xl font-bold shadow-xs transition-all"
                   >
                     تایید و انتشار
@@ -133,6 +144,22 @@ export const AdminApprovalsView: React.FC = () => {
           ))}
         </div>
       )}
+
+      <section className="bg-white rounded-3xl border border-[#E7E2DA] p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-[#173B3F]">بررسی و انتشار خدمات</h3>
+            <p className="text-xs text-[#6C6C6C] mt-1">خدمات تازه پس از ثبت در صف بررسی مدیر کل قرار می‌گیرند.</p>
+          </div>
+          <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">{toPersianDigits(pendingServices.length)} خدمت در انتظار</span>
+        </div>
+        {pendingServices.length === 0 ? <p className="text-sm text-[#6C6C6C]">خدمت در انتظار بررسی وجود ندارد.</p> : <div className="space-y-2">
+          {pendingServices.map((service: any) => <div key={service.id} className="flex flex-wrap items-center justify-between gap-3 border rounded-xl p-3">
+            <div><strong className="text-sm">{service.name}</strong><div className="text-xs text-[#6C6C6C]">{service.salonName} · {toPersianDigits(service.durationMinutes)} دقیقه · {toPersianDigits(service.price)} تومان</div></div>
+            <button disabled={serviceBusyId === service.id} onClick={() => publishService(service)} className="px-3 py-2 rounded-lg bg-[#173B3F] text-white text-xs font-bold disabled:opacity-50">تأیید و انتشار</button>
+          </div>)}
+        </div>}
+      </section>
 
       {/* Examine & Upload License Modal */}
       {selectedSalon && (
@@ -174,7 +201,7 @@ export const AdminApprovalsView: React.FC = () => {
               <div className="pt-3 flex items-center justify-between border-t border-[#E7E2DA]">
                 <button
                   type="button"
-                  onClick={() => onRejectTenant(selectedSalon.id)}
+                  disabled={busy} onClick={() => onRejectTenant(selectedSalon.id)}
                   className="px-4 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl font-bold"
                 >
                   رد پرونده
@@ -182,7 +209,7 @@ export const AdminApprovalsView: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => onApproveTenant(selectedSalon.id, documentUrl)}
+                  disabled={busy} onClick={() => onApproveTenant(selectedSalon.id, documentUrl)}
                   className="px-6 py-2.5 bg-[#173B3F] text-white hover:bg-[#0F3232] rounded-xl font-bold shadow-md"
                 >
                   تایید نهایی و ثبت پروانه

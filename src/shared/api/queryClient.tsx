@@ -4,7 +4,8 @@ import React from 'react';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60, // Keep customer publication data fresh; mutations invalidate ['salons'].
+      refetchOnWindowFocus: true,
       retry: 1,
     },
   },

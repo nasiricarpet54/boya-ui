@@ -110,6 +110,15 @@ export const HomeScreen: React.FC = () => {
     );
   }
 
+  if (isError) {
+    return (
+      <div role="alert" className="text-center py-20 bg-white rounded-3xl border border-red-100 m-4">
+        <p className="text-red-500 font-bold">خطایی در دریافت اطلاعات سالن‌ها رخ داد.</p>
+        <p className="text-xs text-[#6C6C6C] mt-2">لطفاً اتصال خود را بررسی و دوباره تلاش کنید.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-24">
       {/* Editorial Hero Banner */}
@@ -296,7 +305,9 @@ export const HomeScreen: React.FC = () => {
           </h2>
         </div>
 
-        {filteredSalonsWithDistance.map(({ salon, distanceKm }) => (
+          {filteredSalonsWithDistance.length === 0 ? (
+            <div className="text-center py-10 bg-white rounded-3xl border border-[#E7E2DA]">سالنی یافت نشد.</div>
+          ) : filteredSalonsWithDistance.map(({ salon, distanceKm }) => (
           <SalonCard
             key={salon.id}
             salon={salon}

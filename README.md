@@ -67,7 +67,7 @@ cp .env.example .env
 ```bash
 npm run dev
 ```
-برنامه در آدرس `http://localhost:3000` آماده به کار خواهد بود.
+سرور با اسکریپت `tsx server.ts` در پورت ۳۰۰۰ اجرا می‌شود؛ آدرس `http://localhost:3000` را باز کنید.
 
 ---
 
@@ -119,10 +119,12 @@ boya-applet/
 | اسکریپت | توضیح |
 | :--- | :--- |
 | `npm run dev` | اجرای همزمان فرانت‌اند و بک‌اند با `tsx server.ts` روی پورت ۳۰۰۰ |
+| `npm start` | اجرای سرور برنامه با `tsx server.ts` روی پورت ۳۰۰۰ |
 | `npm run build` | ساخت نسخه تولیدی فرانت‌اند با `vite build` |
 | `npm run lint` | بررسی استاتیک کد و قوانین TypeScript / ESLint |
 | `npm run test` | اجرای تست‌های واحد و هوک‌ها با `Vitest` |
 | `npm run test:e2e` | اجرای تست‌های سراسری End-to-End با `Playwright` |
+| `npm run db:migrate:publication-lifecycle` | اجرای مهاجرت انتشار خدمات/متخصصین (نیازمند PostgreSQL CLI و `DATABASE_URL`) |
 | `npm run storybook` | اجرای محیط مستندسازی بصری کامپوننت‌ها با `Storybook` |
 
 ---
@@ -139,12 +141,21 @@ boya-applet/
 
 ## 🛡 استقرار و تولید (Deployment)
 
-برای استقرار پروژه در محیط کامپایل‌شده:
+ابتدا از پایگاه‌داده مقصد نسخه پشتیبان بگیرید و `DATABASE_URL` را به همان پایگاه‌داده تنظیم کنید. این مهاجرت تغییری در پایگاه‌داده زمان ساخت ندارد و فقط با اجرای صریح فرمان زیر اجرا می‌شود؛ فرمان را تنها یک‌بار برای هر پایگاه‌داده مقصد و در پنجره انتشار اجرا کنید. برای محیط تازه، مهاجرت پایه `drizzle/0000_perfect_harrier.sql` را پیش از مهاجرت زیر اجرا کنید:
+
+```bash
+export DATABASE_URL='postgresql://user:password@host:5432/boyadb'
+npm run db:migrate:publication-lifecycle
+```
+
+پس از موفقیت مهاجرت:
 
 ```bash
 npm run build
 npm start
 ```
+
+برای اجرای تست‌های واحد از `npm test` و برای آزمون مرورگر از `npm run test:e2e` استفاده کنید. آزمون‌های امنیتی فعلی منطق فیلتر کوئری و اعتبارسنجی رابطه‌های رزرو را با mock بررسی می‌کنند؛ آزمون‌های endpoint یکپارچه، CRUD پایدار، چرخه تایید تا نمایش عمومی و جداسازی واقعی tenant به پایگاه PostgreSQL آزمایشی و test harness سرور نیاز دارند و در این مخزن فعلاً اجرا نمی‌شوند.
 
 ---
 

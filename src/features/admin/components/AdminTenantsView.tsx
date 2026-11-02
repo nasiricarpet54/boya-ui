@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Crown, Plus, Edit, Trash2, Building2, MapPin, Phone, User, CheckCircle2, X, AlertCircle, Loader2 } from 'lucide-react';
+import { useAuthStore } from '../../../shared/stores/authStore';
 import { useDataStore } from '../../../shared/stores/dataStore';
 import { useSalons } from '../../../shared/api/queries';
 import { useUIStore } from '../../../shared/stores/uiStore';
@@ -10,10 +11,12 @@ import { Salon } from '../../../shared/data/marketplaceData';
 import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
 
 export const AdminTenantsView: React.FC = () => {
+  const { user } = useAuthStore();
   const { salons, addSalon, updateSalon, deleteSalon, fetchServerData } = useDataStore();
   const { data: querySalons, isLoading: isLoadingSalons } = useSalons();
   const { showToast } = useUIStore();
   const queryClient = useQueryClient();
+  if (user?.role !== 'super_admin') return <div role="alert" className="p-6 text-rose-700">دسترسی فقط برای مدیر کل مجاز است.</div>;
 
   const [cityFilter, setCityFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -163,10 +166,10 @@ export const AdminTenantsView: React.FC = () => {
     }
   };
 
-  const onToggleTenantStatus = (id: string | number) => {
+  const onToggleTenantStatus = async (id: string | number) => {
     const s = activeSalons.find((x) => String(x.id) === String(id));
     if (!s) return;
-    updateSalon(id, { status: s.status === 'active' ? 'suspended' : 'active' });
+    try { await updateSalon(id, { isApproved: !s.isApproved }); await queryClient.invalidateQueries({ queryKey: ['salons'] }); showToast('وضعیت سالن ذخیره شد.'); } catch (e: any) { showToast(e?.response?.data?.error || e?.message || 'خطا در تغییر وضعیت سالن.'); }
   };
 
   return (
@@ -303,12 +306,12 @@ export const AdminTenantsView: React.FC = () => {
                   <td className="p-3.5">
                     <span
                       className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        s.status === 'suspended'
-                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        !s.isApproved
+                          ? 'bg-amber-50 text-amber-800 border border-amber-200'
                           : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                       }`}
                     >
-                      {s.status === 'suspended' ? 'معلق‌شده' : 'فعال'}
+                      {s.isApproved ? 'منتشرشده' : 'در انتظار تأیید'}
                     </span>
                   </td>
 
@@ -332,12 +335,12 @@ export const AdminTenantsView: React.FC = () => {
                       <button
                         onClick={() => onToggleTenantStatus(s.id)}
                         className={`px-2 py-1 rounded-lg font-bold text-[10px] border transition-colors ${
-                          s.status === 'suspended'
+                          !s.isApproved
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                             : 'bg-amber-50 text-amber-800 border-amber-300'
                         }`}
                       >
-                        {s.status === 'suspended' ? 'رفع تعلیق' : 'تعلیق'}
+                        {s.isApproved ? 'لغو انتشار' : 'تأیید و انتشار'}
                       </button>
 
                       <button

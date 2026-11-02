@@ -58,6 +58,7 @@ export async function seedDatabase() {
           price: String(srv.price || '300000'),
           durationMinutes: srv.durationMinutes || 45,
           isMobileAvailable: Boolean(srv.isMobileAvailable),
+          publicationStatus: 'active',
           imageUrl: srv.imageUrl || null,
         }).onConflictDoNothing();
       }
@@ -87,6 +88,7 @@ export async function seedDatabase() {
             bio: sp.bio || 'متخصص زیبایی در سامانه بویا',
             experienceYears: sp.experienceYears || 3,
             isVerified: true,
+            publicationStatus: 'active',
             isMobileActive: Boolean(sp.isMobileSpecialist),
             avatarUrl: sp.avatar || null,
           }).onConflictDoNothing();
