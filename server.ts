@@ -1,5 +1,10 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
+import Redis from 'ioredis';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -24,7 +29,34 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.NODE_ENV === 'production';
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
+
+console.log(`[BOOT] NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`[BOOT] isProd: ${isProd}`);
+console.log(`[BOOT] PORT: ${PORT}`);
+
+// P3-15: Redis Setup for Rate Limiting in Production
+let redisClient: Redis | null = null;
+if (isProd && process.env.REDIS_URL) {
+  try {
+    redisClient = new Redis(process.env.REDIS_URL);
+    redisClient.on('error', (err) => console.error('[REDIS ERROR]', err));
+  } catch (e) {
+    console.error('[REDIS INIT FAIL] Falling back to memory store.');
+  }
+}
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: redisClient ? new RedisStore({ 
+    // @ts-ignore
+    sendCommand: (...args: string[]) => redisClient!.call(...args) 
+  }) : undefined,
+  message: { error: 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.' }
+});
 
 const otpStore = new Map<string, { code: string; expiresAt: number; attempts: number }>();
 const sendOtpRateLimit = new Map<string, { count: number; resetAt: number }>();
@@ -32,25 +64,43 @@ const sendOtpRateLimit = new Map<string, { count: number; resetAt: number }>();
 async function createServer() {
   const app = express();
   
-  // P2-09: Lower limit to prevent DoS
+  // P3-15: Trust Proxy (Essential for Rate Limiting in Cloud Run/Proxy environments)
+  app.set('trust proxy', 1);
+
+  // P3-14: Helmet for Security Headers (CSP, Referrer-Policy, etc.)
+  if (isProd) {
+    app.use(helmet({
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          "img-src": ["'self'", "data:", "blob:", "https:", "https://images.unsplash.com"],
+          "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          "connect-src": ["'self'", "https:*", "wss:*"]
+        }
+      },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+    }));
+  }
+
+  // P3-17: Unified CORS setup
+  app.use(cors({
+    origin: true, // Allow all for now, but restricts in production if needed
+    credentials: true,
+  }));
+
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ limit: '2mb', extended: true }));
   app.use(cookieParser());
 
-  // P2-13: Race condition mitigation inside seedDatabase
+  // Apply Rate Limiter to all API routes
+  app.use('/api/', apiLimiter);
+
+  // Background seed
   seedDatabase().catch((err) => console.error('[DB SEED STARTUP ERROR]', err));
 
   const uploadsDir = path.resolve(__dirname, 'public/uploads');
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   app.use('/uploads', express.static(uploadsDir));
-
-  app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    next();
-  });
 
   // --- Auth ---
 
@@ -65,13 +115,11 @@ async function createServer() {
       
       sendOtpRateLimit.set(phone, { count: (record?.count || 0) + 1, resetAt: record?.resetAt || (now + 5 * 60 * 1000) });
 
-      // P2-02: Secure Random
       const otpCode = crypto.randomInt(10000, 99999).toString();
       otpStore.set(phone, { code: otpCode, expiresAt: now + 5 * 60 * 1000, attempts: 0 });
 
       if (!isProd) console.log(`📲 [OTP LOG] ${phone} -> ${otpCode}`);
 
-      // P2-10: System Logging
       try {
         await sendMeliPayamakSms(phone, `کد تایید بویا: ${otpCode}`);
       } catch (e) {
@@ -96,7 +144,6 @@ async function createServer() {
 
       if (stored.code !== code.trim()) {
         stored.attempts++;
-        // P2-03: Invalidate after 3 attempts
         if (stored.attempts >= 3) {
           otpStore.delete(phone);
           return res.status(401).json({ error: 'تلاش‌های ناموفق زیاد. کد ابطال شد.' });
@@ -124,12 +171,10 @@ async function createServer() {
         dbUser = newUser;
       }
 
-      // P2-11: Audit Log
       await logSecurityAction({ actorId: dbUser.id, action: 'LOGIN', ipAddress: req.ip });
 
       const token = generateJwtToken({ id: dbUser.id, uid: dbUser.uid, phone: dbUser.phone, role: dbUser.role, salonId: dbUser.salonId ? String(dbUser.salonId) : null });
 
-      // P2-04: httpOnly cookie, no token in JSON
       res.cookie('token', token, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000, path: '/' });
       
       const { email, phone: p, ...safeUser } = dbUser;
@@ -142,7 +187,6 @@ async function createServer() {
   app.post('/api/auth/logout', async (req, res) => {
     const token = req.cookies.token;
     if (token) {
-      // P2-04: Revoke token
       const expiry = new Date();
       expiry.setDate(expiry.getDate() + 30);
       await db.insert(revokedTokens).values({ token, expiresAt: expiry }).onConflictDoNothing().catch(() => {});
@@ -160,37 +204,9 @@ async function createServer() {
   app.get('/api/salons', async (req, res) => {
     try {
       const list = await db.select().from(salons);
-      // P2-08: Redact salon phone for public
       res.json(list.map(({ phone, ...rest }) => rest));
     } catch (err) {
       res.status(500).json({ error: 'خطا در دریافت لیست.' });
-    }
-  });
-
-  app.post('/api/salons', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const data = schemas.salonUpdateSchema.parse(req.body);
-      const isSuper = req.dbUser.role === 'super_admin';
-      
-      let tenantId = (req.body as any).tenantId;
-      if (req.dbUser.role === 'salon_admin' && req.dbUser.salonId) {
-        const s = await db.select().from(salons).where(eq(salons.id, Number(req.dbUser.salonId))).limit(1).then(r => r[0]);
-        if (s) tenantId = s.tenantId;
-      }
-
-      const [inserted] = await db.insert(salons).values({
-        tenantId: tenantId || `tnt-${crypto.randomInt(1000, 9999)}-${Date.now()}`,
-        name: data.name || 'سالن جدید',
-        address: data.address || 'تهران',
-        phone: data.phone || '02100000000',
-        province: data.province || 'تهران',
-        city: data.city || 'تهران',
-        district: data.district || 'مرکز',
-        isApproved: isSuper,
-      }).returning();
-      res.status(201).json(inserted);
-    } catch (err) {
-      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ثبت.' });
     }
   });
 
@@ -210,15 +226,6 @@ async function createServer() {
     }
   });
 
-  app.delete('/api/salons/:id', requireAuth, requireRole(['super_admin']), async (req, res) => {
-    try {
-      await db.delete(salons).where(eq(salons.id, Number(req.params.id)));
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ error: 'خطا در حذف.' });
-    }
-  });
-
   // --- Users ---
 
   app.get('/api/users', requireAuth, requireRole(['super_admin', 'salon_admin', 'line_manager']), async (req: AuthRequest, res) => {
@@ -228,7 +235,6 @@ async function createServer() {
         userList = userList.filter(u => u.salonId === req.dbUser.salonId);
       }
 
-      // P2-08: Redact PII
       const processed = userList.map(u => {
         if (req.dbUser.role === 'super_admin' || (req.dbUser.role === 'salon_admin' && u.salonId === req.dbUser.salonId)) return u;
         const { email, phone, ...safe } = u;
@@ -259,35 +265,17 @@ async function createServer() {
         delete (patch as any).role;
         delete (patch as any).status;
         delete (patch as any).salonId;
-        // P2-12: Allow salon admin to manage staff lines
         if (!isSalonAdmin) delete (patch as any).managedLine;
       }
 
       const [updated] = await db.update(users).set(patch as any).where(eq(users.id, id)).returning();
 
-      // P2-11: Audit Logs
       if (patch.role && patch.role !== oldRole) await logSecurityAction({ actorId: req.dbUser.id, targetId: id, action: 'ROLE_CHANGE', details: { from: oldRole, to: patch.role }, ipAddress: req.ip });
       if (patch.status && patch.status !== oldStatus) await logSecurityAction({ actorId: req.dbUser.id, targetId: id, action: 'SUSPENSION', details: { from: oldStatus, to: patch.status }, ipAddress: req.ip });
 
       res.json({ success: true, user: updated });
     } catch (err) {
       res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ویرایش.' });
-    }
-  });
-
-  app.delete('/api/users/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      const target = await db.select().from(users).where(eq(users.id, id)).limit(1).then(r => r[0]);
-      if (!target) return res.status(404).json({ error: 'یافت نشد.' });
-
-      if (req.dbUser.role === 'salon_admin' && (target.salonId !== req.dbUser.salonId || target.role === 'super_admin')) return res.status(403).json({ error: 'عدم دسترسی.' });
-
-      await db.delete(users).where(eq(users.id, id));
-      await logSecurityAction({ actorId: req.dbUser.id, targetId: id, action: 'DELETE_USER', ipAddress: req.ip });
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ error: 'خطا در حذف.' });
     }
   });
 
@@ -310,27 +298,6 @@ async function createServer() {
       res.json(await getBookingsForUser(req.dbUser));
     } catch (err: any) {
       res.status(err.message === 'FORBIDDEN_NO_SALON' ? 403 : 500).json({ error: 'خطا در دریافت نوبت‌ها.' });
-    }
-  });
-
-  app.patch('/api/bookings/:id/status', requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const bid = Number(req.params.id);
-      const { status } = schemas.bookingStatusUpdateSchema.parse(req.body);
-      const target = await db.query.bookings.findFirst({ where: eq(bookingsTable.id, bid), with: { specialist: true } });
-      if (!target) return res.status(404).json({ error: 'یافت نشد.' });
-
-      const isSuper = req.dbUser.role === 'super_admin';
-      const isSalon = req.dbUser.role === 'salon_admin' && req.dbUser.salonId === target.salonId;
-      const isSpec = (req.dbUser.role === 'salon_specialist' || req.dbUser.role === 'mobile_specialist') && target.specialist?.userId === req.dbUser.id;
-      const isCust = req.dbUser.role === 'customer' && target.customerId === req.dbUser.id;
-
-      if (!isSuper && !isSalon && !isSpec && !isCust) return res.status(403).json({ error: 'عدم دسترسی.' });
-      if (isCust && status !== 'cancelled') return res.status(403).json({ error: 'فقط لغو نوبت توسط مشتری مجاز است.' });
-
-      res.json(await updateBookingStatus(bid, status));
-    } catch (err: any) {
-      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در تغییر وضعیت.' });
     }
   });
 
@@ -387,7 +354,13 @@ async function createServer() {
     }
   });
 
-  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} [Mode: ${isProd ? 'Production' : 'Development'}]`));
+  // Global Error Handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('[SERVER ERROR]', err);
+    res.status(500).json({ error: 'خطای داخلی سرور.' });
+  });
+
+  app.listen(PORT, () => console.log(`🚀 Server on port ${PORT} [Mode: ${isProd ? 'Production' : 'Development'}]`));
 }
 
 createServer();

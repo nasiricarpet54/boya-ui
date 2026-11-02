@@ -1,0 +1,29 @@
+[33m⚠️ WARNING: JWT_SECRET environment variable is missing.[0m
+[33mUsing internal fallback secret. This is not secure for live production.[0m
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+[DB SEED] Starting database seeding process...
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - `__dirname` (vite.config.ts:11:27). Use `import.meta.dirname` instead
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+WebSocket server error: Port 24678 is already in use
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1941:16)
+    at listenInCluster (node:net:1998:12)
+    at Server.listen (node:net:2103:7)
+    at Function.listen (/app/applet/node_modules/express/lib/application.js:635:24)
+    at createServer (/app/applet/server.ts:351:7)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1977:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -98,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v22.23.4
