@@ -61,7 +61,11 @@ export const UserHeader: React.FC = () => {
         title="منوی کاربری"
       >
         <div className="w-8 h-8 rounded-xl bg-[#173B3F] text-[#D9A2B0] flex items-center justify-center font-bold text-xs border border-[#D9A2B0]/40 overflow-hidden shadow-xs">
-          {user.fullName?.charAt(0) || 'ک'}
+          {user.avatar ? (
+            <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
+          ) : (
+            user.fullName?.charAt(0) || 'ک'
+          )}
         </div>
         <div className="hidden sm:block text-right">
           <span className="text-xs font-bold text-[#173B3F] block group-hover:text-[#0F3232]">{user.fullName}</span>

@@ -64,6 +64,7 @@ export const salons = pgTable('salons', {
   vipBadgeLabel: text('vip_badge_label'),
   isMobileServiceActive: boolean('is_mobile_service_active').default(false).notNull(),
   coverImage: text('cover_image'),
+  gallery: text('gallery'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

@@ -1,16 +1,63 @@
-import React, { useState } from 'react';
-import { MapPin, Share2, Plus, Send, CheckCircle2, ChevronLeft, Store, ShieldCheck } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { MapPin, Share2, Plus, Send, CheckCircle2, ChevronLeft, Store, ShieldCheck, Camera, Edit3, LogOut } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { SupportTicket, INITIAL_TICKETS } from '../../../shared/data/marketplaceData';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useAuthStore } from '../../../shared/stores/authStore';
-import { LogOut } from 'lucide-react';
 
 export const ProfileSupportScreen: React.FC = () => {
   const navigate = useNavigate();
   const { setAppMode, setShowSplashScreen, setSplashAppName } = useUIStore();
-  const { logout, user } = useAuthStore();
+  const { logout, user, updateProfile } = useAuthStore();
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editFullName, setEditFullName] = useState(user?.fullName || '');
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState(false);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64, filename: file.name }),
+          credentials: 'include',
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.url) {
+          await updateProfile({ avatar: uploadData.url });
+          setProfileSuccessMsg(true);
+          setTimeout(() => setProfileSuccessMsg(false), 3000);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Error uploading avatar:', err);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!editFullName.trim()) return;
+    try {
+      await updateProfile({ fullName: editFullName.trim() });
+      setIsEditingName(false);
+      setProfileSuccessMsg(true);
+      setTimeout(() => setProfileSuccessMsg(false), 3000);
+    } catch (err) {
+      console.error('Error updating name:', err);
+    }
+  };
   
   const [activeTab, setActiveTab] = useState<'profile' | 'tickets' | 'addresses' | 'referral' | 'faq' | 'guide'>('tickets');
   // ... rest of state
@@ -106,15 +153,61 @@ export const ProfileSupportScreen: React.FC = () => {
 
       <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3.5">
-          <div className="w-14 h-14 rounded-2xl bg-[#173B3F] text-[#D9A2B0] flex items-center justify-center font-bold text-lg border-2 border-[#D9A2B0]/40 shadow-sm">
-            {user?.fullName?.charAt(0) || 'ک'}
+          <div className="relative group">
+            <div className="w-14 h-14 rounded-2xl bg-[#173B3F] text-[#D9A2B0] flex items-center justify-center font-bold text-lg border-2 border-[#D9A2B0]/40 shadow-sm overflow-hidden">
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
+              ) : (
+                user?.fullName?.charAt(0) || 'ک'
+              )}
+            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+              className="absolute -bottom-1 -left-1 w-6 h-6 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white flex items-center justify-center border border-white shadow-xs transition-all cursor-pointer"
+              title="تغییر تصویر پروفایل"
+            >
+              <Camera className="w-3.5 h-3.5 text-[#D9A2B0]" />
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleAvatarFileChange}
+              accept="image/*"
+              className="hidden"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-[#173B3F]">{user?.fullName || 'کاربر مهمان'}</h2>
-              <span className="text-[10px] text-[#2E5E52] bg-[#EAF2EF] px-2 py-0.5 rounded-full flex items-center gap-0.5 font-bold"><CheckCircle2 className="w-3 h-3" />تایید شده</span>
+              {isEditingName ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    className="h-8 px-2 text-xs font-bold rounded-lg border border-[#173B3F] outline-none"
+                    autoFocus
+                  />
+                  <button onClick={handleSaveName} className="px-2 py-1 bg-[#173B3F] text-white rounded-lg text-[10px] font-bold">ذخیره</button>
+                  <button onClick={() => setIsEditingName(false)} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-[10px]">انصراف</button>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-base font-bold text-[#173B3F]">{user?.fullName || 'کاربر مهمان'}</h2>
+                  <button onClick={() => { setEditFullName(user?.fullName || ''); setIsEditingName(true); }} className="text-[#6F9A8D] hover:text-[#173B3F] p-0.5" title="ویرایش نام">
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="text-[10px] text-[#2E5E52] bg-[#EAF2EF] px-2 py-0.5 rounded-full flex items-center gap-0.5 font-bold"><CheckCircle2 className="w-3 h-3" />تایید شده</span>
+                </>
+              )}
             </div>
             <span className="text-xs text-[#6C6C6C] block font-mono">{toPersianDigits(user?.phone || '')}</span>
+            {profileSuccessMsg && (
+              <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">تغییرات با موفقیت در دیتابیس ذخیره شد.</span>
+            )}
+            {isUploadingAvatar && (
+              <span className="text-[10px] text-amber-700 font-bold block mt-0.5">در حال ذخیره دائمی تصویر...</span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">

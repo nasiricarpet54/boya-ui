@@ -14,6 +14,7 @@ export interface User {
   email: string;
   salonId?: string | number | null;
   managedLine?: string | null;
+  avatar?: string | null;
 }
 
 interface AuthState {
@@ -27,6 +28,7 @@ interface AuthState {
   verifySession: () => Promise<User | null>;
   sendOtp: (phone: string) => Promise<{ success: boolean; message: string }>;
   loginWithPhone: (phone: string, code: string, fullName?: string) => Promise<void>;
+  updateProfile: (patch: { fullName?: string; avatar?: string; email?: string }) => Promise<any>;
   logout: () => Promise<void>;
 }
 
@@ -130,6 +132,29 @@ export const useAuthStore = create<AuthState>()(
           throw error;
         } finally {
           set({ isLoading: false });
+        }
+      },
+      
+      updateProfile: async (patch: { fullName?: string; avatar?: string; email?: string }) => {
+        try {
+          const res = await fetch('/api/profile', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch),
+            credentials: 'include',
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'خطا در ویرایش پروفایل.');
+          
+          if (data.user) {
+            set((state) => ({
+              user: state.user ? { ...state.user, ...data.user } : data.user,
+            }));
+          }
+          return data.user;
+        } catch (err) {
+          console.error('[UPDATE PROFILE ERROR]', err);
+          throw err;
         }
       },
       

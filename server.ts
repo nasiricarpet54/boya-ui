@@ -15,8 +15,8 @@ import { ZodError } from 'zod';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { requireAuth, requireRole, type AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
-import { users, salons, bookings as bookingsTable, revokedTokens, notifications, adminProfile } from './src/db/schema.ts';
-import { eq, desc, and } from 'drizzle-orm';
+import { users, salons, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems } from './src/db/schema.ts';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
 import { normalizeToIsoDate } from './src/shared/utils/dateIsoConverter.ts';
@@ -97,7 +97,7 @@ async function createServer() {
   // Apply Rate Limiter to all API routes
   app.use('/api/', apiLimiter);
 
-  // Synchronous database seeding and migration on startup
+  // Synchronous database seeding on startup
   try {
     await seedDatabase();
     console.log('[DB BOOT] Database tables and seed data synchronized successfully.');
@@ -105,9 +105,52 @@ async function createServer() {
     console.error('[DB BOOT CRITICAL ERROR]', err);
   }
 
-  const uploadsDir = path.resolve(__dirname, 'public/uploads');
+  // Support both /app/uploads (Docker volume) and public/uploads
+  const dockerUploads = '/app/uploads';
+  const localUploads = path.resolve(process.cwd(), 'public/uploads');
+  const uploadsDir = fs.existsSync(dockerUploads) ? dockerUploads : localUploads;
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  if (!fs.existsSync(localUploads)) fs.mkdirSync(localUploads, { recursive: true });
+  
   app.use('/uploads', express.static(uploadsDir));
+  app.use('/uploads', express.static(localUploads));
+
+  // File & Image Upload endpoint (permanent disk storage)
+  app.post('/api/upload', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const rawData = req.body.fileData || req.body.base64;
+      if (!rawData || typeof rawData !== 'string') {
+        return res.status(400).json({ error: 'داده تصویر ارسال نشده است.' });
+      }
+
+      const matches = rawData.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      let ext = 'webp';
+      let buffer: Buffer;
+
+      if (matches) {
+        ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        buffer = Buffer.from(matches[2], 'base64');
+      } else {
+        buffer = Buffer.from(rawData, 'base64');
+      }
+
+      const safeName = `img_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.${ext}`;
+      const filePath = path.join(uploadsDir, safeName);
+      fs.writeFileSync(filePath, buffer);
+
+      if (uploadsDir !== localUploads) {
+        try {
+          fs.writeFileSync(path.join(localUploads, safeName), buffer);
+        } catch (_) {}
+      }
+
+      const fileUrl = `/uploads/${safeName}`;
+      res.json({ success: true, url: fileUrl });
+    } catch (err) {
+      console.error('[UPLOAD ERROR]', err);
+      res.status(500).json({ error: 'خطا در ذخیره‌سازی فایل تصویر.' });
+    }
+  });
 
   // --- Auth ---
 
@@ -206,6 +249,86 @@ async function createServer() {
 
   app.get('/api/profile', requireAuth, (req: AuthRequest, res) => res.json(req.dbUser));
 
+  app.patch('/api/profile', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const allowed = schemas.userUpdateSchema.pick({ fullName: true, avatar: true, email: true }).parse(req.body);
+      const updateData: any = {};
+      if (allowed.fullName !== undefined) updateData.fullName = allowed.fullName;
+      if (allowed.avatar !== undefined) updateData.avatar = allowed.avatar;
+      if (allowed.email !== undefined) updateData.email = allowed.email;
+
+      const [updated] = await db.update(users).set(updateData).where(eq(users.id, req.dbUser.id)).returning();
+      
+      // If user is also a specialist, sync avatarUrl
+      if (allowed.avatar) {
+        await db.update(specialists).set({ avatarUrl: allowed.avatar }).where(eq(specialists.userId, req.dbUser.id)).catch(() => {});
+      }
+
+      res.json({ success: true, user: updated });
+    } catch (err) {
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ویرایش پروفایل.' });
+    }
+  });
+
+  // --- Specialists Portfolio Management ---
+  app.post('/api/specialists/portfolio', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { title, imageUrl, category, specialistId } = req.body;
+      if (!title || !imageUrl) return res.status(400).json({ error: 'عنوان و تصویر الزامی است.' });
+
+      // Find specialist record for this user or by ID if provided
+      let spec = await db.select().from(specialists).where(eq(specialists.userId, req.dbUser.id)).limit(1).then(r => r[0]);
+      if (!spec && specialistId) {
+        spec = await db.select().from(specialists).where(eq(specialists.id, Number(specialistId))).limit(1).then(r => r[0]);
+      }
+      if (!spec) {
+        // If specialist record does not exist yet (e.g. mobile specialist), create one!
+        const [newSpec] = await db.insert(specialists).values({
+          userId: req.dbUser.id,
+          salonId: req.dbUser.salonId || 1,
+          specialtyLine: req.dbUser.managedLine || 'hair',
+          bio: 'متخصص در سامانه بویا',
+          experienceYears: 3,
+          isVerified: true,
+          isMobileActive: req.dbUser.role === 'mobile_specialist',
+          avatarUrl: req.dbUser.avatar || null,
+        }).returning();
+        spec = newSpec;
+      }
+
+      const [item] = await db.insert(portfolioItems).values({
+        specialistId: spec.id,
+        title: String(title).trim(),
+        imageUrl: String(imageUrl).trim(),
+        category: String(category || 'نمونه کار').trim(),
+        likesCount: 1,
+      }).returning();
+
+      res.status(201).json(item);
+    } catch (err) {
+      console.error('[PORTFOLIO CREATE ERROR]', err);
+      res.status(500).json({ error: 'خطا در ثبت نمونه کار.' });
+    }
+  });
+
+  app.delete('/api/specialists/portfolio/:id', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const item = await db.select().from(portfolioItems).where(eq(portfolioItems.id, id)).limit(1).then(r => r[0]);
+      if (!item) return res.status(404).json({ error: 'نمونه کار یافت نشد.' });
+
+      const spec = await db.select().from(specialists).where(eq(specialists.id, item.specialistId)).limit(1).then(r => r[0]);
+      if (req.dbUser.role !== 'super_admin' && (!spec || spec.userId !== req.dbUser.id)) {
+        return res.status(403).json({ error: 'عدم دسترسی به حذف این نمونه‌کار.' });
+      }
+
+      await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در حذف نمونه کار.' });
+    }
+  });
+
   // --- Salons ---
 
   app.get('/api/salons', async (req, res) => {
@@ -225,6 +348,11 @@ async function createServer() {
         ...rest,
         rating: Number(rest.rating) || 5,
         reviewsCount: Number(rest.reviewsCount) || 0,
+        gallery: rest.gallery
+          ? (typeof rest.gallery === 'string'
+              ? (rest.gallery.startsWith('[') ? JSON.parse(rest.gallery) : [rest.gallery])
+              : rest.gallery)
+          : (rest.coverImage ? [rest.coverImage] : []),
         services: (rest.services || []).map(srv => ({
           ...srv,
           price: Number(srv.price) || 0,
@@ -254,7 +382,12 @@ async function createServer() {
 
       if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== target.id) return res.status(403).json({ error: 'عدم دسترسی.' });
 
-      const [updated] = await db.update(salons).set(data).where(eq(salons.id, id)).returning();
+      const patchData: any = { ...data };
+      if (Array.isArray(patchData.gallery)) {
+        patchData.gallery = JSON.stringify(patchData.gallery);
+      }
+
+      const [updated] = await db.update(salons).set(patchData).where(eq(salons.id, id)).returning();
       res.json({ success: true, salon: updated });
     } catch (err) {
       res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ویرایش.' });

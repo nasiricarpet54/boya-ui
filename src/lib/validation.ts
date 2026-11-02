@@ -47,6 +47,8 @@ export const salonUpdateSchema = z.object({
   isApproved: z.boolean().optional(),
   isVip: z.boolean().optional(),
   vipBadgeLabel: z.string().optional(),
+  coverImage: z.string().optional(),
+  gallery: z.union([z.string(), z.array(z.string())]).optional(),
 });
 export const userCreateSchema = z.object({
   fullName: z.string().min(2, 'نام الزامی است'),

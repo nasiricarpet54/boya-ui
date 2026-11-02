@@ -179,6 +179,12 @@ export const SalonAdminDashboard: React.FC = () => {
   // Local state for specialists in this salon
   const [specialistsList, setSpecialistsList] = useState<any[]>([]);
 
+  // Avatar & Cover upload refs
+  const specialistAvatarInputRef = React.useRef<HTMLInputElement>(null);
+  const salonCoverInputRef = React.useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+
   // Local state for adding portfolio item to specialist
   const [isAddingPortfolio, setIsAddingPortfolio] = useState(false);
   const [newPortfolioTitle, setNewPortfolioTitle] = useState('');
@@ -224,22 +230,56 @@ export const SalonAdminDashboard: React.FC = () => {
 
   const isSpecialistRole = user?.role === 'salon_specialist' || user?.role === 'mobile_specialist' || user?.role === 'line_manager';
 
+  const isMobileSpecialist =
+    user?.role === 'mobile_specialist' ||
+    Boolean(activeSpecialistView?.isMobileSpecialist) ||
+    Boolean(activeSpecialistView?.isMobileActive);
+
   // Lock specialist view when logged in as a specialist
   useEffect(() => {
-    if (isSpecialistRole && specialistsList.length > 0) {
-      const mySpec = specialistsList.find(
-        (s: any) =>
-          s.user?.id === user?.id ||
-          s.user?.phone === user?.phone ||
-          s.id === user?.uid ||
-          s.specialtyLine === user?.managedLine
-      ) || specialistsList[0];
+    if (isSpecialistRole) {
+      if (user?.role === 'mobile_specialist') {
+        // Independent Mobile Specialist: Completely standalone, NO salon affiliation
+        const mobileSpecObj = {
+          id: user.id || 'mobile-spec',
+          user: user,
+          name: user.fullName || 'متخصص سیار',
+          avatarUrl: user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+          specialtyLine: user.managedLine || 'hair',
+          bio: 'متخصص سیار و مستقل در پلتفرم بویا — ارائه خدمات زیبایی در محل مشتری',
+          experienceYears: 4,
+          isVerified: true,
+          isMobileSpecialist: true,
+          isMobileActive: true,
+          rating: 5,
+          reviewsCount: 1,
+          portfolio: [],
+        };
+        if (!activeSpecialistView || activeSpecialistView.id !== mobileSpecObj.id) {
+          setActiveSpecialistView(mobileSpecObj);
+        }
+      } else if (specialistsList.length > 0) {
+        const mySpec = specialistsList.find(
+          (s: any) =>
+            s.user?.id === user?.id ||
+            s.user?.phone === user?.phone ||
+            s.id === user?.uid ||
+            s.specialtyLine === user?.managedLine
+        ) || specialistsList[0];
 
-      if (!activeSpecialistView || activeSpecialistView.id !== mySpec.id) {
-        setActiveSpecialistView(mySpec);
+        if (!activeSpecialistView || activeSpecialistView.id !== mySpec.id) {
+          setActiveSpecialistView(mySpec);
+        }
       }
     }
   }, [isSpecialistRole, specialistsList, user, activeSpecialistView]);
+
+  // Ensure mobile specialist never accesses salon_info tab
+  useEffect(() => {
+    if (isMobileSpecialist && specialistTab === 'salon_info') {
+      setSpecialistTab('bookings');
+    }
+  }, [isMobileSpecialist, specialistTab]);
 
   const handleSelectSalon = (salonId: string) => {
     setSelectedSalonId(salonId);
@@ -285,15 +325,17 @@ export const SalonAdminDashboard: React.FC = () => {
   // --- Filter Bookings for Active Specialist (STRICT REQUIREMENT #8) ---
   const specialistBookings = activeSpecialistView
     ? (bookingsData || []).filter(
-        (b: any) => b.specialistId === activeSpecialistView.id
+        (b: any) =>
+          b.specialistId === activeSpecialistView.id ||
+          (user?.id && (b.specialist?.userId === user.id || b.specialistId === user.id))
       )
     : [];
 
   // --- Filter Services for Active Specialist (STRICT REQUIREMENT #2) ---
   const specialistServices = activeSpecialistView
-    ? salonServices.filter(
-        (s) => s.serviceLineId === activeSpecialistView.specialtyLine
-      )
+    ? (salonServices.length > 0
+        ? salonServices.filter((s) => s.serviceLineId === activeSpecialistView.specialtyLine)
+        : (currentSalon?.services || []).filter((s: any) => s.serviceLineId === activeSpecialistView.specialtyLine || s.isMobileAvailable))
     : [];
 
   // --- Filter Schedule Blocks for Active Specialist (STRICT REQUIREMENT #3) ---
@@ -330,66 +372,83 @@ export const SalonAdminDashboard: React.FC = () => {
     setNewServiceName('');
   };
 
-  // Handler: Add Portfolio Item (STRICT REQUIREMENT #4: Only own portfolio)
-  const handleAddPortfolioItem = (e: React.FormEvent) => {
+  // Handler: Add Portfolio Item (Saved permanently in PostgreSQL portfolio_items table)
+  const handleAddPortfolioItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeSpecialistView || !newPortfolioTitle.trim() || !newPortfolioUrl.trim()) return;
 
-    const newItem: SpecialistPortfolio = {
-      id: `port-${Date.now()}`,
-      title: newPortfolioTitle.trim(),
-      imageUrl: newPortfolioUrl.trim(),
-      category: newPortfolioCategory,
-      likesCount: 1,
-    };
+    try {
+      const res = await api.post('/specialists/portfolio', {
+        title: newPortfolioTitle.trim(),
+        imageUrl: newPortfolioUrl.trim(),
+        category: newPortfolioCategory,
+        specialistId: activeSpecialistView.id,
+      });
 
-    const updatedPortfolio = [newItem, ...(activeSpecialistView.portfolio || [])];
+      const newItem: SpecialistPortfolio = {
+        id: String(res.data?.id || `port-${Date.now()}`),
+        title: newPortfolioTitle.trim(),
+        imageUrl: newPortfolioUrl.trim(),
+        category: newPortfolioCategory,
+        likesCount: 1,
+      };
 
-    const updatedSpecialists = specialistsList.map((spec) => {
-      if (spec.id === activeSpecialistView.id) {
-        return {
-          ...spec,
-          portfolio: updatedPortfolio,
-        };
-      }
-      return spec;
-    });
+      const updatedPortfolio = [newItem, ...(activeSpecialistView.portfolio || [])];
 
-    setSpecialistsList(updatedSpecialists);
-    setActiveSpecialistView({
-      ...activeSpecialistView,
-      portfolio: updatedPortfolio,
-    });
-    if (currentSalon?.id) {
-      updateSalon(currentSalon.id, { specialists: updatedSpecialists });
+      const updatedSpecialists = specialistsList.map((spec) => {
+        if (spec.id === activeSpecialistView.id) {
+          return {
+            ...spec,
+            portfolio: updatedPortfolio,
+          };
+        }
+        return spec;
+      });
+
+      setSpecialistsList(updatedSpecialists);
+      setActiveSpecialistView({
+        ...activeSpecialistView,
+        portfolio: updatedPortfolio,
+      });
+
+      setIsAddingPortfolio(false);
+      setNewPortfolioTitle('');
+      showToast('تصویر نمونه‌کار با موفقیت در دیتابیس ثبت شد.');
+    } catch (err) {
+      console.error('Error saving portfolio item:', err);
+      showToast('خطا در ذخیره‌سازی نمونه‌کار در سرور.');
     }
-
-    setIsAddingPortfolio(false);
-    setNewPortfolioTitle('');
   };
 
-  // Handler: Delete Portfolio Item (Only own portfolio)
-  const handleDeletePortfolioItem = (portfolioId: string) => {
+  // Handler: Delete Portfolio Item (Deleted permanently from PostgreSQL portfolio_items table)
+  const handleDeletePortfolioItem = async (portfolioId: string | number) => {
     if (!activeSpecialistView) return;
-    const updatedPortfolio = (activeSpecialistView.portfolio || []).filter((p: any) => p.id !== portfolioId);
-
-    const updatedSpecialists = specialistsList.map((spec) => {
-      if (spec.id === activeSpecialistView.id) {
-        return {
-          ...spec,
-          portfolio: updatedPortfolio,
-        };
+    try {
+      const numId = Number(portfolioId);
+      if (!isNaN(numId)) {
+        await api.delete(`/specialists/portfolio/${numId}`).catch(() => {});
       }
-      return spec;
-    });
 
-    setSpecialistsList(updatedSpecialists);
-    setActiveSpecialistView({
-      ...activeSpecialistView,
-      portfolio: updatedPortfolio,
-    });
-    if (currentSalon?.id) {
-      updateSalon(currentSalon.id, { specialists: updatedSpecialists });
+      const updatedPortfolio = (activeSpecialistView.portfolio || []).filter((p: any) => String(p.id) !== String(portfolioId));
+
+      const updatedSpecialists = specialistsList.map((spec) => {
+        if (spec.id === activeSpecialistView.id) {
+          return {
+            ...spec,
+            portfolio: updatedPortfolio,
+          };
+        }
+        return spec;
+      });
+
+      setSpecialistsList(updatedSpecialists);
+      setActiveSpecialistView({
+        ...activeSpecialistView,
+        portfolio: updatedPortfolio,
+      });
+      showToast('نمونه‌کار از پایگاه‌داده حذف شد.');
+    } catch (err) {
+      console.error('Error deleting portfolio item:', err);
     }
   };
 
@@ -460,17 +519,99 @@ export const SalonAdminDashboard: React.FC = () => {
     }
   };
 
-  const handleAddGalleryImage = (e: React.FormEvent) => {
+  const handleAddGalleryImage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGalleryImageUrl.trim()) return;
     const updatedGallery = [newGalleryImageUrl.trim(), ...salonGallery];
     setSalonGallery(updatedGallery);
     if (currentSalon?.id) {
-      updateSalon(currentSalon.id, { gallery: updatedGallery });
+      await updateSalon(currentSalon.id, { gallery: updatedGallery });
+      showToast('تصویر گالری سالن با موفقیت در پایگاه‌داده ذخیره شد.');
     }
     setNewGalleryImageUrl('');
     setNewGalleryImageTitle('');
     setIsAddingGalleryImage(false);
+  };
+
+  const handleDeleteGalleryImage = async (imgUrl: string) => {
+    const updatedGallery = salonGallery.filter((url) => url !== imgUrl);
+    setSalonGallery(updatedGallery);
+    if (currentSalon?.id) {
+      await updateSalon(currentSalon.id, { gallery: updatedGallery });
+      showToast('تصویر از گالری سالن حذف شد.');
+    }
+  };
+
+  const handleSpecialistAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingAvatar(true);
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const base64 = event.target?.result as string;
+          const res = await api.post('/upload', { base64, filename: file.name });
+          const avatarUrl = res.data?.url || base64;
+
+          await useAuthStore.getState().updateProfile({ avatar: avatarUrl });
+
+          if (activeSpecialistView) {
+            setActiveSpecialistView((prev: any) => ({
+              ...prev,
+              avatarUrl,
+            }));
+          }
+
+          queryClient.invalidateQueries({ queryKey: ['staff'] });
+          queryClient.invalidateQueries({ queryKey: ['salons'] });
+          queryClient.invalidateQueries({ queryKey: ['profile'] });
+
+          showToast('تصویر پروفایل با موفقیت در پایگاه‌داده ذخیره شد.', 'success');
+        } catch (uploadErr) {
+          console.error('Avatar upload failed', uploadErr);
+          showToast('خطا در ذخیره‌سازی تصویر پروفایل.', 'error');
+        } finally {
+          setIsUploadingAvatar(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setIsUploadingAvatar(false);
+      showToast('خطا در پردازش فایل تصویر.', 'error');
+    }
+  };
+
+  const handleSalonCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentSalon?.id) return;
+
+    try {
+      setIsUploadingCover(true);
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const base64 = event.target?.result as string;
+          const res = await api.post('/upload', { base64, filename: file.name });
+          const coverUrl = res.data?.url || base64;
+
+          await updateSalon(currentSalon.id, { coverImage: coverUrl });
+          queryClient.invalidateQueries({ queryKey: ['salons'] });
+
+          showToast('تصویر کاور سالن با موفقیت ذخیره شد.', 'success');
+        } catch (uploadErr) {
+          console.error('Cover upload failed', uploadErr);
+          showToast('خطا در ذخیره تصویر کاور سالن.', 'error');
+        } finally {
+          setIsUploadingCover(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setIsUploadingCover(false);
+      showToast('خطا در پردازش تصویر کاور.', 'error');
+    }
   };
 
   // Specialist line metadata
@@ -581,7 +722,7 @@ export const SalonAdminDashboard: React.FC = () => {
         <div className="space-y-4 animate-fadeIn">
           {/* Top Return Banner */}
           <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-[#E7E2DA] shadow-xs">
-            {!isSpecialistRole ? (
+            {!isSpecialistRole && !isMobileSpecialist ? (
               <button
                 onClick={() => setActiveSpecialistView(null)}
                 className="flex items-center gap-1.5 text-xs font-bold text-[#173B3F] hover:text-[#0F3232]"
@@ -594,6 +735,12 @@ export const SalonAdminDashboard: React.FC = () => {
                 <span className="text-xs font-bold text-[#173B3F]">
                   خوش آمدید، {activeSpecialistView?.user?.fullName || user?.fullName}
                 </span>
+                {isMobileSpecialist && (
+                  <span className="text-[10px] bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                    <Car className="w-3.5 h-3.5 text-amber-700" />
+                    <span>متخصص سیار (خدمات در محل مشتری — بدون وابستگی به سالن)</span>
+                  </span>
+                )}
               </div>
             )}
 
@@ -624,17 +771,46 @@ export const SalonAdminDashboard: React.FC = () => {
 
             <div className="relative z-10 p-5 sm:p-6 space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="relative">
+                <div className="relative group">
                   <img
-                    src={activeSpecialistView.avatarUrl || 'https://via.placeholder.com/150'}
+                    src={activeSpecialistView.avatarUrl || user?.avatar || 'https://via.placeholder.com/150'}
                     alt={activeSpecialistView.user?.fullName}
                     className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-3 border-[#D9A2B0] shadow-md"
                   />
                   {activeSpecialistView.isVerified && (
-                    <span className="absolute -bottom-1.5 -right-1.5 bg-[#6F9A8D] text-white p-1 rounded-full shadow-xs">
+                    <span className="absolute -bottom-1.5 -right-1.5 bg-[#6F9A8D] text-white p-1 rounded-full shadow-xs z-10">
                       <CheckCircle2 className="w-4 h-4" />
                     </span>
                   )}
+                  {/* Avatar Upload Overlay */}
+                  <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center cursor-pointer text-white z-20">
+                    <Camera className="w-5 h-5 text-[#D9A2B0]" />
+                    <span className="text-[9px] font-bold mt-1">{isUploadingAvatar ? 'در حال ارسال...' : 'تغییر تصویر'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleSpecialistAvatarUpload}
+                      disabled={isUploadingAvatar}
+                    />
+                  </label>
+                  {/* Mobile Camera Button */}
+                  <button
+                    type="button"
+                    onClick={() => specialistAvatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="sm:hidden absolute -top-1.5 -left-1.5 bg-[#D9A2B0] text-[#173B3F] p-1.5 rounded-full shadow-md z-20"
+                    title="تغییر عکس پروفایل"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    ref={specialistAvatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleSpecialistAvatarUpload}
+                  />
                 </div>
 
                 <div className="flex-1 space-y-1.5">
@@ -692,8 +868,19 @@ export const SalonAdminDashboard: React.FC = () => {
                   </span>
                 </div>
                 <div className="bg-white/5 p-2.5 rounded-2xl border border-white/10">
-                  <span className="text-[10px] text-[#E8F0EF]/80 block">سالن همکار:</span>
-                  <span className="text-sm font-bold text-white truncate block">{currentSalon?.name}</span>
+                  <span className="text-[10px] text-[#E8F0EF]/80 block">
+                    {isMobileSpecialist ? 'شیوه ارائه خدمت:' : 'سالن همکار:'}
+                  </span>
+                  <span className="text-sm font-bold text-white truncate block">
+                    {isMobileSpecialist ? (
+                      <span className="text-[#FECE57] flex items-center gap-1">
+                        <Car className="w-3.5 h-3.5 inline text-[#FECE57]" />
+                        <span>سیار (در محل مشتری)</span>
+                      </span>
+                    ) : (
+                      currentSalon?.name
+                    )}
+                  </span>
                 </div>
               </div>
             </div>
@@ -769,17 +956,19 @@ export const SalonAdminDashboard: React.FC = () => {
               <BarChart3 className="w-3.5 h-3.5 text-[#D9A2B0]" />
               <span>درآمد و عملکرد مالی</span>
             </button>
-            <button
-              onClick={() => setSpecialistTab('salon_info')}
-              className={`flex-1 min-w-[100px] py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                specialistTab === 'salon_info'
-                  ? 'bg-[#173B3F] text-white shadow-xs'
-                  : 'text-[#6C6C6C] hover:text-[#173B3F]'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>اطلاعات سالن</span>
-            </button>
+            {!isMobileSpecialist && (
+              <button
+                onClick={() => setSpecialistTab('salon_info')}
+                className={`flex-1 min-w-[100px] py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                  specialistTab === 'salon_info'
+                    ? 'bg-[#173B3F] text-white shadow-xs'
+                    : 'text-[#6C6C6C] hover:text-[#173B3F]'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>اطلاعات سالن</span>
+              </button>
+            )}
             <button
               onClick={() => setSpecialistTab('profile')}
               className={`flex-1 min-w-[100px] py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
@@ -1430,7 +1619,7 @@ export const SalonAdminDashboard: React.FC = () => {
               - If Mobile Specialist => NO ACCESS AT ALL (Requirement #6)
               - If Salon Specialist or Independent Specialist => ONLY Name & Address (Requirement #5)
           ---------------------------------------------------- */}
-          {specialistTab === 'salon_info' && (
+          {specialistTab === 'salon_info' && !isMobileSpecialist && (
             <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] space-y-4 shadow-xs">
               {activeSpecialistView.isMobileSpecialist || activeSpecialistView.specialistType === 'mobile_specialist' ? (
                 /* REQUIREMENT #6: Mobile Specialist has NO ACCESS to edit salon information */
@@ -1568,6 +1757,39 @@ export const SalonAdminDashboard: React.FC = () => {
                 </span>
               </div>
 
+              {/* Specialist Profile Photo Card */}
+              <div className="p-4 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] flex flex-col sm:flex-row items-center gap-4">
+                <div className="relative group">
+                  <img
+                    src={activeSpecialistView.avatarUrl || user?.avatar || 'https://via.placeholder.com/150'}
+                    alt={activeSpecialistView.user?.fullName}
+                    className="w-20 h-20 rounded-2xl object-cover border-2 border-[#173B3F] shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => specialistAvatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="absolute -bottom-1 -left-1 p-1.5 rounded-full bg-[#173B3F] text-white hover:bg-[#0F3232] shadow-md transition-all"
+                    title="تغییر تصویر چهره"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="space-y-1 text-center sm:text-right flex-1">
+                  <span className="text-xs font-bold text-[#173B3F] block">تصویر نمایه پرسنلی</span>
+                  <p className="text-[11px] text-[#6C6C6C]">این تصویر در صفحه رزرو نوبت به مشتریان نمایش داده می‌شود و به‌صورت دائمی در سرور ذخیره می‌شود.</p>
+                  <button
+                    type="button"
+                    onClick={() => specialistAvatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="text-xs text-[#2E5E52] font-bold hover:underline inline-flex items-center gap-1 mt-1"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>{isUploadingAvatar ? 'در حال ارسال تصویر...' : 'آپلود تصویر جدید چهره'}</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] space-y-1">
                   <span className="text-[#6C6C6C] block">نام و نام خانوادگی:</span>
@@ -1657,6 +1879,16 @@ export const SalonAdminDashboard: React.FC = () => {
               Specialists do NOT have access to the specialists showcase at the bottom of the page.
           */}
         </div>
+      ) : isMobileSpecialist ? (
+        <div className="bg-white rounded-3xl p-8 border border-[#E7E2DA] shadow-xs text-center space-y-3">
+          <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center justify-center mx-auto">
+            <Car className="w-8 h-8" />
+          </div>
+          <h3 className="text-base font-bold text-[#173B3F]">پنل اختصاصی متخصص سیار مستقل</h3>
+          <p className="text-xs text-[#6C6C6C] max-w-md mx-auto leading-relaxed">
+            به عنوان متخصص سیار، شما سالن فیزیکی ندارید و کلیه خدمات شما مستقیماً در محل مشتری ارائه می‌شوند. دسترسی به داده‌ها و مدیریت سالن‌ها برای شما مسدود است.
+          </p>
+        </div>
       ) : (
         /* ========================================================
             CASE 2: SALON MANAGEMENT MAIN DASHBOARD (OWNER VIEW)
@@ -1712,10 +1944,27 @@ export const SalonAdminDashboard: React.FC = () => {
 
                 <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                   <button
+                    type="button"
+                    onClick={() => salonCoverInputRef.current?.click()}
+                    disabled={isUploadingCover}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-all cursor-pointer"
+                    title="تغییر تصویر کاور سالن"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-[#D9A2B0]" />
+                    <span>{isUploadingCover ? 'در حال ذخیره...' : 'تغییر کاور سالن'}</span>
+                  </button>
+                  <input
+                    ref={salonCoverInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleSalonCoverUpload}
+                  />
+                  <button
                     onClick={() => setSalonTab('gallery')}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-all"
                   >
-                    <Camera className="w-3.5 h-3.5 text-[#D9A2B0]" />
+                    <ImageIcon className="w-3.5 h-3.5 text-[#D9A2B0]" />
                     <span>گالری فضا ({toPersianDigits(salonGallery.length)})</span>
                   </button>
                 </div>
@@ -2184,6 +2433,17 @@ export const SalonAdminDashboard: React.FC = () => {
                       alt={`تصویر سالن ${idx + 1}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteGalleryImage(imgUrl);
+                      }}
+                      className="absolute top-2 left-2 p-1.5 rounded-full bg-red-600/80 hover:bg-red-700 text-white shadow-xs transition-colors z-20"
+                      title="حذف تصویر از گالری"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-80 group-hover:opacity-95 transition-opacity flex flex-col justify-end p-2.5">
                       <span className="text-[11px] font-bold text-white">
                         بخش شماره {toPersianDigits(idx + 1)} سالن
