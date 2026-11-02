@@ -99,6 +99,8 @@ export async function createBooking(data: {
   }
 }
 
+import { processBookingData } from '../lib/piiRedactor.ts';
+
 export async function getBookingsForUser(user: any) {
   const { id, role, salonId, managedLine } = user;
   let dbBookings: any[] = [];
@@ -201,7 +203,8 @@ export async function getBookingsForUser(user: any) {
     dbBookings = managedLine ? rawList.filter(b => b.service?.serviceLineId === managedLine) : rawList;
   }
 
-  return dbBookings;
+  // PII REDACTION: Process each booking to hide sensitive customer data
+  return dbBookings.map(b => processBookingData(b, user));
 }
 
 export async function updateBookingStatus(bookingId: number, status: any) {

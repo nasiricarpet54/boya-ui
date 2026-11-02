@@ -48,3 +48,22 @@ export const salonUpdateSchema = z.object({
   isVip: z.boolean().optional(),
   vipBadgeLabel: z.string().optional(),
 });
+export const userCreateSchema = z.object({
+  fullName: z.string().min(2, 'نام الزامی است'),
+  phone: phoneSchema,
+  email: z.string().email().optional(),
+  role: z.enum(['customer', 'salon_specialist', 'mobile_specialist', 'line_manager', 'salon_admin', 'super_admin']).default('customer'),
+  salonId: z.union([z.number(), z.string()]).optional(),
+});
+
+export const salonCreateSchema = z.object({
+  name: z.string().min(2, 'نام سالن الزامی است'),
+  phone: z.string().min(8, 'شماره تماس الزامی است'),
+  province: z.string().min(2),
+  city: z.string().min(2),
+  district: z.string().optional(),
+  address: z.string().min(5),
+  isVip: z.boolean().optional(),
+  isMobileServiceActive: z.boolean().optional(),
+  coverImage: z.string().optional(),
+});

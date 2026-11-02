@@ -39,7 +39,7 @@ import {
   BarChart3,
   LogOut
 } from 'lucide-react';
-import { useSalons, useBookings } from '../../../shared/api/queries';
+import { useSalons, useBookings, useStaff } from '../../../shared/api/queries';
 import { useAuthStore } from '../../../shared/stores/authStore';
 import api from '../../../shared/api/apiClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -84,6 +84,7 @@ export const SalonAdminDashboard: React.FC = () => {
   // Fetch real data
   const { data: salonsData = [], isLoading: isLoadingSalons } = useSalons();
   const { data: bookingsData = [], isLoading: isLoadingBookings } = useBookings();
+  const { data: staffData = [] } = useStaff();
 
   const updateBookingMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
@@ -138,7 +139,7 @@ export const SalonAdminDashboard: React.FC = () => {
   const [activeSpecialistView, setActiveSpecialistView] = useState<any>(null);
 
   // Specialist panel tab navigation
-  const [specialistTab, setSpecialistTab] = useState<'profile' | 'bookings' | 'services' | 'schedule' | 'portfolio' | 'salon_info' | 'financials'>('bookings');
+  const [specialistTab, setSpecialistTab] = useState<'profile' | 'bookings' | 'services' | 'schedule' | 'portfolio' | 'salon_info' | 'financials' | 'staff'>('bookings');
 
   // Lightbox Modal state
   const [lightboxImage, setLightboxImage] = useState<{ url: string; title: string; category?: string; author?: string } | null>(null);
@@ -726,6 +727,19 @@ export const SalonAdminDashboard: React.FC = () => {
               <Camera className="w-3.5 h-3.5" />
               <span>نمونه‌کارهای من ({toPersianDigits(activeSpecialistView.portfolio.length)})</span>
             </button>
+            {user?.role === 'line_manager' && (
+              <button
+                onClick={() => setSpecialistTab('staff')}
+                className={`flex-1 min-w-[125px] py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                  specialistTab === 'staff'
+                    ? 'bg-[#173B3F] text-white shadow-xs'
+                    : 'text-[#6C6C6C] hover:text-[#173B3F]'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 text-[#D9A2B0]" />
+                <span>مدیریت تیم و پرسنل ({toPersianDigits(staffData.length)})</span>
+              </button>
+            )}
             <button
               onClick={() => setSpecialistTab('financials')}
               className={`flex-1 min-w-[125px] py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
@@ -1570,6 +1584,54 @@ export const SalonAdminDashboard: React.FC = () => {
               bookings={bookingsData}
               salonName={currentSalon?.name || ''}
             />
+          )}
+
+          {/* SPECIALIST TAB 8: STAFF MANAGEMENT (LINE MANAGER ONLY) */}
+          {specialistTab === 'staff' && user?.role === 'line_manager' && (
+            <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] space-y-4 shadow-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E7E2DA]">
+                <div>
+                  <h3 className="text-sm font-bold text-[#173B3F] flex items-center gap-2">
+                    <Users className="w-4 h-4 text-[#D9A2B0]" />
+                    <span>مدیریت پرسنل لاین {user.managedLine}</span>
+                  </h3>
+                  <p className="text-xs text-[#6C6C6C] mt-0.5">
+                    شما به عنوان مدیر لاین، مسئول نظارت بر فعالیت و تایید نوبت‌های تیم خود هستید.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {staffData.length === 0 ? (
+                  <div className="text-center py-8 bg-[#FAF7F2] rounded-2xl border border-dashed border-[#E7E2DA]">
+                    <Users className="w-10 h-10 text-[#6C6C6C]/30 mx-auto mb-2" />
+                    <p className="text-xs text-[#6C6C6C]">هنوز پرسنلی به لاین شما تخصیص نیافته است.</p>
+                  </div>
+                ) : (
+                  staffData.map((member: any) => (
+                    <div key={member.id} className="p-4 bg-white rounded-2xl border border-[#E7E2DA] flex items-center justify-between hover:border-[#173B3F] transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#173B3F] text-[#D9A2B0] flex items-center justify-center font-bold text-xs">
+                          {member.fullName.charAt(0)}
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-[#173B3F] block">{member.fullName}</span>
+                          <span className="text-[10px] text-[#6C6C6C] font-mono">{toPersianDigits(member.phone)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${member.status === 'suspended' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}`}>
+                          {member.status === 'suspended' ? 'معلق' : 'فعال'}
+                        </span>
+                        <button className="p-1.5 bg-[#FAF7F2] rounded-lg text-[#173B3F] hover:bg-[#173B3F] hover:text-white transition-colors border border-[#E7E2DA]">
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           )}
 
           {/* NOTE FOR REQUIREMENT #7:

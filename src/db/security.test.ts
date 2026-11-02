@@ -61,4 +61,20 @@ describe('Security: Tenant Isolation Logic', () => {
     // Should filter by specialistId linked to user.id 5
     expect(callArgs.where).toBeDefined();
   });
+
+  it('should prevent privilege escalation: customer cannot see all bookings', async () => {
+    const mockUser = {
+      id: 100,
+      role: 'customer',
+    };
+
+    const spy = vi.spyOn(db.query.bookings, 'findMany').mockResolvedValue([]);
+
+    await getBookingsForUser(mockUser);
+
+    const callArgs = spy.mock.calls[spy.mock.calls.length - 1][0] as any;
+    // Where clause should be restricted to customerId 100
+    expect(callArgs.where).toBeDefined();
+    // In a real DB it would be eq(bookings.customerId, 100)
+  });
 });

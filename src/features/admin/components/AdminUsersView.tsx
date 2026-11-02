@@ -69,32 +69,27 @@ export const AdminUsersView: React.FC = () => {
       });
     } else {
       // Create user
-      const newUser: PlatformUser = {
-        id: `usr-${Date.now()}`,
-        name: fullName.trim(),
+      addUser({
         fullName: fullName.trim(),
         phone: cleanPhone,
         email: email.trim() || `${cleanPhone}@boya.ir`,
         role: role as any,
-        status: 'active',
-        createdAt: 'امروز',
         salonId: selectedSalonId || undefined,
-      };
-      addUser(newUser);
+      });
     }
 
     setIsModalOpen(false);
     resetForm();
   };
 
-  const handleDeleteUser = (id: string, nameStr: string) => {
+  const handleDeleteUser = (id: string | number, nameStr: string) => {
     if (window.confirm(`آیا از حذف کامل حساب کاربر «${nameStr}» اطمینان دارید؟`)) {
       deleteUser(id);
     }
   };
 
-  const onToggleUserStatus = (id: string) => {
-    const u = users.find((x) => x.id === id);
+  const onToggleUserStatus = (id: string | number) => {
+    const u = users.find((x) => String(x.id) === String(id));
     if (!u) return;
     updateUser(id, { status: u.status === 'active' ? 'suspended' : 'active' });
   };
@@ -203,8 +198,12 @@ export const AdminUsersView: React.FC = () => {
                     </td>
 
                     <td className="p-3.5 font-mono">
-                      <span className="font-bold block text-[#1C1C1C]">{toPersianDigits(u.phone)}</span>
-                      <span className="text-[10px] text-[#6C6C6C] block">{u.email || 'ایمیل ثبت نشده'}</span>
+                      <span className="font-bold block text-[#1C1C1C]">
+                        {u.phone ? toPersianDigits(u.phone) : <span className="text-[#B35D67] text-[10px]">شماره مخفی شده</span>}
+                      </span>
+                      <span className="text-[10px] text-[#6C6C6C] block">
+                        {u.email || (u.phone ? 'ایمیل ثبت نشده' : <span className="text-[#B35D67]">ایمیل مخفی شده</span>)}
+                      </span>
                     </td>
 
                     <td className="p-3.5">

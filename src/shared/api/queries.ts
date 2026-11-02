@@ -49,3 +49,13 @@ export const useBookings = () => {
     staleTime: 1000 * 60 * 5,
   });
 };
+export const useStaff = () => {
+  return useQuery({
+    queryKey: ['staff'],
+    queryFn: async () => {
+      const { data } = await api.get('/line-manager/staff');
+      return data;
+    },
+    retry: false,
+  });
+};

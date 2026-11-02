@@ -113,8 +113,8 @@ export const useDataStore = create<DataState>()(
 
       addSalon: async (salon) => {
         try {
-          const { data } = await api.post('/salons', salon);
-          set((state) => ({ salons: [data, ...state.salons] }));
+          await api.post('/salons', salon);
+          await get().fetchServerData();
         } catch (err) {
           console.error('Error adding salon:', err);
         }
@@ -144,8 +144,8 @@ export const useDataStore = create<DataState>()(
 
       addUser: async (user) => {
         try {
-          const { data } = await api.post('/users', user);
-          set((state) => ({ users: [data, ...state.users.filter(u => String(u.id) !== String(data.id))] }));
+          await api.post('/users', user);
+          await get().fetchServerData();
         } catch (err) {
           console.error('Error adding user:', err);
         }

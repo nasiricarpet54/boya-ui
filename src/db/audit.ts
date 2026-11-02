@@ -4,7 +4,7 @@ import { auditLogs } from './schema.ts';
 export async function logSecurityAction(params: {
   actorId?: number;
   targetId?: string | number;
-  action: 'LOGIN' | 'LOGOUT' | 'ROLE_CHANGE' | 'SUSPENSION' | 'DELETE_USER' | 'PASSWORD_CHANGE' | 'UNAUTHORIZED_ACCESS';
+  action: 'LOGIN' | 'LOGOUT' | 'ROLE_CHANGE' | 'SUSPENSION' | 'DELETE_USER' | 'PASSWORD_CHANGE' | 'UNAUTHORIZED_ACCESS' | 'CREATE_USER';
   details?: any;
   ipAddress?: string;
 }) {

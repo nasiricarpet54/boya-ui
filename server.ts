@@ -16,7 +16,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import { requireAuth, requireRole, type AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
 import { users, salons, bookings as bookingsTable, revokedTokens, notifications, adminProfile } from './src/db/schema.ts';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
 import { normalizePhone } from './src/shared/utils/persianUtils.ts';
@@ -24,6 +24,7 @@ import { generateJwtToken } from './src/lib/jwt.ts';
 import { seedDatabase } from './src/db/seed.ts';
 import { logSecurityAction } from './src/db/audit.ts';
 import * as schemas from './src/lib/validation.ts';
+import { redactUserPII } from './src/lib/piiRedactor.ts';
 
 dotenv.config();
 
@@ -48,7 +49,7 @@ if (isProd && process.env.REDIS_URL) {
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000, // Increased for stability
   standardHeaders: true,
   legacyHeaders: false,
   store: redisClient ? new RedisStore({ 
@@ -226,6 +227,34 @@ async function createServer() {
     }
   });
 
+  app.post('/api/salons', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const data = schemas.salonCreateSchema.parse(req.body);
+      const tenantId = `tenant-${crypto.randomInt(1000, 9999)}-${Date.now().toString().slice(-4)}`;
+      
+      const [newSalon] = await db.insert(salons).values({
+        ...data,
+        tenantId,
+        district: data.district || '',
+        isApproved: true,
+      }).returning();
+
+      res.status(201).json(newSalon);
+    } catch (err) {
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ایجاد سالن.' });
+    }
+  });
+
+  app.delete('/api/salons/:id', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await db.delete(salons).where(eq(salons.id, id));
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در حذف سالن.' });
+    }
+  });
+
   // --- Users ---
 
   app.get('/api/users', requireAuth, requireRole(['super_admin', 'salon_admin', 'line_manager']), async (req: AuthRequest, res) => {
@@ -235,15 +264,70 @@ async function createServer() {
         userList = userList.filter(u => u.salonId === req.dbUser.salonId);
       }
 
-      const processed = userList.map(u => {
-        if (req.dbUser.role === 'super_admin' || (req.dbUser.role === 'salon_admin' && u.salonId === req.dbUser.salonId)) return u;
-        const { email, phone, ...safe } = u;
-        return safe;
-      });
+      // P2-08: Redact PII consistently
+      const processed = userList.map(u => redactUserPII(u, req.dbUser));
 
       res.json(processed);
     } catch (err) {
       res.status(500).json({ error: 'خطا در دریافت کاربران.' });
+    }
+  });
+
+  app.post('/api/users', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const data = schemas.userCreateSchema.parse(req.body);
+      
+      // Check if user already exists by phone
+      const existing = await db.select().from(users).where(eq(users.phone, data.phone)).limit(1).then(r => r[0]);
+      if (existing) return res.status(400).json({ error: 'کاربری با این شماره همراه قبلاً ثبت شده است.' });
+
+      const [newUser] = await db.insert(users).values({
+        uid: `admin_${Date.now()}_${data.phone}`,
+        fullName: data.fullName,
+        phone: data.phone,
+        email: data.email || `${data.phone}@boya.ir`,
+        role: data.role as any,
+        salonId: data.salonId ? Number(data.salonId) : null,
+        status: 'active',
+      }).returning();
+
+      await logSecurityAction({ actorId: req.dbUser.id, targetId: newUser.id, action: 'CREATE_USER', details: { role: newUser.role }, ipAddress: req.ip });
+
+      res.status(201).json(newUser);
+    } catch (err) {
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در تعریف کاربر.' });
+    }
+  });
+
+  app.delete('/api/users/:id', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const target = await db.select().from(users).where(eq(users.id, id)).limit(1).then(r => r[0]);
+      if (!target) return res.status(404).json({ error: 'یافت نشد.' });
+
+      await db.delete(users).where(eq(users.id, id));
+      await logSecurityAction({ actorId: req.dbUser.id, targetId: id, action: 'DELETE_USER', details: { name: target.fullName }, ipAddress: req.ip });
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در حذف کاربر.' });
+    }
+  });
+
+  // P2-12: Specific endpoint for Line Managers
+  app.get('/api/line-manager/staff', requireAuth, requireRole(['line_manager']), async (req: AuthRequest, res) => {
+    try {
+      const { salonId, managedLine } = req.dbUser;
+      if (!salonId || !managedLine) return res.status(403).json({ error: 'اطلاعات مدیریتی شما ناقص است.' });
+
+      const staffList = await db.select().from(users).where(and(
+        eq(users.salonId, salonId),
+        eq(users.managedLine, managedLine)
+      ));
+
+      res.json(staffList.map(u => redactUserPII(u, req.dbUser)));
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در دریافت لیست پرسنل.' });
     }
   });
 
@@ -360,7 +444,10 @@ async function createServer() {
     res.status(500).json({ error: 'خطای داخلی سرور.' });
   });
 
-  app.listen(PORT, () => console.log(`🚀 Server on port ${PORT} [Mode: ${isProd ? 'Production' : 'Development'}]`));
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 [READY] Server on port ${PORT} [Mode: ${isProd ? 'Production' : 'Development'}]`);
+    console.log(`🌍 [READY] Accessible at http://0.0.0.0:${PORT}`);
+  });
 }
 
 createServer();

@@ -88,88 +88,31 @@ export const AdminTenantsView: React.FC = () => {
       });
     } else {
       // Create new salon
-      const newSalon: Salon = {
-        id: `salon-${Date.now()}`,
-        tenantId: `tenant-${Math.floor(1000 + Math.random() * 9000)}`,
+      addSalon({
         name: name.trim(),
-        enName: `salon-${Date.now()}`,
-        ownerName: ownerName.trim() || 'مدیر سالن جدید',
         phone: phone.trim(),
         province,
         city,
         district: district.trim(),
         address: address.trim(),
-        rating: 5.0,
-        reviewsCount: 1,
-        isApproved: true,
         isVip,
-        vipBadgeLabel: isVip ? 'سالن VIP برتر' : undefined,
         isMobileServiceActive,
         coverImage,
-        services: [
-          {
-            id: `srv-${Date.now()}`,
-            serviceLineId: 'hair',
-            name: 'خدمت تخصصی زیبایی',
-            durationMinutes: 45,
-            price: 500000,
-            description: 'خدمت استاندارد تعریفی ادمین کل',
-          },
-        ],
-        specialists: [
-          {
-            id: `spec-${Date.now()}`,
-            salonId: `salon-${Date.now()}`,
-            name: ownerName.trim() || 'استاد تخصصی سالن',
-            role: 'مدیر و متخصص اصلی',
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-            verified: true,
-            rating: 5.0,
-            reviewsCount: 1,
-            experienceYears: 5,
-            specialtyLine: 'hair',
-            bio: 'متخصص اصلی ارشد سالن',
-            isMobileSpecialist: isMobileServiceActive,
-            phone: phone.trim(),
-            portfolio: [],
-          },
-        ],
-        latitude: 35.6892,
-        longitude: 51.389,
-        instagram: '@boya_salon',
-        gallery: [coverImage],
-        workingHours: 'همه روزه ۹ الی ۲۰',
-        workingDays: ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه'],
-        cancellationPolicy: 'لغو نوبت تا ۲۴ ساعت قبل بدون جریمه امکان‌پذیر است.',
-        depositPercentage: 20,
-        availableSlots: [
-          {
-            date: '۱۴۰۳/۰۸/۱۲',
-            dayName: 'شنبه',
-            dayNumber: '۱۲',
-            slots: [
-              { time: '۱۰:۰۰', booked: false },
-              { time: '۱۲:۰۰', booked: false },
-              { time: '۱۶:۰۰', booked: false },
-            ],
-          },
-        ],
-      };
-      addSalon(newSalon);
+      });
     }
 
     setIsAddModalOpen(false);
     resetForm();
   };
 
-  const handleDeleteSalon = (id: string, nameStr: string) => {
+  const handleDeleteSalon = (id: string | number, nameStr: string) => {
     if (window.confirm(`آیا از حذف کامل سالن «${nameStr}» اطمینان دارید؟ تمامی نوبت‌ها و اطلاعات آن حذف خواهد شد.`)) {
       deleteSalon(id);
     }
   };
 
-  const onToggleTenantStatus = (id: string) => {
-    const s = salons.find((x) => x.id === id);
+  const onToggleTenantStatus = (id: string | number) => {
+    const s = salons.find((x) => String(x.id) === String(id));
     if (!s) return;
     updateSalon(id, { status: s.status === 'active' ? 'suspended' : 'active' });
   };
