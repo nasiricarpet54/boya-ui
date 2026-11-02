@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { CheckCircle2, ShieldCheck, FileText, Upload, X, Building2, Eye, AlertCircle } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
+import { useSalons } from '../../../shared/api/queries';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
 import { Salon } from '../../../shared/data/marketplaceData';
 
 export const AdminApprovalsView: React.FC = () => {
   const { salons, updateSalon } = useDataStore();
+  const { data: querySalons } = useSalons();
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string>('');
 
-  const pendingTenants = salons.filter((s) => !s.isApproved || s.status === 'pending');
-  const approvedTenants = salons.filter((s) => s.isApproved && s.status === 'active');
+  const allSalons = (salons && salons.length > 0) ? salons : (querySalons || []);
+  const pendingTenants = allSalons.filter((s) => !s.isApproved || s.status === 'pending');
+  const approvedTenants = allSalons.filter((s) => s.isApproved && s.status === 'active');
 
   const onApproveTenant = (id: string, docUrl?: string) => {
     updateSalon(id, {

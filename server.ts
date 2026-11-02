@@ -344,20 +344,21 @@ async function createServer() {
           },
         },
       });
-      res.json(list.map(({ phone, ...rest }) => ({
-        ...rest,
-        rating: Number(rest.rating) || 5,
-        reviewsCount: Number(rest.reviewsCount) || 0,
-        gallery: rest.gallery
-          ? (typeof rest.gallery === 'string'
-              ? (rest.gallery.startsWith('[') ? JSON.parse(rest.gallery) : [rest.gallery])
-              : rest.gallery)
-          : (rest.coverImage ? [rest.coverImage] : []),
-        services: (rest.services || []).map(srv => ({
+      res.json(list.map((salon) => ({
+        ...salon,
+        phone: salon.phone || '',
+        rating: Number(salon.rating) || 5,
+        reviewsCount: Number(salon.reviewsCount) || 0,
+        gallery: salon.gallery
+          ? (typeof salon.gallery === 'string'
+              ? (salon.gallery.startsWith('[') ? JSON.parse(salon.gallery) : [salon.gallery])
+              : salon.gallery)
+          : (salon.coverImage ? [salon.coverImage] : []),
+        services: (salon.services || []).map(srv => ({
           ...srv,
           price: Number(srv.price) || 0,
         })),
-        specialists: (rest.specialists || []).map(sp => ({
+        specialists: (salon.specialists || []).map(sp => ({
           ...sp,
           name: sp.user?.fullName || 'متخصص زیبایی',
           phone: sp.user?.phone || '',
@@ -401,14 +402,31 @@ async function createServer() {
       
       const [newSalon] = await db.insert(salons).values({
         ...data,
+        phone: normalizePhone(data.phone),
         tenantId,
         district: data.district || '',
         isApproved: true,
       }).returning();
 
-      res.status(201).json(newSalon);
-    } catch (err) {
-      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ایجاد سالن.' });
+      res.status(201).json({
+        ...newSalon,
+        phone: newSalon.phone || '',
+        rating: Number(newSalon.rating) || 5,
+        reviewsCount: Number(newSalon.reviewsCount) || 0,
+        gallery: newSalon.gallery
+          ? (typeof newSalon.gallery === 'string'
+              ? (newSalon.gallery.startsWith('[') ? JSON.parse(newSalon.gallery) : [newSalon.gallery])
+              : newSalon.gallery)
+          : (newSalon.coverImage ? [newSalon.coverImage] : []),
+        services: [],
+        specialists: [],
+      });
+    } catch (err: any) {
+      console.error('[POST SALONS ERROR]', err);
+      if (err instanceof ZodError) {
+        return res.status(400).json({ error: err.errors[0]?.message || 'اطلاعات سالن نامعتبر است.' });
+      }
+      res.status(500).json({ error: err.message || 'خطا در ایجاد سالن در دیتابیس.' });
     }
   });
 

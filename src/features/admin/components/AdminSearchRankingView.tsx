@@ -1,16 +1,25 @@
 import React, { useState } from 'react';
 import { Crown, Pin } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
+import { useSalons } from '../../../shared/api/queries';
 import { IRAN_PROVINCES } from '../../../shared/data/iranLocations';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { sortSalonsForSearchResults } from '../../../shared/utils/salonRanking';
 
 export const AdminSearchRankingView: React.FC = () => {
   const { salons, updateSalon } = useDataStore();
+  const { data: querySalons } = useSalons();
   const [cityFilter, setCityFilter] = useState<string>('all');
   
-  const sortedSalons = sortSalonsForSearchResults(salons);
-  const filteredSalons = sortedSalons.filter(s => cityFilter === 'all' || s.province.includes(cityFilter) || s.city.includes(cityFilter));
+  const allSalons = (salons && salons.length > 0) ? salons : (querySalons || []);
+  const sortedSalons = sortSalonsForSearchResults(allSalons);
+  const filteredSalons = sortedSalons.filter(s => {
+    if (!s) return false;
+    if (cityFilter === 'all') return true;
+    const prov = s.province || '';
+    const ct = s.city || '';
+    return prov.includes(cityFilter) || ct.includes(cityFilter);
+  });
 
   const onUpdateSalonPriority = (id: string, updates: any) => updateSalon(id, updates);
 

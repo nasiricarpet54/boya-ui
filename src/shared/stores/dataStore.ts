@@ -144,10 +144,17 @@ export const useDataStore = create<DataState>()(
 
       addSalon: async (salon) => {
         try {
-          await api.post('/salons', salon);
+          const { data } = await api.post('/salons', salon);
+          if (data) {
+            set((state) => ({
+              salons: [data, ...state.salons.filter((s) => String(s.id) !== String(data.id))],
+            }));
+          }
           await get().fetchServerData();
+          return data;
         } catch (err) {
           console.error('Error adding salon:', err);
+          throw err;
         }
       },
 

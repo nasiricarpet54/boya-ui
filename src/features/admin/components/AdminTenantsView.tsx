@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
-import { Crown, Plus, Edit, Trash2, Building2, MapPin, Phone, User, CheckCircle2, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Crown, Plus, Edit, Trash2, Building2, MapPin, Phone, User, CheckCircle2, X, AlertCircle, Loader2 } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
+import { useSalons } from '../../../shared/api/queries';
+import { useUIStore } from '../../../shared/stores/uiStore';
+import { useQueryClient } from '@tanstack/react-query';
 import { IRAN_PROVINCES } from '../../../shared/data/iranLocations';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { Salon } from '../../../shared/data/marketplaceData';
 import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
 
 export const AdminTenantsView: React.FC = () => {
-  const { salons, addSalon, updateSalon, deleteSalon } = useDataStore();
+  const { salons, addSalon, updateSalon, deleteSalon, fetchServerData } = useDataStore();
+  const { data: querySalons, isLoading: isLoadingSalons } = useSalons();
+  const { showToast } = useUIStore();
+  const queryClient = useQueryClient();
+
   const [cityFilter, setCityFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -15,6 +22,8 @@ export const AdminTenantsView: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingSalon, setEditingSalon] = useState<Salon | null>(null);
   const [selectedDetails, setSelectedDetails] = useState<Salon | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -28,13 +37,22 @@ export const AdminTenantsView: React.FC = () => {
   const [isMobileServiceActive, setIsMobileServiceActive] = useState(false);
   const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80');
 
-  const filtered = salons.filter((s) => {
-    if (cityFilter !== 'all' && !s.province.includes(cityFilter) && !s.city.includes(cityFilter)) return false;
+  useEffect(() => {
+    fetchServerData();
+  }, [fetchServerData]);
+
+  const activeSalons = (salons && salons.length > 0) ? salons : (querySalons || []);
+
+  const filtered = activeSalons.filter((s) => {
+    if (!s) return false;
+    const prov = s.province || '';
+    const ct = s.city || '';
+    if (cityFilter !== 'all' && !prov.includes(cityFilter) && !ct.includes(cityFilter)) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      const matchName = s.name.toLowerCase().includes(q);
+      const matchName = (s.name || '').toLowerCase().includes(q);
       const matchOwner = (s.ownerName || '').toLowerCase().includes(q);
-      const matchPhone = s.phone.includes(q);
+      const matchPhone = (s.phone || '').includes(q);
       if (!matchName && !matchOwner && !matchPhone) return false;
     }
     return true;
@@ -50,69 +68,103 @@ export const AdminTenantsView: React.FC = () => {
     setAddress('');
     setIsVip(false);
     setIsMobileServiceActive(false);
+    setCoverImage('https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80');
     setEditingSalon(null);
+    setFormError(null);
   };
 
   const handleOpenEdit = (s: Salon) => {
     setEditingSalon(s);
-    setName(s.name);
+    setName(s.name || '');
     setOwnerName(s.ownerName || '');
-    setPhone(s.phone);
-    setProvince(s.province);
-    setCity(s.city);
+    setPhone(s.phone || '');
+    setProvince(s.province || 'تهران');
+    setCity(s.city || 'تهران');
     setDistrict(s.district || '');
-    setAddress(s.address);
+    setAddress(s.address || '');
     setIsVip(!!s.isVip);
     setIsMobileServiceActive(!!s.isMobileServiceActive);
     setCoverImage(s.coverImage || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80');
+    setFormError(null);
     setIsAddModalOpen(true);
   };
 
-  const handleSaveSalon = (e: React.FormEvent) => {
+  const handleSaveSalon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !phone.trim()) return;
+    setFormError(null);
 
-    if (editingSalon) {
-      // Edit existing salon
-      updateSalon(editingSalon.id, {
-        name: name.trim(),
-        ownerName: ownerName.trim() || 'مدیر سالن',
-        phone: phone.trim(),
-        province,
-        city,
-        district: district.trim(),
-        address: address.trim(),
-        isVip,
-        isMobileServiceActive,
-        coverImage,
-      });
-    } else {
-      // Create new salon
-      addSalon({
-        name: name.trim(),
-        phone: phone.trim(),
-        province,
-        city,
-        district: district.trim(),
-        address: address.trim(),
-        isVip,
-        isMobileServiceActive,
-        coverImage,
-      });
+    if (!name.trim()) {
+      setFormError('نام سالن الزامی است.');
+      return;
+    }
+    if (!phone.trim()) {
+      setFormError('شماره تماس سالن الزامی است.');
+      return;
+    }
+    if (!address.trim()) {
+      setFormError('آدرس دقیق سالن الزامی است.');
+      return;
     }
 
-    setIsAddModalOpen(false);
-    resetForm();
+    setIsSubmitting(true);
+    try {
+      if (editingSalon) {
+        // Edit existing salon
+        await updateSalon(editingSalon.id, {
+          name: name.trim(),
+          ownerName: ownerName.trim() || 'مدیر سالن',
+          phone: phone.trim(),
+          province,
+          city,
+          district: district.trim(),
+          address: address.trim(),
+          isVip,
+          isMobileServiceActive,
+          coverImage,
+        });
+        showToast('تغییرات سالن با موفقیت ذخیره شد.');
+      } else {
+        // Create new salon
+        await addSalon({
+          name: name.trim(),
+          phone: phone.trim(),
+          province,
+          city,
+          district: district.trim(),
+          address: address.trim(),
+          isVip,
+          isMobileServiceActive,
+          coverImage,
+        });
+        showToast('سالن جدید با موفقیت ایجاد و ذخیره شد.');
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['salons'] });
+      setIsAddModalOpen(false);
+      resetForm();
+    } catch (err: any) {
+      console.error('Failed to save salon:', err);
+      const errMsg = err?.response?.data?.error || err?.message || 'خطا در ثبت اطلاعات سالن. لطفاً ورودی‌ها را بررسی کنید.';
+      setFormError(errMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteSalon = (id: string | number, nameStr: string) => {
+  const handleDeleteSalon = async (id: string | number, nameStr: string) => {
     if (window.confirm(`آیا از حذف کامل سالن «${nameStr}» اطمینان دارید؟ تمامی نوبت‌ها و اطلاعات آن حذف خواهد شد.`)) {
-      deleteSalon(id);
+      try {
+        await deleteSalon(id);
+        await queryClient.invalidateQueries({ queryKey: ['salons'] });
+        showToast(`سالن «${nameStr}» با موفقیت حذف گردید.`);
+      } catch (err) {
+        console.error('Failed to delete salon:', err);
+      }
     }
   };
 
   const onToggleTenantStatus = (id: string | number) => {
-    const s = salons.find((x) => String(x.id) === String(id));
+    const s = activeSalons.find((x) => String(x.id) === String(id));
     if (!s) return;
     updateSalon(id, { status: s.status === 'active' ? 'suspended' : 'active' });
   };
@@ -180,7 +232,27 @@ export const AdminTenantsView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E7E2DA]">
-              {filtered.map((s) => (
+              {isLoadingSalons && activeSalons.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-[#6C6C6C]">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-6 h-6 animate-spin text-[#173B3F]" />
+                      <span className="text-xs font-bold text-[#173B3F]">در حال دریافت لیست سالن‌ها از سرور...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-[#6C6C6C]">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Building2 className="w-8 h-8 text-[#173B3F]/30" />
+                      <span className="text-xs font-bold text-[#173B3F]">هیچ سالنی مطابق فیلترهای انتخابی یافت نشد.</span>
+                      <p className="text-[11px] text-[#6C6C6C]">می‌توانید با دکمه «ایجاد سالن جدید» اولین سالن را ثبت کنید.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((s) => (
                 <tr key={s.id} className="hover:bg-[#FAF7F2]/40 transition-colors">
                   <td className="p-3.5">
                     <div className="flex items-center gap-2.5">
@@ -278,7 +350,7 @@ export const AdminTenantsView: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
@@ -299,6 +371,12 @@ export const AdminTenantsView: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveSalon} className="space-y-4 text-xs">
+              {formError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2 font-bold text-xs">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{formError}</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-[#1C1C1C] block mb-1">نام سالن / مجموعه زیبایی:</label>
@@ -427,9 +505,11 @@ export const AdminTenantsView: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-[#173B3F] hover:bg-[#0F3232] text-white rounded-xl font-bold text-xs shadow-md"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 bg-[#173B3F] hover:bg-[#0F3232] disabled:opacity-50 text-white rounded-xl font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer"
                 >
-                  {editingSalon ? 'ذخیره تغییرات سالن' : 'افزودن قطعی سالن'}
+                  {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{editingSalon ? 'ذخیره تغییرات سالن' : 'افزودن قطعی سالن'}</span>
                 </button>
               </div>
             </form>

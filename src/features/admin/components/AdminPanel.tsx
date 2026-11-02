@@ -13,18 +13,25 @@ import { AdminSearchRankingView } from './AdminSearchRankingView';
 import { AdminNotificationsView } from './AdminNotificationsView';
 import { AdminProfileView } from './AdminProfileView';
 import { useDataStore } from '../../../shared/stores/dataStore';
+import { useSalons } from '../../../shared/api/queries';
 import { useUIStore } from '../../../shared/stores/uiStore';
 
 export const AdminPanel: React.FC = () => {
-  const { salons, bookings, users, tickets, auditLogs, notifications, updateSalon, updateBookingStatus } = useDataStore();
+  const { salons, bookings, users, tickets, auditLogs, notifications, updateSalon, updateBookingStatus, fetchServerData } = useDataStore();
+  const { data: querySalons } = useSalons();
   const { setAppMode, setShowSplashScreen, setSplashAppName } = useUIStore();
   
+  React.useEffect(() => {
+    fetchServerData();
+  }, [fetchServerData]);
+
+  const activeSalons = (salons && salons.length > 0) ? salons : (querySalons || []);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const pendingApprovalsCount = (salons || []).filter((s: any) => !s.isApproved).length;
+  const pendingApprovalsCount = activeSalons.filter((s: any) => !s.isApproved).length;
   const openTicketsCount = (tickets || []).filter((t: any) => t.status === 'open' || t.status === 'in_progress').length;
-  const vipSalonsCount = (salons || []).filter((s: any) => s.isVip).length;
+  const vipSalonsCount = activeSalons.filter((s: any) => s.isVip).length;
   const activeNotificationsCount = (notifications || []).filter((n) => n.isActive).length;
 
   const onSwitchToCustomerApp = () => {

@@ -8,6 +8,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
+import { useSalons } from '../../../shared/api/queries';
 import { formatPrice, toPersianDigits } from '../../../shared/utils/persianUtils';
 
 interface AdminDashboardViewProps {
@@ -18,9 +19,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   onNavigateToTab,
 }) => {
   const { salons, bookings, users, auditLogs, updateSalon } = useDataStore();
+  const { data: querySalons } = useSalons();
   
-  const activeTenants = salons.filter((s) => s.isApproved);
-  const pendingTenants = salons.filter((s) => !s.isApproved);
+  const allSalons = (salons && salons.length > 0) ? salons : (querySalons || []);
+  const activeTenants = allSalons.filter((s) => s.isApproved);
+  const pendingTenants = allSalons.filter((s) => !s.isApproved);
   const totalRevenue = bookings.reduce((sum, b) => (b.status !== 'cancelled' ? sum + b.price : sum), 0);
 
   const onApproveTenant = (id: string) => updateSalon(id, { isApproved: true, status: 'active' });
