@@ -97,8 +97,13 @@ async function createServer() {
   // Apply Rate Limiter to all API routes
   app.use('/api/', apiLimiter);
 
-  // Background seed
-  seedDatabase().catch((err) => console.error('[DB SEED STARTUP ERROR]', err));
+  // Synchronous database seeding and migration on startup
+  try {
+    await seedDatabase();
+    console.log('[DB BOOT] Database tables and seed data synchronized successfully.');
+  } catch (err) {
+    console.error('[DB BOOT CRITICAL ERROR]', err);
+  }
 
   const uploadsDir = path.resolve(__dirname, 'public/uploads');
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
