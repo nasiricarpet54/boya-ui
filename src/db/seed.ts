@@ -153,39 +153,34 @@ export async function seedDatabase() {
     }).catch(err => console.error('Seed superadmin error:', err));
   }
 
-  // 3. Sync serverData store with authoritative PostgreSQL database state
+  // 3. Sync serverData store with authoritative PostgreSQL database state (Strict 1-to-1 Mapping per Phone)
   try {
     const serverData = loadServerData();
     const allDbUsers = await db.select().from(users);
 
+    const userMap = new Map<string, any>();
     for (const dbU of allDbUsers) {
-      const idx = serverData.users.findIndex(u => normalizePhone(u.phone) === dbU.phone);
-      if (idx >= 0) {
-        serverData.users[idx] = {
-          ...serverData.users[idx],
-          id: dbU.id,
-          fullName: dbU.fullName,
-          phone: dbU.phone,
-          email: dbU.email,
-          role: dbU.role,
-          salonId: dbU.salonId ? String(dbU.salonId) : null,
-          status: dbU.status,
-        };
-      } else {
-        serverData.users.push({
-          id: dbU.id,
-          uid: dbU.uid,
-          fullName: dbU.fullName,
-          phone: dbU.phone,
-          email: dbU.email,
-          role: dbU.role,
-          salonId: dbU.salonId ? String(dbU.salonId) : null,
-          status: dbU.status,
-          createdAt: new Date().toISOString(),
-        });
-      }
+      const p = normalizePhone(dbU.phone);
+      if (!p) continue;
+
+      const storeMatch = serverData.users.find((u: any) => normalizePhone(u.phone) === p);
+      userMap.set(p, {
+        id: String(dbU.id),
+        dbId: dbU.id,
+        uid: dbU.uid,
+        fullName: dbU.fullName,
+        name: dbU.fullName,
+        phone: dbU.phone,
+        email: dbU.email,
+        role: dbU.role,
+        salonId: dbU.salonId ? String(dbU.salonId) : null,
+        status: dbU.status,
+        avatar: storeMatch?.avatar || null,
+        createdAt: storeMatch?.createdAt || new Date().toISOString(),
+      });
     }
 
+    serverData.users = Array.from(userMap.values());
     saveServerData(serverData);
   } catch (err) {
     console.error('Error syncing serverData store during seed:', err);

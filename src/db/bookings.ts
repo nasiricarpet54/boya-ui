@@ -167,9 +167,9 @@ export async function getBookingsForUser(dbUser: any) {
         if (s) sid = s.id;
       }
 
-      // CRITICAL MULTI-TENANT GUARD: If salon_admin has NO valid assigned salon, return empty array!
+      // CRITICAL MULTI-TENANT GUARD: If salon_admin has NO valid assigned salon, return 403!
       if (!sid || isNaN(sid)) {
-        return [];
+        throw new Error('FORBIDDEN_NO_SALON');
       }
 
       dbBookings = await db.query.bookings.findMany({
@@ -209,7 +209,7 @@ export async function getBookingsForUser(dbUser: any) {
       }
 
       if (!sid || isNaN(sid)) {
-        return [];
+        throw new Error('FORBIDDEN_NO_SALON');
       }
 
       const rawList = await db.query.bookings.findMany({

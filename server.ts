@@ -730,7 +730,10 @@ async function createServer() {
     try {
       const userBookings = await getBookingsForUser(req.dbUser);
       res.json(userBookings);
-    } catch (err) {
+    } catch (err: any) {
+      if (err.message === 'FORBIDDEN_NO_SALON') {
+        return res.status(403).json({ error: 'عدم دسترسی: سالن معتبری برای شما یافت نشد.' });
+      }
       console.error('Error fetching bookings:', err);
       res.status(500).json({ error: 'خطا در دریافت لیست نوبت‌ها.' });
     }
