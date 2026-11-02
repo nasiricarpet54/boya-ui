@@ -162,13 +162,18 @@ export async function getBookingsForUser(dbUser: any) {
     } else if (role === 'salon_admin') {
       // Resolve numeric salonId if salonId is string or tenantId
       let sid = Number(salonId);
-      if (isNaN(sid) && salonId) {
+      if ((isNaN(sid) || !sid) && salonId) {
         const s = await db.select().from(salons).where(eq(salons.tenantId, String(salonId))).limit(1).then(r => r[0]);
         if (s) sid = s.id;
       }
 
+      // CRITICAL MULTI-TENANT GUARD: If salon_admin has NO valid assigned salon, return empty array!
+      if (!sid || isNaN(sid)) {
+        return [];
+      }
+
       dbBookings = await db.query.bookings.findMany({
-        where: sid ? eq(bookings.salonId, sid) : undefined,
+        where: eq(bookings.salonId, sid),
         with: {
           salon: true,
           service: true,
@@ -198,12 +203,17 @@ export async function getBookingsForUser(dbUser: any) {
       });
     } else if (role === 'line_manager') {
       let sid = Number(salonId);
-      if (isNaN(sid) && salonId) {
+      if ((isNaN(sid) || !sid) && salonId) {
         const s = await db.select().from(salons).where(eq(salons.tenantId, String(salonId))).limit(1).then(r => r[0]);
         if (s) sid = s.id;
       }
+
+      if (!sid || isNaN(sid)) {
+        return [];
+      }
+
       const rawList = await db.query.bookings.findMany({
-        where: sid ? eq(bookings.salonId, sid) : undefined,
+        where: eq(bookings.salonId, sid),
         with: {
           salon: true,
           service: true,

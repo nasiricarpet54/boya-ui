@@ -271,8 +271,12 @@ async function createServer() {
     try {
       const salonId = req.params.id;
       if (req.dbUser.role === 'salon_admin') {
-        const userSalonId = String(req.dbUser.salonId || '');
-        if (userSalonId !== String(salonId)) {
+        const userSalonId = req.dbUser.salonId ? String(req.dbUser.salonId) : null;
+        const targetSalon = serverData.salons.find(s => String(s.id) === String(salonId) || String(s.tenantId) === String(salonId));
+        const targetSalonId = targetSalon ? String(targetSalon.id) : String(salonId);
+        const targetTenantId = targetSalon ? String(targetSalon.tenantId) : null;
+
+        if (!userSalonId || (userSalonId !== targetSalonId && userSalonId !== targetTenantId)) {
           return res.status(403).json({ error: 'عدم دسترسی: شما تنها مجاز به ویرایش سالن خود می‌باشید.' });
         }
       }
@@ -302,8 +306,11 @@ async function createServer() {
   // Protected: Only super_admin and salon_admin can view users
   app.get('/api/users', requireAuth, requireRole(['super_admin', 'salon_admin']), (req: AuthRequest, res) => {
     if (req.dbUser.role === 'salon_admin') {
-      const userSalonId = String(req.dbUser.salonId || '');
-      const filtered = serverData.users.filter((u) => String(u.salonId) === userSalonId);
+      const userSalonId = req.dbUser.salonId ? String(req.dbUser.salonId) : null;
+      if (!userSalonId) {
+        return res.json([]);
+      }
+      const filtered = serverData.users.filter((u) => u.salonId && String(u.salonId) === userSalonId);
       return res.json(filtered);
     }
     res.json(serverData.users);
@@ -388,7 +395,13 @@ async function createServer() {
       // Check ownership
       const isSelf = String(req.dbUser.id) === String(userId) || req.dbUser.phone === targetUser?.phone;
       const isSuperAdmin = req.dbUser.role === 'super_admin';
-      const isSalonAdminOfUser = req.dbUser.role === 'salon_admin' && targetUser && String(targetUser.salonId) === String(req.dbUser.salonId);
+
+      const userSalonId = req.dbUser.salonId ? String(req.dbUser.salonId) : null;
+      const targetSalonId = targetUser?.salonId ? String(targetUser.salonId) : null;
+      const isSalonAdminOfUser = req.dbUser.role === 'salon_admin' && 
+                                 userSalonId !== null && 
+                                 targetSalonId !== null && 
+                                 userSalonId === targetSalonId;
 
       if (!isSelf && !isSuperAdmin && !isSalonAdminOfUser) {
         return res.status(403).json({ error: 'عدم دسترسی: شما مجاز به ویرایش این کاربر نمی‌باشید.' });
@@ -593,7 +606,16 @@ async function createServer() {
 
       // Check permissions:
       const isSuperAdmin = req.dbUser.role === 'super_admin';
-      const isSalonAdmin = req.dbUser.role === 'salon_admin' && (String(req.dbUser.salonId) === String(existingBooking.salonId) || String(req.dbUser.salonId) === String(existingBooking.salon?.tenantId));
+
+      const userSalonId = req.dbUser.salonId ? String(req.dbUser.salonId) : null;
+      const bookingSalonId = existingBooking.salonId ? String(existingBooking.salonId) : null;
+      const bookingTenantId = existingBooking.salon?.tenantId ? String(existingBooking.salon.tenantId) : null;
+
+      const isSalonAdmin = req.dbUser.role === 'salon_admin' && 
+                           userSalonId !== null && 
+                           ((bookingSalonId !== null && userSalonId === bookingSalonId) || 
+                            (bookingTenantId !== null && userSalonId === bookingTenantId));
+
       const isSpecialist = (req.dbUser.role === 'salon_specialist' || req.dbUser.role === 'mobile_specialist') && existingBooking.specialist?.userId === req.dbUser.id;
       const isCustomer = req.dbUser.role === 'customer' && existingBooking.customerId === req.dbUser.id;
 

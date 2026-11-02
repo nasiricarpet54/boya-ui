@@ -4,44 +4,14 @@ import { INITIAL_SALONS, INITIAL_USERS } from '../shared/data/marketplaceData.ts
 import { eq } from 'drizzle-orm';
 import { normalizePhone } from '../shared/utils/persianUtils.ts';
 import { sanitizeRole } from './users.ts';
+import { loadServerData, saveServerData } from '../lib/serverDataStore.ts';
 
 export async function seedDatabase() {
-  console.log('[DB SEED] Starting database seeding...');
+  console.log('[DB SEED] Starting database seeding & multi-tenant mapping...');
 
-  // 1. Seed Users
-  for (const u of INITIAL_USERS) {
-    const cleanPhone = normalizePhone(u.phone);
-    if (!cleanPhone) continue;
+  const tenantSalonMap = new Map<string, number>();
 
-    const existing = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1).then(r => r[0]);
-    const role = sanitizeRole(u.role);
-
-    if (!existing) {
-      await db.insert(users).values({
-        uid: `phone_${cleanPhone}`,
-        phone: cleanPhone,
-        fullName: u.name || u.fullName || `کاربر ${cleanPhone.slice(-4)}`,
-        email: u.email || `${cleanPhone}@boya.ir`,
-        role,
-        salonId: u.salonId ? String(u.salonId) : null,
-      }).catch(err => console.error('Seed user error:', err));
-    }
-  }
-
-  // Ensure default super_admin exists
-  const superAdmin = await db.select().from(users).where(eq(users.phone, '09123456789')).limit(1).then(r => r[0]);
-  if (!superAdmin) {
-    await db.insert(users).values({
-      uid: 'super_admin_main',
-      phone: '09123456789',
-      fullName: 'مهندس حسینی (مدیر ارشد)',
-      email: 'admin@boya.ir',
-      role: 'super_admin',
-      salonId: null,
-    }).catch(err => console.error('Seed superadmin error:', err));
-  }
-
-  // 2. Seed Salons, Services & Specialists
+  // 1. Seed Salons, Services & Specialists first to get numeric IDs
   for (const s of INITIAL_SALONS) {
     const tenantId = s.tenantId || String(s.id);
     let salonRecord = await db.select().from(salons).where(eq(salons.tenantId, tenantId)).limit(1).then(r => r[0]);
@@ -72,6 +42,7 @@ export async function seedDatabase() {
     }
 
     if (!salonRecord) continue;
+    tenantSalonMap.set(tenantId, salonRecord.id);
 
     // Seed Services for this salon
     for (const srv of s.services || []) {
@@ -104,9 +75,15 @@ export async function seedDatabase() {
           fullName: sp.name,
           email: `${spPhone}@boya.ir`,
           role: sp.isMobileSpecialist ? 'mobile_specialist' : 'salon_specialist',
-          salonId: String(salonRecord.id),
+          salonId: salonRecord.id,
         }).returning();
         spUser = createdUser;
+      } else {
+        // Ensure existing specialist user has the correct salonId integer set
+        await db.update(users)
+          .set({ salonId: salonRecord.id })
+          .where(eq(users.id, spUser.id))
+          .catch(err => console.error('Update specialist salonId error:', err));
       }
 
       if (spUser) {
@@ -127,5 +104,92 @@ export async function seedDatabase() {
     }
   }
 
-  console.log('[DB SEED] Seeding completed successfully!');
+  // 2. Seed Users & enforce tenantId mapping to numeric salonId
+  for (const u of INITIAL_USERS) {
+    const cleanPhone = normalizePhone(u.phone);
+    if (!cleanPhone) continue;
+
+    const role = sanitizeRole(u.role);
+    let resolvedSalonId: number | null = null;
+
+    if (u.tenantId && tenantSalonMap.has(u.tenantId)) {
+      resolvedSalonId = tenantSalonMap.get(u.tenantId)!;
+    } else if (u.salonId && !isNaN(Number(u.salonId))) {
+      resolvedSalonId = Number(u.salonId);
+    }
+
+    const existing = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1).then(r => r[0]);
+
+    if (!existing) {
+      await db.insert(users).values({
+        uid: `phone_${cleanPhone}`,
+        phone: cleanPhone,
+        fullName: u.name || u.fullName || `کاربر ${cleanPhone.slice(-4)}`,
+        email: u.email || `${cleanPhone}@boya.ir`,
+        role,
+        salonId: resolvedSalonId,
+      }).catch(err => console.error('Seed user error:', err));
+    } else {
+      // Fix missing or outdated salonId on existing user
+      if (resolvedSalonId !== null && existing.salonId !== resolvedSalonId) {
+        await db.update(users)
+          .set({ salonId: resolvedSalonId, role })
+          .where(eq(users.id, existing.id))
+          .catch(err => console.error('Update user salonId error:', err));
+      }
+    }
+  }
+
+  // Ensure default super_admin exists
+  const superAdmin = await db.select().from(users).where(eq(users.phone, '09123456789')).limit(1).then(r => r[0]);
+  if (!superAdmin) {
+    await db.insert(users).values({
+      uid: 'super_admin_main',
+      phone: '09123456789',
+      fullName: 'مهندس حسینی (مدیر ارشد)',
+      email: 'admin@boya.ir',
+      role: 'super_admin',
+      salonId: null,
+    }).catch(err => console.error('Seed superadmin error:', err));
+  }
+
+  // 3. Sync serverData store with authoritative PostgreSQL database state
+  try {
+    const serverData = loadServerData();
+    const allDbUsers = await db.select().from(users);
+
+    for (const dbU of allDbUsers) {
+      const idx = serverData.users.findIndex(u => normalizePhone(u.phone) === dbU.phone);
+      if (idx >= 0) {
+        serverData.users[idx] = {
+          ...serverData.users[idx],
+          id: dbU.id,
+          fullName: dbU.fullName,
+          phone: dbU.phone,
+          email: dbU.email,
+          role: dbU.role,
+          salonId: dbU.salonId ? String(dbU.salonId) : null,
+          status: dbU.status,
+        };
+      } else {
+        serverData.users.push({
+          id: dbU.id,
+          uid: dbU.uid,
+          fullName: dbU.fullName,
+          phone: dbU.phone,
+          email: dbU.email,
+          role: dbU.role,
+          salonId: dbU.salonId ? String(dbU.salonId) : null,
+          status: dbU.status,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    saveServerData(serverData);
+  } catch (err) {
+    console.error('Error syncing serverData store during seed:', err);
+  }
+
+  console.log('[DB SEED] Seeding and multi-tenant mapping completed successfully!');
 }
