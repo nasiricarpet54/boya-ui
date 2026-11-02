@@ -8,8 +8,9 @@ declare global {
 
 export const createPool = () => {
   if (!global._postgresPool) {
-    const connectionString = process.env.DATABASE_URL || 
-      (process.env.SQL_HOST ? `postgresql://${process.env.SQL_USER || 'postgres'}:${process.env.SQL_PASSWORD || 'postgres'}@${process.env.SQL_HOST}:${process.env.SQL_PORT || '5432'}/${process.env.SQL_DB_NAME || 'boyadb'}` : undefined);
+    const rawConnString = process.env.DATABASE_URL || '';
+    const isValidConnString = rawConnString.startsWith('postgresql://') || rawConnString.startsWith('postgres://');
+    const connectionString = isValidConnString ? rawConnString : undefined;
 
     global._postgresPool = new Pool(connectionString ? {
       connectionString,

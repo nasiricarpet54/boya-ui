@@ -4,7 +4,6 @@ import { INITIAL_SALONS, INITIAL_USERS } from '../shared/data/marketplaceData.ts
 import { eq } from 'drizzle-orm';
 import { normalizePhone } from '../shared/utils/persianUtils.ts';
 import { sanitizeRole } from './users.ts';
-import { loadServerData, saveServerData } from '../lib/serverDataStore.ts';
 
 export async function seedDatabase() {
   console.log('[DB SEED] Starting database seeding & multi-tenant mapping...');
@@ -76,12 +75,13 @@ export async function seedDatabase() {
           email: `${spPhone}@boya.ir`,
           role: sp.isMobileSpecialist ? 'mobile_specialist' : 'salon_specialist',
           salonId: salonRecord.id,
+          avatar: sp.avatar || null,
         }).returning();
         spUser = createdUser;
       } else {
         // Ensure existing specialist user has the correct salonId integer set
         await db.update(users)
-          .set({ salonId: salonRecord.id })
+          .set({ salonId: salonRecord.id, avatar: sp.avatar || spUser.avatar })
           .where(eq(users.id, spUser.id))
           .catch(err => console.error('Update specialist salonId error:', err));
       }
@@ -128,12 +128,17 @@ export async function seedDatabase() {
         email: u.email || `${cleanPhone}@boya.ir`,
         role,
         salonId: resolvedSalonId,
+        avatar: (u as any).avatar || null,
       }).catch(err => console.error('Seed user error:', err));
     } else {
       // Fix missing or outdated salonId on existing user
-      if (resolvedSalonId !== null && existing.salonId !== resolvedSalonId) {
+      if ((resolvedSalonId !== null && existing.salonId !== resolvedSalonId) || (u as any).avatar) {
         await db.update(users)
-          .set({ salonId: resolvedSalonId, role })
+          .set({ 
+            salonId: resolvedSalonId !== null ? resolvedSalonId : existing.salonId, 
+            role,
+            avatar: (u as any).avatar || existing.avatar
+          })
           .where(eq(users.id, existing.id))
           .catch(err => console.error('Update user salonId error:', err));
       }
@@ -151,39 +156,6 @@ export async function seedDatabase() {
       role: 'super_admin',
       salonId: null,
     }).catch(err => console.error('Seed superadmin error:', err));
-  }
-
-  // 3. Sync serverData store with authoritative PostgreSQL database state (Strict 1-to-1 Mapping per Phone)
-  try {
-    const serverData = loadServerData();
-    const allDbUsers = await db.select().from(users);
-
-    const userMap = new Map<string, any>();
-    for (const dbU of allDbUsers) {
-      const p = normalizePhone(dbU.phone);
-      if (!p) continue;
-
-      const storeMatch = serverData.users.find((u: any) => normalizePhone(u.phone) === p);
-      userMap.set(p, {
-        id: String(dbU.id),
-        dbId: dbU.id,
-        uid: dbU.uid,
-        fullName: dbU.fullName,
-        name: dbU.fullName,
-        phone: dbU.phone,
-        email: dbU.email,
-        role: dbU.role,
-        salonId: dbU.salonId ? String(dbU.salonId) : null,
-        status: dbU.status,
-        avatar: storeMatch?.avatar || null,
-        createdAt: storeMatch?.createdAt || new Date().toISOString(),
-      });
-    }
-
-    serverData.users = Array.from(userMap.values());
-    saveServerData(serverData);
-  } catch (err) {
-    console.error('Error syncing serverData store during seed:', err);
   }
 
   console.log('[DB SEED] Seeding and multi-tenant mapping completed successfully!');

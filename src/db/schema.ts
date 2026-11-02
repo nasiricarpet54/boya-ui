@@ -42,6 +42,7 @@ export const users = pgTable('users', {
   status: userStatusEnum('status').default('active').notNull(),
   salonId: integer('salon_id'), // For salon_admin, specialists, and line_manager
   managedLine: text('managed_line'), // For line_manager (e.g. 'hair', 'nail')
+  avatar: text('avatar'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
