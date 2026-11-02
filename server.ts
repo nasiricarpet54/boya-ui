@@ -304,16 +304,43 @@ async function createServer() {
 
   // --- Platform Users CRUD ---
   // Protected: Only super_admin and salon_admin can view users
-  app.get('/api/users', requireAuth, requireRole(['super_admin', 'salon_admin']), (req: AuthRequest, res) => {
-    if (req.dbUser.role === 'salon_admin') {
-      const userSalonId = req.dbUser.salonId ? String(req.dbUser.salonId) : null;
-      if (!userSalonId) {
-        return res.json([]);
+  app.get('/api/users', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      // Primary Source of Truth: PostgreSQL Database
+      const dbUsersList = await db.select().from(users);
+
+      const mergedUsers = dbUsersList.map(u => {
+        const storeU = serverData.users.find(su => normalizePhone(su.phone) === u.phone || String(su.id) === String(u.id));
+        return {
+          id: String(u.id),
+          dbId: u.id,
+          uid: u.uid,
+          name: u.fullName,
+          fullName: u.fullName,
+          phone: u.phone,
+          email: u.email,
+          role: u.role,
+          salonId: u.salonId ? String(u.salonId) : null,
+          status: u.status,
+          avatar: storeU?.avatar || null,
+          createdAt: storeU?.createdAt || u.createdAt?.toLocaleDateString('fa-IR') || '۱۴۰۳/۰۱/۰۱',
+        };
+      });
+
+      if (req.dbUser.role === 'salon_admin') {
+        const userSalonId = req.dbUser.salonId ? String(req.dbUser.salonId) : null;
+        if (!userSalonId) {
+          return res.json([]);
+        }
+        const filtered = mergedUsers.filter((u) => u.salonId && String(u.salonId) === userSalonId);
+        return res.json(filtered);
       }
-      const filtered = serverData.users.filter((u) => u.salonId && String(u.salonId) === userSalonId);
-      return res.json(filtered);
+
+      res.json(mergedUsers);
+    } catch (err) {
+      console.error('Error in GET /api/users:', err);
+      res.status(500).json({ error: 'خطا در دریافت لیست کاربران از دیتابیس.' });
     }
-    res.json(serverData.users);
   });
 
   // Protected: Create user
@@ -325,11 +352,6 @@ async function createServer() {
         return res.status(400).json({ error: 'شماره تلفن وارد شده معتبر نیست.' });
       }
 
-      if (!newUser.id) {
-        newUser.id = `usr-${Date.now()}`;
-      }
-      newUser.phone = phone;
-
       const roleMap: Record<string, string> = {
         'salon_owner': 'salon_admin',
         'specialist': 'salon_specialist',
@@ -337,47 +359,64 @@ async function createServer() {
       };
       let role = roleMap[newUser.role] || newUser.role || 'customer';
 
-      // Salon admin cannot create super_admins and can only assign to their salon
-      let salonId = newUser.salonId ? String(newUser.salonId) : null;
+      let salonId = newUser.salonId ? Number(newUser.salonId) : null;
       if (req.dbUser.role === 'salon_admin') {
-        salonId = String(req.dbUser.salonId || '');
+        salonId = req.dbUser.salonId ? Number(req.dbUser.salonId) : null;
         if (role === 'super_admin' || role === 'salon_admin') {
           role = 'salon_specialist';
         }
       }
-      newUser.role = role;
-      newUser.salonId = salonId;
 
-      // Update DB
+      // Upsert directly into PostgreSQL DB (Source of Truth)
       const existingUser = await db.select().from(users).where(eq(users.phone, phone)).limit(1).then(r => r[0]);
+      let savedDbUser;
       if (existingUser) {
-        await db.update(users).set({
+        const [updated] = await db.update(users).set({
           fullName: newUser.fullName || newUser.name || existingUser.fullName,
           role: role as any,
-          salonId: salonId || existingUser.salonId,
+          salonId: salonId !== null ? salonId : existingUser.salonId,
           email: newUser.email || existingUser.email,
-        }).where(eq(users.id, existingUser.id));
+          status: newUser.status || existingUser.status,
+        }).where(eq(users.id, existingUser.id)).returning();
+        savedDbUser = updated;
       } else {
-        await db.insert(users).values({
+        const [inserted] = await db.insert(users).values({
           uid: `phone_${phone}`,
           phone,
           fullName: newUser.fullName || newUser.name || `کاربر ${phone.slice(-4)}`,
           email: newUser.email || `${phone}@boya.ir`,
           role: role as any,
+          status: newUser.status || 'active',
           salonId,
-        });
+        }).returning();
+        savedDbUser = inserted;
       }
 
-      // Upsert into serverData
-      const idx = serverData.users.findIndex(u => normalizePhone(u.phone) === phone || String(u.id) === String(newUser.id));
+      // Sync into serverData store
+      const formattedUser = {
+        id: String(savedDbUser.id),
+        dbId: savedDbUser.id,
+        uid: savedDbUser.uid,
+        name: savedDbUser.fullName,
+        fullName: savedDbUser.fullName,
+        phone: savedDbUser.phone,
+        email: savedDbUser.email,
+        role: savedDbUser.role,
+        salonId: savedDbUser.salonId ? String(savedDbUser.salonId) : null,
+        status: savedDbUser.status,
+        avatar: newUser.avatar || null,
+        createdAt: new Date().toISOString(),
+      };
+
+      const idx = serverData.users.findIndex(u => normalizePhone(u.phone) === phone || String(u.id) === String(savedDbUser.id));
       if (idx >= 0) {
-        serverData.users[idx] = { ...serverData.users[idx], ...newUser, phone, role, salonId };
+        serverData.users[idx] = { ...serverData.users[idx], ...formattedUser };
       } else {
-        serverData.users = [{ ...newUser, phone, role, salonId }, ...serverData.users];
+        serverData.users = [formattedUser, ...serverData.users];
       }
       saveServerData(serverData);
 
-      res.status(201).json(newUser);
+      res.status(201).json(formattedUser);
     } catch (err) {
       console.error('Error saving user in /api/users:', err);
       res.status(500).json({ error: 'خطا در ثبت کاربر جدید در دیتابیس.' });
@@ -389,15 +428,56 @@ async function createServer() {
     try {
       const userId = req.params.id;
       const patch = req.body;
-      const userIdx = serverData.users.findIndex(u => String(u.id) === String(userId));
-      const targetUser = userIdx >= 0 ? serverData.users[userIdx] : null;
 
-      // Check ownership
-      const isSelf = String(req.dbUser.id) === String(userId) || req.dbUser.phone === targetUser?.phone;
+      // 1. Locate target user in PostgreSQL DB
+      let dbUserTarget = null;
+      if (!isNaN(Number(userId))) {
+        dbUserTarget = await db.select().from(users).where(eq(users.id, Number(userId))).limit(1).then(r => r[0]);
+      }
+      if (!dbUserTarget && patch.phone) {
+        const cleanPhone = normalizePhone(patch.phone);
+        if (cleanPhone) {
+          dbUserTarget = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1).then(r => r[0]);
+        }
+      }
+      if (!dbUserTarget) {
+        const storeMatch = serverData.users.find(u => String(u.id) === String(userId));
+        if (storeMatch?.phone) {
+          const cleanPhone = normalizePhone(storeMatch.phone);
+          if (cleanPhone) {
+            dbUserTarget = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1).then(r => r[0]);
+          }
+        }
+      }
+
+      // If user is legacy and not in DB yet, create DB record
+      if (!dbUserTarget) {
+        const storeMatch = serverData.users.find(u => String(u.id) === String(userId));
+        const userPhone = patch.phone ? normalizePhone(patch.phone) : (storeMatch?.phone ? normalizePhone(storeMatch.phone) : null);
+        if (userPhone) {
+          const [created] = await db.insert(users).values({
+            uid: `phone_${userPhone}`,
+            phone: userPhone,
+            fullName: patch.fullName || patch.name || storeMatch?.fullName || `کاربر ${userPhone.slice(-4)}`,
+            email: patch.email || `${userPhone}@boya.ir`,
+            role: (patch.role || storeMatch?.role || 'customer') as any,
+            status: (patch.status || storeMatch?.status || 'active') as any,
+            salonId: patch.salonId ? Number(patch.salonId) : (storeMatch?.salonId ? Number(storeMatch.salonId) : null),
+          }).returning();
+          dbUserTarget = created;
+        }
+      }
+
+      if (!dbUserTarget) {
+        return res.status(404).json({ error: 'کاربر مورد نظر یافت نشد.' });
+      }
+
+      // 2. Check ownership & permissions
+      const isSelf = String(req.dbUser.id) === String(dbUserTarget.id) || req.dbUser.phone === dbUserTarget.phone;
       const isSuperAdmin = req.dbUser.role === 'super_admin';
 
       const userSalonId = req.dbUser.salonId ? String(req.dbUser.salonId) : null;
-      const targetSalonId = targetUser?.salonId ? String(targetUser.salonId) : null;
+      const targetSalonId = dbUserTarget.salonId ? String(dbUserTarget.salonId) : null;
       const isSalonAdminOfUser = req.dbUser.role === 'salon_admin' && 
                                  userSalonId !== null && 
                                  targetSalonId !== null && 
@@ -417,37 +497,57 @@ async function createServer() {
         targetRole = undefined; // Non-superadmins cannot grant super_admin
       }
 
-      const targetPhone = patch.phone ? normalizePhone(patch.phone) : undefined;
-      const userPhone = targetPhone || (targetUser ? normalizePhone(targetUser.phone) : null);
-
-      if (userPhone) {
-        const dbExisting = await db.select().from(users).where(eq(users.phone, userPhone)).limit(1).then(r => r[0]);
-        if (dbExisting) {
-          const dbUpdates: any = {};
-          if (patch.fullName || patch.name) dbUpdates.fullName = patch.fullName || patch.name;
-          if (targetRole) dbUpdates.role = targetRole;
-          if (patch.salonId !== undefined) dbUpdates.salonId = patch.salonId ? String(patch.salonId) : null;
-          if (patch.email) dbUpdates.email = patch.email;
-          if (Object.keys(dbUpdates).length > 0) {
-            await db.update(users).set(dbUpdates).where(eq(users.id, dbExisting.id));
-          }
-        }
+      // 3. Update PostgreSQL DB FIRST
+      const dbUpdates: any = {};
+      if (patch.fullName || patch.name) dbUpdates.fullName = patch.fullName || patch.name;
+      if (targetRole) dbUpdates.role = targetRole;
+      if (patch.salonId !== undefined) dbUpdates.salonId = patch.salonId ? Number(patch.salonId) : null;
+      if (patch.email) dbUpdates.email = patch.email;
+      if (patch.status) dbUpdates.status = patch.status;
+      if (patch.phone) {
+        const cleanPhone = normalizePhone(patch.phone);
+        if (cleanPhone) dbUpdates.phone = cleanPhone;
       }
 
+      let updatedDbUser = dbUserTarget;
+      if (Object.keys(dbUpdates).length > 0) {
+        const [updated] = await db.update(users).set(dbUpdates).where(eq(users.id, dbUserTarget.id)).returning();
+        updatedDbUser = updated;
+      }
+
+      // 4. Sync serverData store
+      const userIdx = serverData.users.findIndex(u => String(u.id) === String(userId) || normalizePhone(u.phone) === dbUserTarget.phone);
       if (userIdx >= 0) {
         serverData.users[userIdx] = {
           ...serverData.users[userIdx],
-          ...patch,
-          ...(targetRole ? { role: targetRole } : {}),
-          ...(targetPhone ? { phone: targetPhone } : {}),
+          id: String(updatedDbUser.id),
+          fullName: updatedDbUser.fullName,
+          name: updatedDbUser.fullName,
+          phone: updatedDbUser.phone,
+          email: updatedDbUser.email,
+          role: updatedDbUser.role,
+          salonId: updatedDbUser.salonId ? String(updatedDbUser.salonId) : null,
+          status: updatedDbUser.status,
+          ...(patch.avatar ? { avatar: patch.avatar } : {}),
         };
         saveServerData(serverData);
       }
 
-      res.json({ success: true, userId });
+      res.json({
+        success: true,
+        user: {
+          id: String(updatedDbUser.id),
+          fullName: updatedDbUser.fullName,
+          phone: updatedDbUser.phone,
+          email: updatedDbUser.email,
+          role: updatedDbUser.role,
+          salonId: updatedDbUser.salonId ? String(updatedDbUser.salonId) : null,
+          status: updatedDbUser.status,
+        },
+      });
     } catch (err) {
       console.error('Error updating user in /api/users/:id:', err);
-      res.status(500).json({ error: 'خطا در ویرایش کاربر.' });
+      res.status(500).json({ error: 'خطا در ویرایش کاربر در دیتابیس.' });
     }
   });
 
@@ -455,22 +555,39 @@ async function createServer() {
   app.delete('/api/users/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
       const userId = req.params.id;
-      const target = serverData.users.find((u) => String(u.id) === String(userId));
+
+      let dbUserTarget = null;
+      if (!isNaN(Number(userId))) {
+        dbUserTarget = await db.select().from(users).where(eq(users.id, Number(userId))).limit(1).then(r => r[0]);
+      }
+      if (!dbUserTarget) {
+        const storeMatch = serverData.users.find(u => String(u.id) === String(userId));
+        if (storeMatch?.phone) {
+          const cleanPhone = normalizePhone(storeMatch.phone);
+          if (cleanPhone) {
+            dbUserTarget = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1).then(r => r[0]);
+          }
+        }
+      }
 
       if (req.dbUser.role === 'salon_admin') {
-        if (!target || String(target.salonId) !== String(req.dbUser.salonId) || target.role === 'super_admin') {
+        const userSalonId = req.dbUser.salonId ? String(req.dbUser.salonId) : null;
+        const targetSalonId = dbUserTarget?.salonId ? String(dbUserTarget.salonId) : null;
+        if (!userSalonId || !targetSalonId || userSalonId !== targetSalonId || dbUserTarget?.role === 'super_admin') {
           return res.status(403).json({ error: 'عدم دسترسی: شما تنها مجاز به حذف پرسنل سالن خود هستید.' });
         }
       }
 
-      if (target && target.phone) {
-        const phone = normalizePhone(target.phone);
-        await db.delete(users).where(eq(users.phone, phone)).catch(() => {});
+      if (dbUserTarget) {
+        await db.delete(users).where(eq(users.id, dbUserTarget.id));
       }
-      serverData.users = serverData.users.filter((u) => String(u.id) !== String(userId));
+
+      serverData.users = serverData.users.filter((u) => String(u.id) !== String(userId) && (!dbUserTarget || normalizePhone(u.phone) !== dbUserTarget.phone));
       saveServerData(serverData);
+
       res.json({ success: true, deletedId: userId });
     } catch (err) {
+      console.error('Error deleting user:', err);
       res.status(500).json({ error: 'خطا در حذف کاربر.' });
     }
   });
