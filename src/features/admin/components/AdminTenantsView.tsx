@@ -6,7 +6,7 @@ import { useSalons } from '../../../shared/api/queries';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useQueryClient } from '@tanstack/react-query';
 import { IRAN_PROVINCES } from '../../../shared/data/iranLocations';
-import { toPersianDigits } from '../../../shared/utils/persianUtils';
+import { toPersianDigits, normalizePhone } from '../../../shared/utils/persianUtils';
 import { Salon } from '../../../shared/data/marketplaceData';
 import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
 
@@ -31,6 +31,7 @@ export const AdminTenantsView: React.FC = () => {
   // Form State
   const [name, setName] = useState('');
   const [ownerName, setOwnerName] = useState('');
+  const [ownerPhone, setOwnerPhone] = useState('');
   const [phone, setPhone] = useState('');
   const [province, setProvince] = useState('تهران');
   const [city, setCity] = useState('تهران');
@@ -64,6 +65,7 @@ export const AdminTenantsView: React.FC = () => {
   const resetForm = () => {
     setName('');
     setOwnerName('');
+    setOwnerPhone('');
     setPhone('');
     setProvince('تهران');
     setCity('تهران');
@@ -80,6 +82,7 @@ export const AdminTenantsView: React.FC = () => {
     setEditingSalon(s);
     setName(s.name || '');
     setOwnerName(s.ownerName || '');
+    setOwnerPhone('');
     setPhone(s.phone || '');
     setProvince(s.province || 'تهران');
     setCity(s.city || 'تهران');
@@ -108,6 +111,10 @@ export const AdminTenantsView: React.FC = () => {
       setFormError('آدرس دقیق سالن الزامی است.');
       return;
     }
+    if (!editingSalon && (!ownerName.trim() || !/^09\d{9}$/.test(normalizePhone(ownerPhone) || '')) ) {
+      setFormError('نام مدیر و شماره همراه معتبر او برای ارسال دعوت‌نامه الزامی است.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -128,8 +135,10 @@ export const AdminTenantsView: React.FC = () => {
         showToast('تغییرات سالن با موفقیت ذخیره شد.');
       } else {
         // Create new salon
-        await addSalon({
+        const createdSalon = await addSalon({
           name: name.trim(),
+          ownerName: ownerName.trim(),
+          ownerPhone: normalizePhone(ownerPhone),
           phone: phone.trim(),
           province,
           city,
@@ -139,7 +148,9 @@ export const AdminTenantsView: React.FC = () => {
           isMobileServiceActive,
           coverImage,
         });
-        showToast('سالن جدید با موفقیت ایجاد و ذخیره شد.');
+        showToast(createdSalon?.invitation?.delivery === 'sent'
+          ? 'سالن ایجاد شد و دعوت‌نامه پیامکی برای مدیر ارسال شد.'
+          : 'سالن ایجاد شد؛ برای مدیر دعوت‌نامه پیامکی ارسال نشد و باید دستی اطلاع‌رسانی شود.');
       }
 
       await queryClient.invalidateQueries({ queryKey: ['salons'] });
@@ -405,6 +416,12 @@ export const AdminTenantsView: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {!editingSalon && <div>
+                <label className="font-bold text-[#1C1C1C] block mb-1">شماره همراه مدیر برای دعوت و اتصال حساب:</label>
+                <input type="tel" required value={ownerPhone} onChange={(e) => setOwnerPhone(e.target.value)} placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" className="w-full h-10 px-3 rounded-xl border border-[#E7E2DA] font-mono text-left focus:border-[#173B3F] outline-none" />
+                <p className="mt-1 text-[10px] text-[#6C6C6C]">حساب مدیر پس از تأیید شماره با کد پیامکی به همین سالن متصل می‌شود.</p>
+              </div>}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>

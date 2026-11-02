@@ -54,7 +54,7 @@ export interface DataState {
   clearLatestBookingAlert: () => void;
   setSalons: (salons: any[]) => void;
   setTickets: (tickets: any[]) => void;
-  addSalon: (salon: any) => Promise<void>;
+  addSalon: (salon: any) => Promise<any>;
   updateSalon: (id: string | number, patch: any) => Promise<void>;
   deleteSalon: (id: string | number) => Promise<void>;
   addUser: (user: any) => Promise<void>;

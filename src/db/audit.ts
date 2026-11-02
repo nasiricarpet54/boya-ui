@@ -1,5 +1,6 @@
 import { db } from './index.ts';
 import { auditLogs } from './schema.ts';
+import { redactLogValue } from '../lib/piiRedactor.ts';
 
 export async function logSecurityAction(params: {
   actorId?: number;
@@ -17,6 +18,6 @@ export async function logSecurityAction(params: {
       ipAddress: params.ipAddress || '0.0.0.0',
     });
   } catch (err) {
-    console.error('[AUDIT LOG ERROR]', err);
+    console.error('[AUDIT LOG ERROR]', redactLogValue(err));
   }
 }

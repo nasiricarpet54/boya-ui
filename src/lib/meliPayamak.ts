@@ -15,13 +15,8 @@ export async function sendMeliPayamakSms(phone: string, text: string): Promise<S
   const password = process.env.MELIPAYAMAK_PASSWORD;
   const fromNumber = process.env.MELIPAYAMAK_FROM_NUMBER || '50004000';
 
-  // ALWAYS print live backend console log for test & debugging
-  console.log(`\n==================================================`);
-  console.log(`📲 [MELIPAYAMAK SMS GATEWAY LOG]`);
-  console.log(`   شماره گیرنده: ${phone}`);
-  console.log(`   متن پیامک: ${text}`);
-  console.log(`   زمان ثبت: ${new Date().toLocaleString('fa-IR', { timeZone: 'Asia/Tehran' })}`);
-  console.log(`==================================================\n`);
+  // Never log recipient numbers or SMS text: messages may contain OTPs and personal data.
+  console.info('[SMS] request received', { configured: Boolean(username && password) });
 
   if (!username || !password) {
     return {
@@ -61,7 +56,7 @@ export async function sendMeliPayamakSms(phone: string, text: string): Promise<S
       };
     }
   } catch (err: any) {
-    console.error('MeliPayamak API Exception:', err);
+    console.error('[SMS] provider request failed', { message: err?.message || 'network error' });
     return {
       success: false,
       error: err.message || 'خطای شبکه در اتصال به پنل ملی پیامک',

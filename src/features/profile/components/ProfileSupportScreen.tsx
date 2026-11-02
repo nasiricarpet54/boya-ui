@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MapPin, Share2, Plus, Send, CheckCircle2, ChevronLeft, Store, ShieldCheck, Camera, Edit3, LogOut } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
-import { SupportTicket, INITIAL_TICKETS } from '../../../shared/data/marketplaceData';
+import { SupportTicket } from '../../../shared/data/marketplaceData';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useAuthStore } from '../../../shared/stores/authStore';
+import api from '../../../shared/api/apiClient';
 
 export const ProfileSupportScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export const ProfileSupportScreen: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<'profile' | 'tickets' | 'addresses' | 'referral' | 'faq' | 'guide'>('tickets');
   // ... rest of state
-  const [tickets, setTickets] = useState<SupportTicket[]>(INITIAL_TICKETS);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [newReplyText, setNewReplyText] = useState<string>('');
   const [isCreatingTicket, setIsCreatingTicket] = useState<boolean>(false);
@@ -72,6 +73,20 @@ export const ProfileSupportScreen: React.FC = () => {
 
   const referralCode = user?.phone ? `BOYA-${user.phone.slice(-4)}` : 'BOYA-CLUB';
 
+  const toTicket = (row: any): SupportTicket => ({
+    ...row,
+    id: String(row.id), userName: user?.fullName || 'کاربر بویا', userPhone: user?.phone || '', userRole: user?.role || 'customer',
+    createdAt: row.createdAt ? new Date(row.createdAt).toLocaleDateString('fa-IR') : 'امروز',
+    messages: (Array.isArray(row.messages) ? row.messages : []).map((message: any) => ({ ...message, time: message.time || (message.createdAt ? new Date(message.createdAt).toLocaleString('fa-IR') : 'هم‌اکنون') })),
+  } as SupportTicket);
+
+  useEffect(() => {
+    let active = true;
+    api.get('/me/tickets').then(({ data }) => { if (active) setTickets((Array.isArray(data) ? data : []).map(toTicket)); })
+      .catch(() => { if (active) setTickets([]); });
+    return () => { active = false; };
+  }, [user?.id]);
+
   const handleSwitchToSalonPanel = () => {
     setSplashAppName('ورود به پنل جامع سالندار و متخصصین بویا');
     setShowSplashScreen(true);
@@ -79,63 +94,29 @@ export const ProfileSupportScreen: React.FC = () => {
     navigate({ to: '/salon-admin' });
   };
 
-  const handleSendReply = (e: React.FormEvent) => {
+  const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newReplyText.trim() || !selectedTicket) return;
 
-    const currentUserName = user?.fullName || 'کاربر بویا';
-    const updated = {
-      ...selectedTicket,
-      messages: [
-        ...selectedTicket.messages,
-        {
-          sender: 'user' as const,
-          senderName: currentUserName,
-          text: newReplyText.trim(),
-          time: 'هم‌اکنون',
-        },
-      ],
-      lastReply: newReplyText.trim(),
-      status: 'in_progress' as const,
-    };
-
-    setTickets((prev) => prev.map((t) => (t.id === selectedTicket.id ? updated : t)));
-    setSelectedTicket(updated);
-    setNewReplyText('');
+    try {
+      const { data } = await api.post(`/me/tickets/${selectedTicket.id}/replies`, { text: newReplyText.trim() });
+      const updated = toTicket(data);
+      setTickets((prev) => prev.map((ticket) => (ticket.id === selectedTicket.id ? updated : ticket)));
+      setSelectedTicket(updated);
+      setNewReplyText('');
+    } catch { useUIStore.getState().showToast('ثبت پاسخ ناموفق بود.'); }
   };
 
-  const handleCreateTicket = (e: React.FormEvent) => {
+  const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTicketTitle.trim() || !newTicketMessage.trim()) return;
 
-    const currentUserName = user?.fullName || 'کاربر بویا';
-    const currentUserPhone = user?.phone || '';
-
-    const newTicket: SupportTicket = {
-      id: `tkt-${Math.floor(100 + Math.random() * 900)}`,
-      title: newTicketTitle.trim(),
-      userName: currentUserName,
-      userPhone: currentUserPhone,
-      userRole: 'customer',
-      category: newTicketCategory,
-      status: 'open',
-      lastReply: newTicketMessage.trim(),
-      createdAt: 'امروز',
-      messages: [
-        {
-          sender: 'user',
-          senderName: currentUserName,
-          text: newTicketMessage.trim(),
-          time: 'هم‌اکنون',
-        },
-      ],
-    };
-
-    setTickets([newTicket, ...tickets]);
-    setIsCreatingTicket(false);
-    setNewTicketTitle('');
-    setNewTicketMessage('');
-    setSelectedTicket(newTicket);
+    try {
+      const { data } = await api.post('/me/tickets', { title: newTicketTitle.trim(), category: newTicketCategory, message: newTicketMessage.trim() });
+      const newTicket = toTicket(data);
+      setTickets((previous) => [newTicket, ...previous]);
+      setIsCreatingTicket(false); setNewTicketTitle(''); setNewTicketMessage(''); setSelectedTicket(newTicket);
+    } catch { useUIStore.getState().showToast('ثبت درخواست پشتیبانی ناموفق بود.'); }
   };
 
   const handleLogout = async () => {

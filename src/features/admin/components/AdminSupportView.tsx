@@ -1,29 +1,43 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Send } from 'lucide-react';
-import { useDataStore } from '../../../shared/stores/dataStore';
-import { toPersianDigits } from '../../../shared/utils/persianUtils';
+import api from '../../../shared/api/apiClient';
+import { useUIStore } from '../../../shared/stores/uiStore';
 
 export const AdminSupportView: React.FC = () => {
-  const { tickets, setTickets } = useDataStore();
-  const [selectedTicketId, setSelectedTicketId] = useState<string>(tickets[0]?.id || '');
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [selectedTicketId, setSelectedTicketId] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [adminReplyText, setAdminReplyText] = useState('');
   const [resolveOnReply, setResolveOnReply] = useState(false);
 
+  const toTicket = (row: any) => ({ ...row, id: String(row.id), userName: row.customer?.fullName || `کاربر ${row.customerId}`, userPhone: '', userRole: row.customer?.role || 'customer', createdAt: row.createdAt ? new Date(row.createdAt).toLocaleDateString('fa-IR') : '', messages: (Array.isArray(row.messages) ? row.messages : []).map((m: any) => ({ ...m, time: m.time || (m.createdAt ? new Date(m.createdAt).toLocaleString('fa-IR') : '') })) });
+  const { showToast } = useUIStore();
+  useEffect(() => {
+    let active = true;
+    api.get('/admin/support/tickets').then(({ data }) => {
+      if (!active) return;
+      const rows = Array.isArray(data) ? data.map(toTicket) : [];
+      setTickets(rows); setSelectedTicketId(rows[0]?.id || '');
+    }).catch(() => { if (active) showToast('دریافت تیکت‌های پشتیبانی ناموفق بود.'); });
+    return () => { active = false; };
+  }, [showToast]);
+
   const filteredTickets = tickets.filter(t => statusFilter === 'all' || t.status === statusFilter);
   const activeTicket = tickets.find(t => t.id === selectedTicketId) || filteredTickets[0];
 
-  const onReplyTicket = (id: string, text: string, status: any = 'in_progress') => {
-    setTickets(tickets.map(t => t.id === id ? {
-      ...t, status, lastReply: text,
-      messages: [...t.messages, { sender: 'admin', senderName: 'مدیر بویا', text, time: 'هم‌اکنون' }]
-    } : t));
+  const onReplyTicket = async (id: string, text: string, status: any = 'in_progress') => {
+    try {
+      const { data } = await api.post(`/admin/support/tickets/${id}/replies`, { text, status });
+      const updated = toTicket(data);
+      setTickets((current) => current.map((ticket) => ticket.id === id ? updated : ticket));
+      showToast('پاسخ تیکت ذخیره شد.');
+    } catch { showToast('ثبت پاسخ تیکت ناموفق بود.'); }
   };
 
-  const handleSendReply = (e: React.FormEvent) => {
+  const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminReplyText.trim() || !activeTicket) return;
-    onReplyTicket(activeTicket.id, adminReplyText.trim(), resolveOnReply ? 'resolved' : 'in_progress');
+    await onReplyTicket(activeTicket.id, adminReplyText.trim(), resolveOnReply ? 'resolved' : 'in_progress');
     setAdminReplyText(''); setResolveOnReply(false);
   };
 

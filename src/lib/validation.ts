@@ -40,6 +40,7 @@ export const userCreateSchema = z.object({
 });
 export const salonCreateSchema = z.object({
   name: z.string().min(2, 'نام سالن الزامی است (حداقل ۲ حرف)'), phone: z.string().min(4, 'شماره تماس سالن الزامی است'),
+  ownerName: z.string().min(2, 'نام مدیر سالن الزامی است'), ownerPhone: phoneSchema,
   province: z.string().min(1, 'استان الزامی است'), city: z.string().min(1, 'شهر الزامی است'),
   district: z.string().optional().default(''), address: z.string().min(1, 'آدرس دقیق سالن الزامی است'),
   isVip: z.boolean().optional().default(false), isMobileServiceActive: z.boolean().optional().default(false), coverImage: z.string().optional(),

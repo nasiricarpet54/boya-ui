@@ -3,6 +3,7 @@ import { bookings, salons, services, specialists, users } from './schema.ts';
 import { eq, sql, and } from 'drizzle-orm';
 import { normalizeToIsoDate } from '../shared/utils/dateIsoConverter.ts';
 import crypto from 'crypto';
+import { redactLogValue } from '../lib/piiRedactor.ts';
 
 export async function createBooking(data: {
   customerId: number;
@@ -94,7 +95,7 @@ export async function createBooking(data: {
 
     return fullBooking;
   } catch (error) {
-    console.error('Create booking failed:', error);
+    console.error('Create booking failed:', redactLogValue(error));
     throw error;
   }
 }

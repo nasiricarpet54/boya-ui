@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   X,
@@ -27,6 +27,8 @@ import { useModalStore } from '../../../shared/stores/modalStore';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useSalons } from '../../../shared/api/queries';
 import { RefreshCw } from 'lucide-react';
+import { useAuthStore } from '../../../shared/stores/authStore';
+import api from '../../../shared/api/apiClient';
 
 export const SalonsScreen: React.FC = () => {
   const searchParams = useSearch({ from: '/salons' }) as any;
@@ -51,8 +53,15 @@ export const SalonsScreen: React.FC = () => {
   const [onlyVipFilter, setOnlyVipFilter] = useState<boolean>(false);
   const [sortByOption, setSortByOption] = useState<'distance' | 'vip' | 'rating' | 'popular'>('distance');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
-
-  const savedSalonIds: any[] = [];
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const [savedSalonIds, setSavedSalonIds] = useState<number[]>([]);
+  useEffect(() => {
+    let active = true;
+    if (!isAuthenticated) { setSavedSalonIds([]); return; }
+    api.get('/me/favorites').then(({ data }) => { if (active) setSavedSalonIds(Array.isArray(data?.salonIds) ? data.salonIds.map(Number) : []); })
+      .catch(() => { if (active) setSavedSalonIds([]); });
+    return () => { active = false; };
+  }, [isAuthenticated]);
   const publishedSalons = useMemo(() => salons.filter((salon: any) =>
     salon?.isApproved !== false && salon?.isActive !== false && salon?.active !== false &&
     (salon?.publicationStatus == null || salon.publicationStatus === 'active') &&
@@ -108,8 +117,15 @@ export const SalonsScreen: React.FC = () => {
     return list;
   }, [publishedSalons, selectedProvince, selectedCity, selectedDistrict, customerLocation, maxDistanceKm, sortByDistance, onlyVipFilter, onlyMobileService, selectedServiceLine, searchQuery, sortByOption]);
 
-  const handleToggleWishlistSalon = (id: string) => {
-    showToast('وضعیت علاقه‌مندی به‌روز شد.');
+  const handleToggleWishlistSalon = async (id: string | number) => {
+    const salonId = Number(id);
+    const wasSaved = savedSalonIds.includes(salonId);
+    try {
+      if (wasSaved) await api.delete(`/me/favorites/${salonId}`);
+      else await api.post(`/me/favorites/${salonId}`);
+      setSavedSalonIds((ids) => wasSaved ? ids.filter((value) => value !== salonId) : [...ids, salonId]);
+      showToast(wasSaved ? 'از نشان‌شده‌ها حذف شد.' : 'به نشان‌شده‌ها اضافه شد.');
+    } catch { showToast(isAuthenticated ? 'ذخیره نشان‌شده نیازمند ورود است.' : 'برای نشان کردن سالن ابتدا وارد شوید.'); }
   };
 
   if (isLoading) {
@@ -249,7 +265,7 @@ export const SalonsScreen: React.FC = () => {
                 salon={salon}
                 distanceKm={distanceKm}
                 isWishlisted={savedSalonIds.includes(salon.id)}
-                onToggleWishlist={() => handleToggleWishlistSalon(salon.id)}
+                onToggleWishlist={() => void handleToggleWishlistSalon(salon.id)}
                 onBookNow={openBookingModal}
                 onViewSpecialistPortfolio={openPortfolioModal}
               />

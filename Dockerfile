@@ -2,9 +2,10 @@
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+RUN npm install --global npm@10.9.9
 
 # Install dependencies first (leveraging Docker layer caching)
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 # Copy source code and config files
@@ -20,10 +21,11 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+RUN npm install --global npm@10.9.9
 
 # Install production dependencies only
-COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev && npm install tsx --no-save
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --omit=dev
 
 # Copy built artifacts and server files from builder
 COPY --from=builder /app/dist ./dist

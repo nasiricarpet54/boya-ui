@@ -2,6 +2,7 @@ import { db } from './index.ts';
 import { users } from './schema.ts';
 import { eq } from 'drizzle-orm';
 import { normalizePhone } from '../shared/utils/persianUtils.ts';
+import { redactLogValue } from '../lib/piiRedactor.ts';
 
 const VALID_ROLES = [
   'customer',
@@ -49,7 +50,7 @@ export async function getOrCreateUser(uid: string, email: string, fullName: stri
 
     return result[0];
   } catch (error) {
-    console.error('Database operation failed (getOrCreateUser):', error);
+    console.error('Database operation failed (getOrCreateUser):', redactLogValue(error));
     throw new Error('Failed to synchronize user profile.', { cause: error });
   }
 }
@@ -88,7 +89,7 @@ export async function getOrCreateUserByPhone(rawPhone: string, fullName?: string
 
     return dbUser;
   } catch (error) {
-    console.error('Database operation failed (getOrCreateUserByPhone):', error);
+    console.error('Database operation failed (getOrCreateUserByPhone):', redactLogValue(error));
     throw new Error('خطا در ثبت یا بازیابی کاربر در پایگاه‌داده.', { cause: error });
   }
 }

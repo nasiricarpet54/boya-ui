@@ -131,20 +131,20 @@ export const SalonAdminDashboard: React.FC = () => {
   }, [salonsData, user]);
 
   const currentSalon = salonsData.find((s: any) => s.id.toString() === selectedSalonId) || salonsData[0] || {
-    id: 1,
+    id: '',
     name: 'سالن زیبایی',
     address: 'تهران',
     province: 'تهران',
     city: 'تهران',
     district: 'مرکز',
-    tenantId: 'tenant-1',
+    tenantId: 'unassigned',
     rating: 5,
     reviewsCount: 0,
     coverImage: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80',
     gallery: [],
     services: [],
     specialists: [],
-    isApproved: true,
+    isApproved: false,
     isVip: false,
   };
 
@@ -208,11 +208,7 @@ export const SalonAdminDashboard: React.FC = () => {
   const [scheduleSuccessMsg, setScheduleSuccessMsg] = useState(false);
 
   // Schedule blocks with specialistId tracking
-  const [scheduleBlocks, setScheduleBlocks] = useState([
-    { id: 'blk-1', specialistId: 'spec-1', date: 'شنبه ۵ آبان', time: '۱۲:۰۰ الی ۱۳:۰۰', reason: 'ضدعفونی تجهیزات و استراحت' },
-    { id: 'blk-2', specialistId: 'spec-2', date: 'یکشنبه ۶ آبان', time: '۱۴:۰۰ الی ۱۵:۰۰', reason: 'جلسه هماهنگی کادر تخصصی' },
-    { id: 'blk-3', specialistId: 'spec-nail-1', date: 'دوشنبه ۷ آبان', time: '۱۳:۰۰ الی ۱۴:۰۰', reason: 'وقت ناهار و استراحت' },
-  ]);
+  const [scheduleBlocks, setScheduleBlocks] = useState<any[]>([]);
   const [newBlockDate, setNewBlockDate] = useState('دوشنبه ۷ آبان');
   const [newBlockTime, setNewBlockTime] = useState('۱۳:۰۰ الی ۱۴:۰۰');
   const [newBlockReason, setNewBlockReason] = useState('استراحت / نوبت تلفنی');
@@ -230,6 +226,19 @@ export const SalonAdminDashboard: React.FC = () => {
 
   const isSpecialistRole = user?.role === 'salon_specialist' || user?.role === 'mobile_specialist' || user?.role === 'line_manager';
 
+  useEffect(() => {
+    const specialistId = Number(activeSpecialistView?.id);
+    if (!Number.isSafeInteger(specialistId) || specialistId < 1) return;
+    let active = true;
+    api.get(`/specialists/${specialistId}/schedule`).then(({ data }) => {
+      if (!active) return;
+      setSpecialistWorkingDays(Array.isArray(data.workingDays) ? data.workingDays : []);
+      setSpecialistWorkingHours(data.workingHours?.label || '۱۰:۰۰ الی ۱۹:۰۰');
+      setScheduleBlocks(Array.isArray(data.scheduleBlocks) ? data.scheduleBlocks : []);
+    }).catch(() => { if (active) { setSpecialistWorkingDays([]); setScheduleBlocks([]); } });
+    return () => { active = false; };
+  }, [activeSpecialistView?.id]);
+
   const isMobileSpecialist =
     user?.role === 'mobile_specialist' ||
     Boolean(activeSpecialistView?.isMobileSpecialist) ||
@@ -241,7 +250,7 @@ export const SalonAdminDashboard: React.FC = () => {
       if (user?.role === 'mobile_specialist') {
         // Independent Mobile Specialist: Completely standalone, NO salon affiliation
         const mobileSpecObj = {
-          id: user.id || 'mobile-spec',
+          id: `standalone-${user.id || 'profile'}`,
           user: user,
           name: user.fullName || 'متخصص سیار',
           avatarUrl: user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
@@ -440,22 +449,34 @@ export const SalonAdminDashboard: React.FC = () => {
   };
 
   // Handler: Add Schedule Block (STRICT REQUIREMENT #3: Specialist blocks own slots)
-  const handleAddBlock = (e: React.FormEvent) => {
+  const handleAddBlock = async (e: React.FormEvent) => {
     e.preventDefault();
+    const specialistId = Number(activeSpecialistView?.id);
+    if (!Number.isSafeInteger(specialistId) || specialistId < 1) { showToast('برای ثبت زمان مسدود، ابتدا متخصص معتبر را انتخاب کنید.'); return; }
     const newBlock = {
       id: `blk-${Date.now()}`,
-      specialistId: activeSpecialistView ? activeSpecialistView.id : 'general',
+      specialistId,
       date: newBlockDate,
       time: newBlockTime,
       reason: newBlockReason,
     };
-    setScheduleBlocks([...scheduleBlocks, newBlock]);
-    setNewBlockReason('استراحت / وقت پر شده');
+    const nextBlocks = [...scheduleBlocks, newBlock];
+    try {
+      const { data } = await api.put(`/specialists/${specialistId}/schedule`, { workingDays: specialistWorkingDays, workingHours: { label: specialistWorkingHours }, scheduleBlocks: nextBlocks });
+      setScheduleBlocks(data.scheduleBlocks || nextBlocks);
+      setNewBlockReason('استراحت / وقت پر شده');
+    } catch { showToast('ذخیره زمان مسدود در پایگاه‌داده ناموفق بود.'); }
   };
 
   // Handler: Delete Block
-  const handleDeleteBlock = (blockId: string) => {
-    setScheduleBlocks(scheduleBlocks.filter((b) => b.id !== blockId));
+  const handleDeleteBlock = async (blockId: string) => {
+    const specialistId = Number(activeSpecialistView?.id);
+    if (!Number.isSafeInteger(specialistId) || specialistId < 1) return;
+    const nextBlocks = scheduleBlocks.filter((b) => b.id !== blockId);
+    try {
+      const { data } = await api.put(`/specialists/${specialistId}/schedule`, { workingDays: specialistWorkingDays, workingHours: { label: specialistWorkingHours }, scheduleBlocks: nextBlocks });
+      setScheduleBlocks(data.scheduleBlocks || nextBlocks);
+    } catch { showToast('حذف زمان مسدود ناموفق بود.'); }
   };
 
   // Handler: Save Salon Name & Address
@@ -476,26 +497,16 @@ export const SalonAdminDashboard: React.FC = () => {
   };
 
   // Handler: Save specialist's working hours
-  const handleSaveWorkingHours = (e: React.FormEvent) => {
+  const handleSaveWorkingHours = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeSpecialistView) return;
-
-    const updated = specialistsList.map((s) =>
-      s.id === activeSpecialistView.id
-        ? { ...s, workingHours: specialistWorkingHours, workingDays: specialistWorkingDays }
-        : s
-    );
-    setSpecialistsList(updated);
-    setActiveSpecialistView({
-      ...activeSpecialistView,
-      workingHours: specialistWorkingHours,
-      workingDays: specialistWorkingDays,
-    });
-    if (currentSalon?.id) {
-      updateSalon(currentSalon.id, { specialists: updated });
-    }
-    setScheduleSuccessMsg(true);
-    setTimeout(() => setScheduleSuccessMsg(false), 3000);
+    const specialistId = Number(activeSpecialistView?.id);
+    if (!Number.isSafeInteger(specialistId) || specialistId < 1) { showToast('شناسه متخصص معتبر نیست.'); return; }
+    try {
+      const { data } = await api.put(`/specialists/${specialistId}/schedule`, { workingDays: specialistWorkingDays, workingHours: { label: specialistWorkingHours }, scheduleBlocks });
+      setScheduleBlocks(data.scheduleBlocks || []);
+      setScheduleSuccessMsg(true);
+      setTimeout(() => setScheduleSuccessMsg(false), 3000);
+    } catch { showToast('ذخیره برنامه کاری ناموفق بود.'); }
   };
 
   const handleToggleWorkingDay = (day: string) => {

@@ -124,7 +124,8 @@ boya-applet/
 | `npm run lint` | بررسی استاتیک کد و قوانین TypeScript / ESLint |
 | `npm run test` | اجرای تست‌های واحد و هوک‌ها با `Vitest` |
 | `npm run test:e2e` | اجرای تست‌های سراسری End-to-End با `Playwright` |
-| `npm run db:migrate:publication-lifecycle` | اجرای مهاجرت انتشار خدمات/متخصصین (نیازمند PostgreSQL CLI و `DATABASE_URL`) |
+| `npm run db:migrate` | اجرای migrationهای نسخه‌دار با قفل دیتابیس و تراکنش (نیازمند `DATABASE_URL`) |
+| `npm run db:rollback` | عمداً غیرفعال است؛ rollback مخرب تا زمان طراحی migration برگشتیِ داده‌نگهدار ارائه نمی‌شود |
 | `npm run storybook` | اجرای محیط مستندسازی بصری کامپوننت‌ها با `Storybook` |
 
 ---
@@ -141,11 +142,14 @@ boya-applet/
 
 ## 🛡 استقرار و تولید (Deployment)
 
-ابتدا از پایگاه‌داده مقصد نسخه پشتیبان بگیرید و `DATABASE_URL` را به همان پایگاه‌داده تنظیم کنید. این مهاجرت تغییری در پایگاه‌داده زمان ساخت ندارد و فقط با اجرای صریح فرمان زیر اجرا می‌شود؛ فرمان را تنها یک‌بار برای هر پایگاه‌داده مقصد و در پنجره انتشار اجرا کنید. برای محیط تازه، مهاجرت پایه `drizzle/0000_perfect_harrier.sql` را پیش از مهاجرت زیر اجرا کنید:
+پروژه از **npm و `package-lock.json`** استفاده می‌کند؛ نصب CI و Docker با `npm ci` انجام می‌شود. قبل از انتشار، `CORS_ALLOWED_ORIGINS` را به فهرست دقیق originهای فرانت‌اند تنظیم کنید (بدون wildcard). در production پیش‌فرض فقط `https://boya.bcshopir.ir` مجاز است.
+
+ابتدا از پایگاه‌داده مقصد نسخه پشتیبان بگیرید و `DATABASE_URL` را به همان پایگاه‌داده تنظیم کنید. migrationها هنگام بالا آمدن سرور خودکار اجرا نمی‌شوند؛ فرمان زیر را در مرحلهٔ کنترل‌شدهٔ release، پیش از بالا آوردن نسخه جدید اجرا کنید. runner با advisory lock، ledger و transaction migrationها را idempotent اجرا می‌کند و برای نصب موجود، migration پایه را دوباره اعمال نمی‌کند:
 
 ```bash
 export DATABASE_URL='postgresql://user:password@host:5432/boyadb'
-npm run db:migrate:publication-lifecycle
+npm ci
+npm run db:migrate
 ```
 
 پس از موفقیت مهاجرت:
@@ -155,7 +159,7 @@ npm run build
 npm start
 ```
 
-برای اجرای تست‌های واحد از `npm test` و برای آزمون مرورگر از `npm run test:e2e` استفاده کنید. آزمون‌های امنیتی فعلی منطق فیلتر کوئری و اعتبارسنجی رابطه‌های رزرو را با mock بررسی می‌کنند؛ آزمون‌های endpoint یکپارچه، CRUD پایدار، چرخه تایید تا نمایش عمومی و جداسازی واقعی tenant به پایگاه PostgreSQL آزمایشی و test harness سرور نیاز دارند و در این مخزن فعلاً اجرا نمی‌شوند.
+برای اجرای تست‌های واحد از `npm test` و برای آزمون مرورگر از `npm run test:e2e` استفاده کنید. تغییرات schema شامل favorites، support tickets، specialist schedules/invitations و ایندکس نوبت‌های فعال است. rollback خودکار و عمومی عمداً در دسترس نیست، چون حذف این جدول‌ها یا ستون‌ها می‌تواند داده‌های مشتری را نابود کند؛ در صورت نیاز به بازگشت نسخه، ابتدا نسخه قبلی برنامه را اجرا کنید و migration جبرانیِ داده‌نگهدار را با backup و بازبینی جداگانه بسازید. آزمون endpoint یکپارچه با PostgreSQL آزمایشی همچنان باید در CI افزوده شود.
 
 ---
 

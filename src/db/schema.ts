@@ -1,5 +1,5 @@
-import { pgTable, serial, text, integer, timestamp, boolean, pgEnum, decimal, unique } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { pgTable, serial, text, integer, timestamp, boolean, pgEnum, decimal, unique, uniqueIndex } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
 
 // Enums
 export const userRoleEnum = pgEnum('user_role', [
@@ -71,6 +71,7 @@ export const salons = pgTable('salons', {
   isMobileServiceActive: boolean('is_mobile_service_active').default(false).notNull(),
   coverImage: text('cover_image'),
   gallery: text('gallery'),
+  licenseDocUrl: text('license_doc_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -83,6 +84,7 @@ export const services = pgTable('services', {
   price: decimal('price', { precision: 12, scale: 0 }).notNull(), // In Toman
   durationMinutes: integer('duration_minutes').notNull(),
   isMobileAvailable: boolean('is_mobile_available').default(false).notNull(),
+  publicationStatus: publicationStatusEnum('publication_status').default('pending').notNull(),
   imageUrl: text('image_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -95,6 +97,7 @@ export const specialists = pgTable('specialists', {
   bio: text('bio'),
   experienceYears: integer('experience_years').default(0).notNull(),
   isVerified: boolean('is_verified').default(false).notNull(),
+  publicationStatus: publicationStatusEnum('publication_status').default('pending').notNull(),
   isMobileActive: boolean('is_mobile_active').default(false).notNull(),
   avatarUrl: text('avatar_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -118,8 +121,46 @@ export const bookings = pgTable('bookings', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   // Database-level lock for double booking prevention
-  uniqueSpecialistSlot: unique('unique_specialist_slot').on(table.specialistId, table.date, table.time),
+  uniqueSpecialistSlot: uniqueIndex('unique_specialist_slot_active').on(table.specialistId, table.date, table.time).where(sql`${table.status} <> 'cancelled'`),
 }));
+
+export const customerFavorites = pgTable('customer_favorites', {
+  id: serial('id').primaryKey(),
+  customerId: integer('customer_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  salonId: integer('salon_id').references(() => salons.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({ uniqueCustomerSalon: unique('customer_favorites_customer_salon_uq').on(table.customerId, table.salonId) }));
+
+export const supportTickets = pgTable('support_tickets', {
+  id: serial('id').primaryKey(),
+  customerId: integer('customer_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  title: text('title').notNull(),
+  category: text('category').notNull(),
+  status: text('status').default('open').notNull(),
+  messages: text('messages').default('[]').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const specialistSchedules = pgTable('specialist_schedules', {
+  id: serial('id').primaryKey(),
+  specialistId: integer('specialist_id').references(() => specialists.id, { onDelete: 'cascade' }).notNull().unique(),
+  workingDays: text('working_days').default('[]').notNull(),
+  workingHours: text('working_hours').default('{}').notNull(),
+  blockedSlots: text('blocked_slots').default('[]').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const salonInvitations = pgTable('salon_invitations', {
+  id: serial('id').primaryKey(),
+  salonId: integer('salon_id').references(() => salons.id, { onDelete: 'cascade' }).notNull(),
+  phone: text('phone').notNull(),
+  ownerName: text('owner_name').notNull(),
+  invitedBy: integer('invited_by').references(() => users.id),
+  expiresAt: timestamp('expires_at').notNull(),
+  acceptedAt: timestamp('accepted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
 
 export const transactions = pgTable('transactions', {
   id: serial('id').primaryKey(),

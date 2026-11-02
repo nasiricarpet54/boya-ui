@@ -15,8 +15,8 @@ import { ZodError } from 'zod';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { requireAuth, requireRole, type AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
-import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems } from './src/db/schema.ts';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems, customerFavorites, supportTickets, specialistSchedules, salonInvitations } from './src/db/schema.ts';
+import { eq, desc, and, sql, isNull, gt } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
 import { normalizeToIsoDate } from './src/shared/utils/dateIsoConverter.ts';
@@ -25,7 +25,9 @@ import { generateJwtToken } from './src/lib/jwt.ts';
 import { seedDatabase } from './src/db/seed.ts';
 import { logSecurityAction } from './src/db/audit.ts';
 import * as schemas from './src/lib/validation.ts';
-import { redactUserPII, processBookingData } from './src/lib/piiRedactor.ts';
+import { redactUserPII, processBookingData, redactLogValue } from './src/lib/piiRedactor.ts';
+import { createCorsAllowlist, isCorsOriginAllowed } from './src/lib/corsPolicy.ts';
+import { isAllowedBookingTransition } from './src/lib/bookingTransitions.ts';
 
 dotenv.config();
 
@@ -84,10 +86,17 @@ async function createServer() {
     }));
   }
 
-  // P3-17: Unified CORS setup
+  // Credentialed CORS must only reflect explicitly trusted application origins.
+  const allowedOrigins = createCorsAllowlist(process.env.CORS_ALLOWED_ORIGINS, isProd);
   app.use(cors({
-    origin: true, // Allow all for now, but restricts in production if needed
+    origin(origin, callback) {
+      if (isCorsOriginAllowed(origin, allowedOrigins)) return callback(null, true);
+      return callback(null, false);
+    },
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
+    maxAge: 600,
   }));
 
   app.use(express.json({ limit: '2mb' }));
@@ -174,14 +183,10 @@ async function createServer() {
       const otpCode = crypto.randomInt(10000, 99999).toString();
       otpStore.set(phone, { code: otpCode, expiresAt: now + 5 * 60 * 1000, attempts: 0 });
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`📲 [OTP LOG] ${phone} -> ${otpCode}`);
-      }
-
       try {
         await sendMeliPayamakSms(phone, `کد تایید بویا: ${otpCode}`);
-      } catch (e) {
-        console.error('[SMS FAIL]', { phone, error: e });
+      } catch {
+        console.error('[SMS FAIL] provider request failed');
         return res.status(502).json({ error: 'خطا در ارسال پیامک.' });
       }
 
@@ -211,6 +216,9 @@ async function createServer() {
 
       otpStore.delete(phone);
 
+      const invitation = await db.select().from(salonInvitations).where(and(
+        eq(salonInvitations.phone, phone), isNull(salonInvitations.acceptedAt), gt(salonInvitations.expiresAt, new Date()),
+      )).orderBy(desc(salonInvitations.createdAt)).limit(1).then(r => r[0]);
       let dbUser = await db.select().from(users).where(eq(users.phone, phone)).limit(1).then(r => r[0]);
 
       if (dbUser?.status === 'suspended') {
@@ -218,14 +226,21 @@ async function createServer() {
         return res.status(403).json({ error: 'حساب کاربری مسدود است.' });
       }
 
-      if (!dbUser) {
-        const [newUser] = await db.insert(users).values({
-          uid: `phone_${phone}`,
-          phone,
-          fullName: fullName || `کاربر ${phone.slice(-4)}`,
-          email: `${phone}@boya.ir`,
-          role: 'customer',
-        }).returning();
+      if (invitation) {
+        if (dbUser && !(dbUser.role === 'customer' || (dbUser.role === 'salon_admin' && Number(dbUser.salonId) === invitation.salonId))) {
+          return res.status(409).json({ error: 'این شماره به حساب مدیریتی دیگری متصل است.' });
+        }
+        if (dbUser?.role === 'customer') {
+          [dbUser] = await db.update(users).set({ role: 'salon_admin', salonId: invitation.salonId, fullName: invitation.ownerName }).where(eq(users.id, dbUser.id)).returning();
+        } else if (!dbUser) {
+          [dbUser] = await db.insert(users).values({
+            uid: `phone_${phone}`, phone, fullName: invitation.ownerName || fullName || `کاربر ${phone.slice(-4)}`,
+            email: `${phone}@boya.ir`, role: 'salon_admin', salonId: invitation.salonId,
+          }).returning();
+        }
+        await db.update(salonInvitations).set({ acceptedAt: new Date() }).where(eq(salonInvitations.id, invitation.id));
+      } else if (!dbUser) {
+        const [newUser] = await db.insert(users).values({ uid: `phone_${phone}`, phone, fullName: fullName || `کاربر ${phone.slice(-4)}`, email: `${phone}@boya.ir`, role: 'customer' }).returning();
         dbUser = newUser;
       }
 
@@ -299,7 +314,7 @@ async function createServer() {
 
       res.status(201).json(item);
     } catch (err) {
-      console.error('[PORTFOLIO CREATE ERROR]', err);
+      console.error('[PORTFOLIO CREATE ERROR]', redactLogValue(err));
       res.status(500).json({ error: 'خطا در ثبت نمونه کار.' });
     }
   });
@@ -334,23 +349,28 @@ async function createServer() {
         where: req.dbUser.role === 'super_admin' ? undefined : eq(salons.id, Number(salonId)),
         with: { services: true, specialists: { with: { user: true, portfolio: true } } },
       });
-      res.json(rows.map((salon) => ({
-        ...salon,
-        services: salon.services.map((service) => ({ ...service, price: Number(service.price) || 0 })),
-        specialists: salon.specialists.map((specialist) => ({
-          ...specialist,
-          name: specialist.user?.fullName || 'متخصص زیبایی',
-          phone: specialist.user?.phone || '',
-          role: 'متخصص زیبایی',
-          specialistType: specialist.user?.role,
-          verified: specialist.isVerified,
-          isMobileSpecialist: specialist.isMobileActive,
-          avatar: specialist.avatarUrl,
-          user: specialist.user ? { id: specialist.user.id, fullName: specialist.user.fullName, phone: specialist.user.phone, role: specialist.user.role, status: specialist.user.status } : null,
-        })),
-      })));
+      const canViewLicense = ['super_admin', 'salon_admin'].includes(req.dbUser.role);
+      res.json(rows.map((salon) => {
+        const { licenseDocUrl, ...safeSalon } = salon;
+        return {
+          ...safeSalon,
+          ...(canViewLicense ? { licenseDocUrl } : {}),
+          services: salon.services.map((service) => ({ ...service, price: Number(service.price) || 0 })),
+          specialists: salon.specialists.map((specialist) => {
+            const mayViewPhone = canViewLicense || specialist.userId === req.dbUser.id;
+            return {
+              ...specialist,
+              name: specialist.user?.fullName || 'متخصص زیبایی',
+              ...(mayViewPhone ? { phone: specialist.user?.phone || '' } : {}),
+              role: 'متخصص زیبایی', specialistType: specialist.user?.role,
+              verified: specialist.isVerified, isMobileSpecialist: specialist.isMobileActive, avatar: specialist.avatarUrl,
+              user: specialist.user ? { id: specialist.user.id, fullName: specialist.user.fullName, ...(mayViewPhone ? { phone: specialist.user.phone } : {}), role: specialist.user.role, status: specialist.user.status } : null,
+            };
+          }),
+        };
+      }));
     } catch (err) {
-      console.error('[API MANAGED SALONS ERROR]', err);
+      console.error('[API MANAGED SALONS ERROR]', redactLogValue(err));
       res.status(500).json({ error: 'خطا در دریافت اطلاعات مدیریتی سالن.' });
     }
   });
@@ -384,7 +404,7 @@ async function createServer() {
         })),
       })));
     } catch (err) {
-      console.error('[API SALONS ERROR]', err);
+      console.error('[API SALONS ERROR]', redactLogValue(err));
       res.status(500).json({ error: 'خطا در دریافت لیست.' });
     }
   });
@@ -421,14 +441,22 @@ async function createServer() {
     try {
       const data = schemas.salonCreateSchema.parse(req.body);
       const tenantId = `tenant-${crypto.randomInt(1000, 9999)}-${Date.now().toString().slice(-4)}`;
-      
-      const [newSalon] = await db.insert(salons).values({
-        ...data,
-        phone: normalizePhone(data.phone),
-        tenantId,
-        district: data.district || '',
-        isApproved: false,
-      }).returning();
+      const { ownerName, ownerPhone, ...salonData } = data;
+      const invitePhone = normalizePhone(ownerPhone);
+      if (!invitePhone) return res.status(400).json({ error: 'شماره همراه مدیر نامعتبر است.' });
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const created = await db.transaction(async (tx) => {
+        const [newSalon] = await tx.insert(salons).values({
+          ...salonData, phone: normalizePhone(data.phone), tenantId, district: data.district || '', isApproved: false,
+        }).returning();
+        const [invitation] = await tx.insert(salonInvitations).values({
+          salonId: newSalon.id, phone: invitePhone, ownerName: ownerName.trim(),
+          invitedBy: req.dbUser.id, expiresAt,
+        }).returning({ id: salonInvitations.id, phone: salonInvitations.phone, expiresAt: salonInvitations.expiresAt });
+        return { newSalon, invitation };
+      });
+      const { newSalon, invitation } = created;
+      const inviteSms = await sendMeliPayamakSms(invitePhone, `برای مدیریت سالن ${newSalon.name} دعوت شده‌اید. با شماره ${invitePhone} وارد بویا شوید و کد پیامکی را تأیید کنید. اعتبار دعوت تا ${expiresAt.toLocaleDateString('fa-IR')} است.`);
 
       res.status(201).json({
         ...newSalon,
@@ -442,9 +470,10 @@ async function createServer() {
           : (newSalon.coverImage ? [newSalon.coverImage] : []),
         services: [],
         specialists: [],
+        invitation: { ...invitation, delivery: inviteSms.mode === 'live_api' && inviteSms.success ? 'sent' : 'manual_required' },
       });
     } catch (err: any) {
-      console.error('[POST SALONS ERROR]', err);
+      console.error('[POST SALONS ERROR]', redactLogValue(err));
       if (err instanceof ZodError) {
         return res.status(400).json({ error: err.issues[0]?.message || 'اطلاعات سالن نامعتبر است.' });
       }
@@ -638,10 +667,99 @@ async function createServer() {
       if (patch.role && patch.role !== oldRole) await logSecurityAction({ actorId: req.dbUser.id, targetId: id, action: 'ROLE_CHANGE', details: { from: oldRole, to: patch.role }, ipAddress: req.ip });
       if (patch.status && patch.status !== oldStatus) await logSecurityAction({ actorId: req.dbUser.id, targetId: id, action: 'SUSPENSION', details: { from: oldStatus, to: patch.status }, ipAddress: req.ip });
 
-      res.json({ success: true, user: updated });
+      res.json({ success: true, user: redactUserPII(updated, req.dbUser) });
     } catch (err) {
       res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ویرایش.' });
     }
+  });
+
+  // Customer favorites: the server-side user id is always authoritative.
+  app.get('/api/me/favorites', requireAuth, async (req: AuthRequest, res) => {
+    const rows = await db.select({ salonId: customerFavorites.salonId }).from(customerFavorites).where(eq(customerFavorites.customerId, req.dbUser.id));
+    res.json({ salonIds: rows.map((row) => row.salonId) });
+  });
+  app.post('/api/me/favorites/:salonId', requireAuth, async (req: AuthRequest, res) => {
+    const salonId = Number(req.params.salonId);
+    if (!Number.isSafeInteger(salonId) || salonId < 1) return res.status(400).json({ error: 'شناسه سالن نامعتبر است.' });
+    const salon = await db.select({ id: salons.id }).from(salons).where(and(eq(salons.id, salonId), eq(salons.isApproved, true))).limit(1).then((rows) => rows[0]);
+    if (!salon) return res.status(404).json({ error: 'سالن منتشرشده یافت نشد.' });
+    await db.insert(customerFavorites).values({ customerId: req.dbUser.id, salonId }).onConflictDoNothing();
+    res.status(201).json({ success: true, salonId });
+  });
+  app.delete('/api/me/favorites/:salonId', requireAuth, async (req: AuthRequest, res) => {
+    const salonId = Number(req.params.salonId);
+    if (!Number.isSafeInteger(salonId) || salonId < 1) return res.status(400).json({ error: 'شناسه سالن نامعتبر است.' });
+    await db.delete(customerFavorites).where(and(eq(customerFavorites.customerId, req.dbUser.id), eq(customerFavorites.salonId, salonId)));
+    res.json({ success: true });
+  });
+
+  // Tickets are private to their creator; IDs cannot be used to read another user's support conversation.
+  app.get('/api/me/tickets', requireAuth, async (req: AuthRequest, res) => {
+    const rows = await db.select().from(supportTickets).where(eq(supportTickets.customerId, req.dbUser.id)).orderBy(desc(supportTickets.updatedAt));
+    res.json(rows.map((row) => ({ ...row, messages: JSON.parse(row.messages || '[]') })));
+  });
+  app.post('/api/me/tickets', requireAuth, async (req: AuthRequest, res) => {
+    const title = typeof req.body.title === 'string' ? req.body.title.trim().slice(0, 160) : '';
+    const message = typeof req.body.message === 'string' ? req.body.message.trim().slice(0, 5000) : '';
+    const category = typeof req.body.category === 'string' ? req.body.category : 'booking';
+    if (!title || !message || !['booking', 'salon', 'specialist', 'account'].includes(category)) return res.status(400).json({ error: 'عنوان، متن و دسته‌بندی معتبر لازم است.' });
+    const initialMessages = [{ sender: 'user', senderName: req.dbUser.fullName, text: message, createdAt: new Date().toISOString() }];
+    const [row] = await db.insert(supportTickets).values({ customerId: req.dbUser.id, title, category, messages: JSON.stringify(initialMessages) }).returning();
+    res.status(201).json({ ...row, messages: initialMessages });
+  });
+  app.post('/api/me/tickets/:id/replies', requireAuth, async (req: AuthRequest, res) => {
+    const id = Number(req.params.id);
+    const text = typeof req.body.text === 'string' ? req.body.text.trim().slice(0, 5000) : '';
+    if (!Number.isSafeInteger(id) || id < 1 || !text) return res.status(400).json({ error: 'شناسه یا متن پاسخ نامعتبر است.' });
+    const ticket = await db.select().from(supportTickets).where(and(eq(supportTickets.id, id), eq(supportTickets.customerId, req.dbUser.id))).limit(1).then((rows) => rows[0]);
+    if (!ticket) return res.status(404).json({ error: 'درخواست پشتیبانی یافت نشد.' });
+    const messages = JSON.parse(ticket.messages || '[]');
+    messages.push({ sender: 'user', senderName: req.dbUser.fullName, text, createdAt: new Date().toISOString() });
+    const [updated] = await db.update(supportTickets).set({ messages: JSON.stringify(messages), status: 'in_progress', updatedAt: new Date() }).where(eq(supportTickets.id, id)).returning();
+    res.json({ ...updated, messages });
+  });
+  app.get('/api/admin/support/tickets', requireAuth, requireRole(['super_admin']), async (_req, res) => {
+    const rows = await db.select().from(supportTickets).orderBy(desc(supportTickets.updatedAt));
+    const customers = await db.select({ id: users.id, fullName: users.fullName, role: users.role }).from(users);
+    const customerById = new Map(customers.map((customer) => [customer.id, customer]));
+    res.json(rows.map((row) => ({ ...row, customer: customerById.get(row.customerId) || null, messages: JSON.parse(row.messages || '[]') })));
+  });
+  app.post('/api/admin/support/tickets/:id/replies', requireAuth, requireRole(['super_admin']), async (req, res) => {
+    const id = Number(req.params.id);
+    const text = typeof req.body.text === 'string' ? req.body.text.trim().slice(0, 5000) : '';
+    const status = req.body.status === 'resolved' ? 'resolved' : 'in_progress';
+    if (!Number.isSafeInteger(id) || id < 1 || !text) return res.status(400).json({ error: 'شناسه یا متن پاسخ نامعتبر است.' });
+    const ticket = await db.select().from(supportTickets).where(eq(supportTickets.id, id)).limit(1).then((rows) => rows[0]);
+    if (!ticket) return res.status(404).json({ error: 'درخواست پشتیبانی یافت نشد.' });
+    const messages = JSON.parse(ticket.messages || '[]');
+    messages.push({ sender: 'admin', senderName: 'مدیر بویا', text, createdAt: new Date().toISOString() });
+    const [updated] = await db.update(supportTickets).set({ messages: JSON.stringify(messages), status, updatedAt: new Date() }).where(eq(supportTickets.id, id)).returning();
+    res.json({ ...updated, messages });
+  });
+
+  // Specialist working-hours are persisted on the specialist profile, not sent as salon fields.
+  app.get('/api/specialists/:id/schedule', requireAuth, async (req: AuthRequest, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: 'شناسه متخصص نامعتبر است.' });
+    const spec = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1).then((rows) => rows[0]);
+    if (!spec) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+    const allowed = req.dbUser.role === 'super_admin' || (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) === spec.salonId) || spec.userId === req.dbUser.id;
+    if (!allowed) return res.status(403).json({ error: 'عدم دسترسی به برنامه کاری متخصص.' });
+    const schedule = await db.select().from(specialistSchedules).where(eq(specialistSchedules.specialistId, id)).limit(1).then((rows) => rows[0]);
+    res.json({ specialistId: id, workingDays: schedule ? JSON.parse(schedule.workingDays) : [], workingHours: schedule ? JSON.parse(schedule.workingHours) : {}, scheduleBlocks: schedule ? JSON.parse(schedule.blockedSlots) : [] });
+  });
+  app.put('/api/specialists/:id/schedule', requireAuth, async (req: AuthRequest, res) => {
+    const id = Number(req.params.id);
+    const spec = Number.isSafeInteger(id) ? await db.select().from(specialists).where(eq(specialists.id, id)).limit(1).then((rows) => rows[0]) : null;
+    if (!spec) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+    const allowed = req.dbUser.role === 'super_admin' || (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) === spec.salonId) || spec.userId === req.dbUser.id;
+    if (!allowed) return res.status(403).json({ error: 'عدم دسترسی به برنامه کاری متخصص.' });
+    const days = req.body.workingDays;
+    const hours = req.body.workingHours;
+    const blocked = req.body.scheduleBlocks ?? [];
+    if (!Array.isArray(days) || days.some((day) => typeof day !== 'string' || day.length > 24) || !hours || typeof hours !== 'object' || Array.isArray(hours) || !Array.isArray(blocked) || blocked.length > 200 || blocked.some((block: any) => !block || typeof block.id !== 'string' || typeof block.date !== 'string' || typeof block.time !== 'string' || typeof block.reason !== 'string' || block.date.length > 64 || block.time.length > 64 || block.reason.length > 240)) return res.status(400).json({ error: 'برنامه کاری نامعتبر است.' });
+    const [schedule] = await db.insert(specialistSchedules).values({ specialistId: id, workingDays: JSON.stringify(days), workingHours: JSON.stringify(hours), blockedSlots: JSON.stringify(blocked), updatedAt: new Date() }).onConflictDoUpdate({ target: specialistSchedules.specialistId, set: { workingDays: JSON.stringify(days), workingHours: JSON.stringify(hours), blockedSlots: JSON.stringify(blocked), updatedAt: new Date() } }).returning();
+    res.json({ specialistId: id, workingDays: JSON.parse(schedule.workingDays), workingHours: JSON.parse(schedule.workingHours), scheduleBlocks: JSON.parse(schedule.blockedSlots) });
   });
 
   // --- Bookings ---
@@ -671,7 +789,7 @@ async function createServer() {
 
       const booking = await createBooking({ ...data, customerId: req.dbUser.id });
       await sendMeliPayamakSms(req.dbUser.phone, `نوبت ثبت شد. کد رهگیری: ${booking?.trackingCode}`).catch(() => {});
-      res.status(201).json(booking);
+      res.status(201).json(processBookingData(booking, req.dbUser));
     } catch (err: any) {
       if (err.code === '23505' || String(err.message).includes('unique_specialist_slot')) {
         return res.status(409).json({ error: 'این سانس توسط کاربر دیگری در لحظه قبل رزرو شد (تضاد سانس).' });
@@ -693,13 +811,14 @@ async function createServer() {
   app.patch('/api/bookings/:id/status', requireAuth, async (req: AuthRequest, res) => {
     try {
       const id = Number(req.params.id);
-      const { status } = req.body;
+      if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ error: 'شناسه نوبت نامعتبر است.' });
+      const { status } = schemas.bookingStatusUpdateSchema.parse(req.body);
       const booking = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id)).limit(1).then(r => r[0]);
       if (!booking) return res.status(404).json({ error: 'نوبت یافت نشد.' });
 
       const isSuper = req.dbUser.role === 'super_admin';
       const isSalonAdmin = req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) === booking.salonId;
-      const isCustomer = req.dbUser.id === booking.customerId && status === 'cancelled';
+      const isCustomer = req.dbUser.id === booking.customerId && status === 'cancelled' && ['pending', 'confirmed'].includes(booking.status);
       const isSpecialist = ['salon_specialist', 'mobile_specialist'].includes(req.dbUser.role);
       
       let specialistMatches = false;
@@ -711,12 +830,14 @@ async function createServer() {
       if (!isSuper && !isSalonAdmin && !isCustomer && !specialistMatches) {
         return res.status(403).json({ error: 'عدم دسترسی به تغییر وضعیت این نوبت.' });
       }
+      if (!isAllowedBookingTransition(booking.status, status)) return res.status(409).json({ error: 'تغییر وضعیت در این مرحله مجاز نیست.' });
 
       const updated = await updateBookingStatus(id, status);
-      res.json(updated);
+      res.json(processBookingData(updated, req.dbUser));
     } catch (err: any) {
-      console.error('[BOOKING STATUS PATCH ERROR]', err);
-      res.status(500).json({ error: err.message || 'خطا در به‌روزرسانی وضعیت نوبت.' });
+      if (err instanceof ZodError) return res.status(400).json({ error: 'وضعیت نوبت نامعتبر است.' });
+      console.error('[BOOKING STATUS PATCH ERROR]', redactLogValue(err));
+      res.status(500).json({ error: 'خطا در به‌روزرسانی وضعیت نوبت.' });
     }
   });
 
@@ -775,7 +896,7 @@ async function createServer() {
 
   // Global Error Handler
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('[SERVER ERROR]', err);
+    console.error('[SERVER ERROR]', redactLogValue(err));
     res.status(500).json({ error: 'خطای داخلی سرور.' });
   });
 
