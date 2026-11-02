@@ -20,6 +20,11 @@ import { seedDatabase } from './src/db/seed.ts';
 
 dotenv.config();
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('FATAL ERROR: JWT_SECRET is not defined in environment variables.');
+  process.exit(1);
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
@@ -253,7 +258,7 @@ async function createServer() {
         path: '/',
       });
 
-      res.json({ token, user: dbUser });
+      res.json({ user: dbUser });
     } catch (err) {
       console.error('Error in /api/auth/verify-otp:', err);
       res.status(500).json({ error: 'خطایی در ثبت یا ورود کاربر رخ داد.' });
@@ -277,49 +282,69 @@ async function createServer() {
   });
 
   // --- Salons CRUD ---
+  // --- Salons CRUD ---
   // Public GET for browsing salons
-  app.get('/api/salons', (req, res) => {
-    res.json(serverData.salons);
+  app.get('/api/salons', async (req, res) => {
+    try {
+      const allSalons = await db.select().from(salons);
+      res.json(allSalons);
+    } catch (err) {
+      console.error('Error fetching salons:', err);
+      res.status(500).json({ error: 'خطا در دریافت لیست سالن‌ها.' });
+    }
   });
 
   // Protected: Only super_admin or salon_admin can create salons
-  app.post('/api/salons', requireAuth, requireRole(['super_admin', 'salon_admin']), (req: AuthRequest, res) => {
+  app.post('/api/salons', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
-      const newSalon = req.body;
-      if (!newSalon.id) {
-        newSalon.id = `salon-${Date.now()}`;
-      }
+      const newSalonData = req.body;
+      
+      // Enforce tenantId for salon_admin
+      let tenantId = newSalonData.tenantId;
       if (req.dbUser.role === 'salon_admin' && req.dbUser.salonId) {
-        newSalon.tenantId = req.dbUser.salonId;
+        const salon = await db.select().from(salons).where(eq(salons.id, Number(req.dbUser.salonId))).limit(1).then(r => r[0]);
+        if (salon) tenantId = salon.tenantId;
       }
-      serverData.salons = [newSalon, ...serverData.salons];
-      saveServerData(serverData);
-      res.status(201).json(newSalon);
+      
+      const [inserted] = await db.insert(salons).values({
+        tenantId: tenantId || `tnt-${Date.now()}`,
+        name: newSalonData.name,
+        address: newSalonData.address || 'تهران',
+        phone: newSalonData.phone || '02100000000',
+        province: newSalonData.province || 'تهران',
+        city: newSalonData.city || 'تهران',
+        district: newSalonData.district || 'مرکز',
+        isApproved: true,
+      }).returning();
+      
+      res.status(201).json(inserted);
     } catch (err) {
+      console.error('Error creating salon:', err);
       res.status(500).json({ error: 'خطا در ثبت سالن جدید روی سرور.' });
     }
   });
 
   // Protected: salon_admin can only edit their own salonId, super_admin can edit any
-  app.patch('/api/salons/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), (req: AuthRequest, res) => {
+  app.patch('/api/salons/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
-      const salonId = req.params.id;
+      const salonId = Number(req.params.id);
+      if (isNaN(salonId)) return res.status(400).json({ error: 'شناسه نامعتبر.' });
+
+      const targetSalon = await db.select().from(salons).where(eq(salons.id, salonId)).limit(1).then(r => r[0]);
+      if (!targetSalon) return res.status(404).json({ error: 'سالن یافت نشد.' });
+
       if (req.dbUser.role === 'salon_admin') {
         const userSalonId = req.dbUser.salonId ? String(req.dbUser.salonId) : null;
-        const targetSalon = serverData.salons.find(s => String(s.id) === String(salonId) || String(s.tenantId) === String(salonId));
-        const targetSalonId = targetSalon ? String(targetSalon.id) : String(salonId);
-        const targetTenantId = targetSalon ? String(targetSalon.tenantId) : null;
-
-        if (!userSalonId || (userSalonId !== targetSalonId && userSalonId !== targetTenantId)) {
+        if (!userSalonId || (String(targetSalon.id) !== userSalonId && String(targetSalon.tenantId) !== userSalonId)) {
           return res.status(403).json({ error: 'عدم دسترسی: شما تنها مجاز به ویرایش سالن خود می‌باشید.' });
         }
       }
 
       const patch = req.body;
-      serverData.salons = serverData.salons.map((s) => (String(s.id) === String(salonId) ? { ...s, ...patch } : s));
-      saveServerData(serverData);
-      res.json({ success: true, salonId });
+      const [updated] = await db.update(salons).set(patch).where(eq(salons.id, salonId)).returning();
+      res.json({ success: true, salon: updated });
     } catch (err) {
+      console.error('Error updating salon:', err);
       res.status(500).json({ error: 'خطا در ویرایش اطلاعات سالن.' });
     }
   });
@@ -770,7 +795,9 @@ async function createServer() {
                            ((bookingSalonId !== null && userSalonId === bookingSalonId) || 
                             (bookingTenantId !== null && userSalonId === bookingTenantId));
 
-      const isSpecialist = (req.dbUser.role === 'salon_specialist' || req.dbUser.role === 'mobile_specialist') && existingBooking.specialist?.userId === req.dbUser.id;
+      const isSpecialist = (req.dbUser.role === 'salon_specialist' || req.dbUser.role === 'mobile_specialist') && 
+                           existingBooking.specialist?.userId === req.dbUser.id &&
+                           (userSalonId !== null && String(existingBooking.salonId) === userSalonId);
       const isCustomer = req.dbUser.role === 'customer' && existingBooking.customerId === req.dbUser.id;
 
       if (!isSuperAdmin && !isSalonAdmin && !isSpecialist && !isCustomer) {

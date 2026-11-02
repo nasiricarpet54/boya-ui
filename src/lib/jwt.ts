@@ -1,6 +1,11 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'boya-beauty-jwt-secret-platform-2026-key-secure';
+const isProd = process.env.NODE_ENV === 'production';
+const JWT_SECRET = process.env.JWT_SECRET || (isProd ? '' : 'boya-beauty-jwt-secret-platform-2026-key-secure');
+
+if (isProd && !JWT_SECRET) {
+  throw new Error('JWT_SECRET is required in production mode.');
+}
 const JWT_EXPIRES_IN = '30d';
 
 export interface JwtUserPayload {

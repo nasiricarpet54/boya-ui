@@ -144,7 +144,7 @@ export const useAuthStore = create<AuthState>()(
           if (!response.ok) {
             throw new Error(data.error || 'کد تایید معتبر نمی‌باشد.');
           }
-          get().setAuth(data.user, data.token);
+          get().setAuth(data.user, data.token || '');
         } catch (error) {
           console.error('Phone login failed:', error);
           get().clearAuth();

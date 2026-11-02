@@ -20,7 +20,7 @@ export const createPool = () => {
       user: process.env.SQL_USER || 'postgres',
       password: process.env.SQL_PASSWORD || 'postgres',
       database: process.env.SQL_DB_NAME || 'boyadb',
-      port: Number(process.env.SQL_PORT) || 5432,
+      port: (process.env.SQL_PORT && !isNaN(Number(process.env.SQL_PORT))) ? Number(process.env.SQL_PORT) : 5432,
       max: 10,
       connectionTimeoutMillis: 15000,
     });
