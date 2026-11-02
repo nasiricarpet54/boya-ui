@@ -19,6 +19,7 @@ import { users, salons, bookings as bookingsTable, revokedTokens, notifications,
 import { eq, desc, and } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
+import { normalizeToIsoDate } from './src/shared/utils/dateIsoConverter.ts';
 import { normalizePhone } from './src/shared/utils/persianUtils.ts';
 import { generateJwtToken } from './src/lib/jwt.ts';
 import { seedDatabase } from './src/db/seed.ts';
@@ -368,10 +369,25 @@ async function createServer() {
   app.post('/api/bookings', requireAuth, async (req: AuthRequest, res) => {
     try {
       const data = schemas.bookingCreateSchema.parse(req.body);
+      
+      // Check for double booking race condition explicitly before insert
+      const existingSlot = await db.select().from(bookingsTable).where(and(
+        eq(bookingsTable.specialistId, Number(data.specialistId)),
+        eq(bookingsTable.date, normalizeToIsoDate(data.date)),
+        eq(bookingsTable.time, data.time)
+      )).limit(1).then(r => r[0]);
+
+      if (existingSlot && existingSlot.status !== 'cancelled') {
+        return res.status(409).json({ error: 'این سانس قبلاً توسط مراجع دیگری رزرو شده است. لطفاً زمان یا متخصص دیگری را انتخاب کنید.' });
+      }
+
       const booking = await createBooking({ ...data, customerId: req.dbUser.id });
       await sendMeliPayamakSms(req.dbUser.phone, `نوبت ثبت شد. کد رهگیری: ${booking?.trackingCode}`).catch(() => {});
       res.status(201).json(booking);
     } catch (err: any) {
+      if (err.code === '23505' || String(err.message).includes('unique_specialist_slot')) {
+        return res.status(409).json({ error: 'این سانس توسط کاربر دیگری در لحظه قبل رزرو شد (تضاد سانس).' });
+      }
       const msg = err.message || 'خطا در ثبت نوبت.';
       res.status(msg.includes('NOT_FOUND') ? 404 : 400).json({ error: msg });
     }
