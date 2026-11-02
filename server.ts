@@ -337,9 +337,14 @@ async function createServer() {
 
   // --- Salons ---
 
-  app.get('/api/salons', async (req, res) => {
+  app.get('/api/salons', async (req: any, res) => {
     try {
+      // If user is super_admin or query has all=true, return all salons, otherwise filter approved only for customers
+      const isSuperAdmin = req.cookies?.token ? verifyJwtToken(req.cookies.token)?.role === 'super_admin' : false;
+      const showAll = isSuperAdmin || req.query.all === 'true';
+
       const list = await db.query.salons.findMany({
+        where: showAll ? undefined : eq(salons.isApproved, true),
         with: {
           services: true,
           specialists: {
@@ -350,6 +355,7 @@ async function createServer() {
           },
         },
       });
+
       res.json(list.map((salon) => ({
         ...salon,
         phone: salon.phone || '',
@@ -370,7 +376,7 @@ async function createServer() {
           phone: sp.user?.phone || '',
           rating: 5,
           reviewsCount: 1,
-          user: sp.user ? redactUserPII(sp.user, (req as any).dbUser || { role: 'guest' }) : null,
+          user: sp.user ? redactUserPII(sp.user, req.dbUser || { role: 'guest' }) : null,
           portfolio: sp.portfolio || [],
         })),
       })));
@@ -390,6 +396,13 @@ async function createServer() {
       if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== target.id) return res.status(403).json({ error: 'عدم دسترسی.' });
 
       const patchData: any = { ...data };
+      if (req.dbUser.role === 'salon_admin') {
+        // Salon admin cannot change approval status or VIP status
+        delete patchData.isApproved;
+        delete patchData.isVip;
+        delete patchData.vipBadgeLabel;
+      }
+
       if (Array.isArray(patchData.gallery)) {
         patchData.gallery = JSON.stringify(patchData.gallery);
       }
@@ -443,6 +456,119 @@ async function createServer() {
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'خطا در حذف سالن.' });
+    }
+  });
+
+  // --- Services CRUD ---
+
+  app.post('/api/services', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { salonId, serviceLineId, name, description, price, durationMinutes, isMobileAvailable, imageUrl } = req.body;
+      const targetSalonId = salonId ? Number(salonId) : (req.dbUser.salonId || 1);
+      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== targetSalonId) {
+        return res.status(403).json({ error: 'عدم دسترسی به این سالن.' });
+      }
+      if (!name) return res.status(400).json({ error: 'نام خدمت الزامی است.' });
+
+      const [newService] = await db.insert(services).values({
+        salonId: targetSalonId,
+        serviceLineId: serviceLineId || 'hair',
+        name: String(name).trim(),
+        description: description ? String(description).trim() : null,
+        price: String(price || 0),
+        durationMinutes: Number(durationMinutes || 30),
+        isMobileAvailable: Boolean(isMobileAvailable),
+        imageUrl: imageUrl || null,
+      }).returning();
+
+      res.status(201).json(newService);
+    } catch (err) {
+      console.error('[SERVICE CREATE ERROR]', err);
+      res.status(500).json({ error: 'خطا در ثبت خدمت.' });
+    }
+  });
+
+  app.delete('/api/services/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const serv = await db.select().from(services).where(eq(services.id, id)).limit(1).then(r => r[0]);
+      if (!serv) return res.status(404).json({ error: 'خدمت یافت نشد.' });
+      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== serv.salonId) {
+        return res.status(403).json({ error: 'عدم دسترسی.' });
+      }
+      await db.delete(services).where(eq(services.id, id));
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در حذف خدمت.' });
+    }
+  });
+
+  // --- Specialists CRUD ---
+
+  app.post('/api/specialists', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { userId, salonId, specialtyLine, bio, experienceYears, isMobileActive, avatarUrl } = req.body;
+      const targetSalonId = salonId ? Number(salonId) : (req.dbUser.salonId || 1);
+      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== targetSalonId) {
+        return res.status(403).json({ error: 'عدم دسترسی.' });
+      }
+      if (!userId) return res.status(400).json({ error: 'شناسه کاربر الزامی است.' });
+
+      const [newSpec] = await db.insert(specialists).values({
+        userId: Number(userId),
+        salonId: targetSalonId,
+        specialtyLine: specialtyLine || 'hair',
+        bio: bio || '',
+        experienceYears: Number(experienceYears || 1),
+        isVerified: req.dbUser.role === 'super_admin',
+        isMobileActive: Boolean(isMobileActive),
+        avatarUrl: avatarUrl || null,
+      }).returning();
+
+      res.status(201).json(newSpec);
+    } catch (err) {
+      console.error('[SPECIALIST CREATE ERROR]', err);
+      res.status(500).json({ error: 'خطا در ثبت متخصص.' });
+    }
+  });
+
+  app.patch('/api/specialists/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const spec = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1).then(r => r[0]);
+      if (!spec) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== spec.salonId) {
+        return res.status(403).json({ error: 'عدم دسترسی.' });
+      }
+      const { specialtyLine, bio, experienceYears, isVerified, isMobileActive, avatarUrl } = req.body;
+      const patchData: any = {};
+      if (specialtyLine !== undefined) patchData.specialtyLine = specialtyLine;
+      if (bio !== undefined) patchData.bio = bio;
+      if (experienceYears !== undefined) patchData.experienceYears = Number(experienceYears);
+      if (isMobileActive !== undefined) patchData.isMobileActive = Boolean(isMobileActive);
+      if (avatarUrl !== undefined) patchData.avatarUrl = avatarUrl;
+      if (isVerified !== undefined && req.dbUser.role === 'super_admin') {
+        patchData.isVerified = Boolean(isVerified);
+      }
+      const [updated] = await db.update(specialists).set(patchData).where(eq(specialists.id, id)).returning();
+      res.json({ success: true, specialist: updated });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در ویرایش متخصص.' });
+    }
+  });
+
+  app.delete('/api/specialists/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const spec = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1).then(r => r[0]);
+      if (!spec) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== spec.salonId) {
+        return res.status(403).json({ error: 'عدم دسترسی.' });
+      }
+      await db.delete(specialists).where(eq(specialists.id, id));
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در حذف متخصص.' });
     }
   });
 

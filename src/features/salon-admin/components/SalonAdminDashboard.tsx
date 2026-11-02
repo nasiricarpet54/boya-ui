@@ -344,32 +344,34 @@ export const SalonAdminDashboard: React.FC = () => {
     : [];
 
   // Handler: Add service (Specialist can only add in their specialty line)
-  const handleAddService = (e: React.FormEvent) => {
+  const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newServiceName.trim()) return;
 
     const lineId = activeSpecialistView ? activeSpecialistView.specialtyLine : newServiceLineId;
 
-    const newServ: SalonService = {
-      id: `serv-${Date.now()}`,
-      serviceLineId: lineId,
-      name: newServiceName.trim(),
-      durationMinutes: Number(newServiceDuration),
-      price: Number(newServicePrice),
-      description: activeSpecialistView
-        ? `سرویس اختصاصی ارائه شده توسط ${activeSpecialistView.user?.fullName}`
-        : 'سرویس ثبت شده توسط مدیریت سالن در پلتفرم بویا',
-      isMobileAvailable: newServiceMobile,
-      imageUrl: newServiceImage,
-    };
+    try {
+      await api.post('/services', {
+        salonId: currentSalon?.id ? Number(currentSalon.id) : 1,
+        serviceLineId: lineId,
+        name: newServiceName.trim(),
+        durationMinutes: Number(newServiceDuration),
+        price: Number(newServicePrice),
+        description: activeSpecialistView
+          ? `سرویس اختصاصی ارائه شده توسط ${activeSpecialistView.user?.fullName}`
+          : 'سرویس ثبت شده توسط مدیریت سالن در پلتفرم بویا',
+        isMobileAvailable: newServiceMobile,
+        imageUrl: newServiceImage,
+      });
 
-    const updatedServices = [...salonServices, newServ];
-    setSalonServices(updatedServices);
-    if (currentSalon?.id) {
-      updateSalon(currentSalon.id, { services: updatedServices });
+      await queryClient.invalidateQueries({ queryKey: ['salons'] });
+      showToast('خدمت جدید با موفقیت ثبت شد.');
+      setIsAddingService(false);
+      setNewServiceName('');
+    } catch (err: any) {
+      console.error('Failed to add service:', err);
+      showToast(err?.response?.data?.error || 'خطا در ثبت خدمت.');
     }
-    setIsAddingService(false);
-    setNewServiceName('');
   };
 
   // Handler: Add Portfolio Item (Saved permanently in PostgreSQL portfolio_items table)

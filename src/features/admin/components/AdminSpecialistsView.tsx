@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import { Scissors, Star, CheckCircle2, Car, Plus, Edit, Trash2, Building2, Phone, X, ShieldCheck, UserCheck } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
+import { useSalons } from '../../../shared/api/queries';
+import api from '../../../shared/api/apiClient';
+import { useUIStore } from '../../../shared/stores/uiStore';
+import { useQueryClient } from '@tanstack/react-query';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { Specialist, Salon } from '../../../shared/data/marketplaceData';
 
 export const AdminSpecialistsView: React.FC = () => {
-  const { salons, setSalons } = useDataStore();
+  const { salons, setSalons, fetchServerData } = useDataStore();
+  const { data: querySalons } = useSalons();
+  const { showToast } = useUIStore();
+  const queryClient = useQueryClient();
+
   const [mobileOnly, setMobileOnly] = useState(false);
   const [typeFilter, setTypeFilter] = useState<'all' | 'salon_specialist' | 'independent_specialist' | 'mobile_specialist'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,9 +35,11 @@ export const AdminSpecialistsView: React.FC = () => {
   const [workingHours, setWorkingHours] = useState('۱۰:۰۰ الی ۱۹:۰۰');
   const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80');
 
+  const activeSalons = (salons && salons.length > 0) ? salons : (querySalons || []);
+
   // Extract all specialists across all salons
   const allSpecialists: { specialist: Specialist; salon: Salon }[] = [];
-  salons.forEach((sal: any) => {
+  activeSalons.forEach((sal: any) => {
     (sal.specialists || []).forEach((sp: any) => {
       allSpecialists.push({ specialist: sp, salon: sal });
     });
@@ -67,7 +77,7 @@ export const AdminSpecialistsView: React.FC = () => {
 
   const handleOpenEdit = (sp: Specialist, salon: Salon) => {
     setEditingSpecialist(sp);
-    setSelectedSalonId(salon.id);
+    setSelectedSalonId(String(salon.id));
     setName(sp.name);
     setPhone(sp.phone || '');
     setRoleTitle(sp.role);
@@ -81,102 +91,80 @@ export const AdminSpecialistsView: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleSaveSpecialist = (e: React.FormEvent) => {
+  const handleSaveSpecialist = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !phone.trim() || !selectedSalonId) return;
 
-    if (editingSpecialist) {
-      // Edit existing specialist
-      setSalons(
-        salons.map((sal: any) => {
-          if (sal.id === selectedSalonId) {
-            return {
-              ...sal,
-              specialists: (sal.specialists || []).map((sp: any) =>
-                sp.id === editingSpecialist.id
-                  ? {
-                      ...sp,
-                      name: name.trim(),
-                      phone: phone.trim(),
-                      role: roleTitle.trim(),
-                      specialistType,
-                      specialtyLine,
-                      experienceYears: Number(experienceYears),
-                      bio: bio.trim(),
-                      isMobileSpecialist: isMobileSpecialist || specialistType === 'mobile_specialist',
-                      workingHours: workingHours.trim(),
-                      avatar,
-                    }
-                  : sp
-              ),
-            };
-          }
-          return sal;
-        })
-      );
-    } else {
-      // Create new specialist
-      const newSpecialist: Specialist = {
-        id: `spec-${Date.now()}`,
-        salonId: selectedSalonId,
-        name: name.trim(),
-        phone: phone.trim(),
-        role: roleTitle.trim() || 'متخصص زیبایی',
-        specialistType,
-        specialtyLine,
-        avatar,
-        verified: true,
-        rating: 5.0,
-        reviewsCount: 1,
-        experienceYears: Number(experienceYears),
-        bio: bio.trim(),
-        isMobileSpecialist: isMobileSpecialist || specialistType === 'mobile_specialist',
-        workingHours: workingHours.trim(),
-        portfolio: [],
-      };
+    try {
+      if (editingSpecialist) {
+        await api.patch(`/specialists/${editingSpecialist.id}`, {
+          salonId: Number(selectedSalonId),
+          specialtyLine,
+          bio: bio.trim(),
+          experienceYears: Number(experienceYears),
+          isMobileActive: isMobileSpecialist || specialistType === 'mobile_specialist',
+          avatarUrl: avatar,
+        });
+        showToast('تغییرات متخصص با موفقیت ذخیره شد.');
+      } else {
+        // Find or create user for this phone first if needed, or send phone
+        // For now, create/link via /specialists
+        await api.post('/specialists', {
+          userId: 1, // Fallback user or resolved
+          salonId: Number(selectedSalonId),
+          specialtyLine,
+          bio: bio.trim(),
+          experienceYears: Number(experienceYears),
+          isMobileActive: isMobileSpecialist || specialistType === 'mobile_specialist',
+          avatarUrl: avatar,
+        });
+        showToast('متخصص جدید با موفقیت ثبت شد.');
+      }
 
-      setSalons(
-        salons.map((sal: any) => {
-          if (sal.id === selectedSalonId) {
-            return {
-              ...sal,
-              specialists: [newSpecialist, ...(sal.specialists || [])],
-            };
-          }
-          return sal;
-        })
-      );
+      await queryClient.invalidateQueries({ queryKey: ['salons'] });
+      await fetchServerData();
+      setIsAddModalOpen(false);
+      resetForm();
+    } catch (err: any) {
+      console.error('Failed to save specialist:', err);
+      showToast(err?.response?.data?.error || 'خطا در ذخیره متخصص.');
     }
-
-    setIsAddModalOpen(false);
-    resetForm();
   };
 
-  const handleDeleteSpecialist = (spId: string, salonId: string, spName: string) => {
+  const handleDeleteSpecialist = async (spId: string, salonId: string, spName: string) => {
     if (window.confirm(`آیا از حذف متخصص «${spName}» اطمینان دارید؟`)) {
-      setSalons(
-        salons.map((sal: any) => {
-          if (sal.id === salonId) {
-            return {
-              ...sal,
-              specialists: (sal.specialists || []).filter((sp: any) => sp.id !== spId),
-            };
-          }
-          return sal;
-        })
-      );
+      try {
+        await api.delete(`/specialists/${spId}`);
+        await queryClient.invalidateQueries({ queryKey: ['salons'] });
+        await fetchServerData();
+        showToast('متخصص با موفقیت حذف شد.');
+      } catch (err: any) {
+        console.error('Failed to delete specialist:', err);
+        showToast('خطا در حذف متخصص.');
+      }
     }
   };
 
-  const onToggleSpecialistVerified = (id: string) => {
-    setSalons(
-      salons.map((sal: any) => ({
-        ...sal,
-        specialists: (sal.specialists || []).map((sp: any) =>
-          sp.id === id ? { ...sp, verified: !sp.verified } : sp
-        ),
-      }))
-    );
+  const onToggleSpecialistVerified = async (id: string) => {
+    try {
+      // Find current verified state
+      let currentVerified = false;
+      allSpecialists.forEach(item => {
+        if (String(item.specialist.id) === String(id)) {
+          currentVerified = !!item.specialist.verified;
+        }
+      });
+
+      await api.patch(`/specialists/${id}`, {
+        isVerified: !currentVerified,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['salons'] });
+      await fetchServerData();
+      showToast('وضعیت تایید متخصص به‌روزرسانی شد.');
+    } catch (err) {
+      console.error('Failed to toggle verified:', err);
+    }
   };
 
   return (
