@@ -130,7 +130,15 @@ export const SalonAdminDashboard: React.FC = () => {
     }
   }, [salonsData, user]);
 
-  const currentSalon = salonsData.find((s: any) => s.id.toString() === selectedSalonId) || salonsData[0];
+  const currentSalon = salonsData.find((s: any) => s.id.toString() === selectedSalonId) || salonsData[0] || {
+    id: 1,
+    name: 'سالن زیبایی',
+    address: 'تهران',
+    coverImage: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80',
+    gallery: [],
+    services: [],
+    specialists: [],
+  };
 
   // Salon Manager tab navigation
   const [salonTab, setSalonTab] = useState<'overview' | 'schedule' | 'gallery' | 'services' | 'specialists' | 'blocks'>('overview');
