@@ -26,6 +26,8 @@ const PORT = process.env.PORT || 3000;
 
 // In-memory OTP storage for phone verification
 const otpStore = new Map<string, { code: string; expiresAt: number }>();
+const sendOtpRateLimit = new Map<string, { count: number; resetAt: number }>();
+const verifyOtpRateLimit = new Map<string, { attempts: number; resetAt: number }>();
 
 async function createServer() {
   const app = express();
@@ -95,11 +97,23 @@ async function createServer() {
     }
   });
 
-  // Phone OTP Auth: Send OTP with live backend server logging
+  // Phone OTP Auth: Send OTP with live backend server logging & Rate Limiting
   app.post('/api/auth/send-otp', async (req, res) => {
     const phone = normalizePhone(req.body.phone);
     if (!phone || !/^09\d{9}$/.test(phone)) {
       return res.status(400).json({ error: 'شماره همراه وارد شده معتبر نمی‌باشد (نمونه: ۰۹۱۲۳۴۵۶۷۸۹).' });
+    }
+
+    // Rate Limiting: Max 3 requests per 5 minutes per phone number
+    const now = Date.now();
+    const sendRecord = sendOtpRateLimit.get(phone);
+    if (sendRecord && now < sendRecord.resetAt) {
+      if (sendRecord.count >= 3) {
+        return res.status(429).json({ error: 'درخواست‌های مکرر غیرمجاز. لطفاً چند دقیقه دیگر مجدداً تلاش کنید.' });
+      }
+      sendRecord.count++;
+    } else {
+      sendOtpRateLimit.set(phone, { count: 1, resetAt: now + 5 * 60 * 1000 });
     }
 
     // Generate unpredictable 5-digit verification code
@@ -108,7 +122,7 @@ async function createServer() {
     // Store in memory with 5-minute expiry
     otpStore.set(phone, {
       code: otpCode,
-      expiresAt: Date.now() + 5 * 60 * 1000,
+      expiresAt: now + 5 * 60 * 1000,
     });
 
     // Prominent live backend server log for testing & inspection (Development/Test only)
@@ -131,7 +145,7 @@ async function createServer() {
     });
   });
 
-  // Verify OTP and issue real JWT token
+  // Verify OTP and issue real JWT token with Brute-force protection
   app.post('/api/auth/verify-otp', async (req, res) => {
     const { phone: rawPhone, code, fullName } = req.body;
     const phone = normalizePhone(rawPhone);
@@ -139,19 +153,33 @@ async function createServer() {
       return res.status(400).json({ error: 'شماره همراه و کد تایید الزامی است.' });
     }
 
+    const now = Date.now();
+    const verifyRecord = verifyOtpRateLimit.get(phone);
+    if (verifyRecord && now < verifyRecord.resetAt) {
+      if (verifyRecord.attempts >= 5) {
+        return res.status(429).json({ error: 'تلاش‌های ناموفق بیش از حد مجاز. به دلایل امنیتی لطفاً ۵ دقیقه دیگر تلاش کنید.' });
+      }
+    }
+
     const storedOtp = otpStore.get(phone);
     const isValidCode = Boolean(
       storedOtp &&
       storedOtp.code === String(code).trim() &&
-      Date.now() <= storedOtp.expiresAt
+      now <= storedOtp.expiresAt
     );
 
     if (!isValidCode) {
+      if (verifyRecord && now < verifyRecord.resetAt) {
+        verifyRecord.attempts++;
+      } else {
+        verifyOtpRateLimit.set(phone, { attempts: 1, resetAt: now + 5 * 60 * 1000 });
+      }
       return res.status(400).json({ error: 'کد تایید وارد شده نادرست یا منقضی شده است.' });
     }
 
-    // Clear used OTP
+    // Clear used OTP and rate limit on success
     otpStore.delete(phone);
+    verifyOtpRateLimit.delete(phone);
 
     try {
       // 1. Fetch user strictly from PostgreSQL DB (the single source of truth for roles)
