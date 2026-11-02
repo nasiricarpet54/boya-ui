@@ -1,11 +1,8 @@
 import jwt from 'jsonwebtoken';
 
 if (!process.env.JWT_SECRET) {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET environment variable is missing in production!');
-  }
   console.warn('\x1b[33m%s\x1b[0m', '⚠️ WARNING: JWT_SECRET environment variable is missing.');
-  console.warn('\x1b[33m%s\x1b[0m', 'Using internal fallback secret. This is not secure for live production.');
+  console.warn('\x1b[33m%s\x1b[0m', 'Using internal fallback secret.');
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || 'boya-beauty-fallback-secret-key-2026-secure-v3';

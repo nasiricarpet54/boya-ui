@@ -25,7 +25,7 @@ import { generateJwtToken } from './src/lib/jwt.ts';
 import { seedDatabase } from './src/db/seed.ts';
 import { logSecurityAction } from './src/db/audit.ts';
 import * as schemas from './src/lib/validation.ts';
-import { redactUserPII } from './src/lib/piiRedactor.ts';
+import { redactUserPII, processBookingData } from './src/lib/piiRedactor.ts';
 
 dotenv.config();
 
@@ -96,6 +96,8 @@ async function createServer() {
 
   // Apply Rate Limiter to all API routes
   app.use('/api/', apiLimiter);
+
+
 
   // Synchronous database seeding on startup if RUN_SEED is enabled
   if (process.env.RUN_SEED === 'true') {
@@ -681,9 +683,40 @@ async function createServer() {
 
   app.get('/api/bookings', requireAuth, async (req: AuthRequest, res) => {
     try {
-      res.json(await getBookingsForUser(req.dbUser));
+      const list = await getBookingsForUser(req.dbUser);
+      res.json(list.map((b: any) => processBookingData(b, req.dbUser)));
     } catch (err: any) {
       res.status(err.message === 'FORBIDDEN_NO_SALON' ? 403 : 500).json({ error: 'خطا در دریافت نوبت‌ها.' });
+    }
+  });
+
+  app.patch('/api/bookings/:id/status', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { status } = req.body;
+      const booking = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id)).limit(1).then(r => r[0]);
+      if (!booking) return res.status(404).json({ error: 'نوبت یافت نشد.' });
+
+      const isSuper = req.dbUser.role === 'super_admin';
+      const isSalonAdmin = req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) === booking.salonId;
+      const isCustomer = req.dbUser.id === booking.customerId && status === 'cancelled';
+      const isSpecialist = ['salon_specialist', 'mobile_specialist'].includes(req.dbUser.role);
+      
+      let specialistMatches = false;
+      if (isSpecialist) {
+        const spec = await db.select().from(specialists).where(eq(specialists.userId, req.dbUser.id)).limit(1).then(r => r[0]);
+        if (spec && spec.id === booking.specialistId) specialistMatches = true;
+      }
+
+      if (!isSuper && !isSalonAdmin && !isCustomer && !specialistMatches) {
+        return res.status(403).json({ error: 'عدم دسترسی به تغییر وضعیت این نوبت.' });
+      }
+
+      const updated = await updateBookingStatus(id, status);
+      res.json(updated);
+    } catch (err: any) {
+      console.error('[BOOKING STATUS PATCH ERROR]', err);
+      res.status(500).json({ error: err.message || 'خطا در به‌روزرسانی وضعیت نوبت.' });
     }
   });
 

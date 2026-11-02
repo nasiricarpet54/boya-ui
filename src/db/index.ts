@@ -27,7 +27,7 @@ export const createPool = () => {
     });
 
     global._postgresPool.on('error', (err) => {
-      console.error('Unexpected error on idle SQL pool client:', err);
+      console.warn('[DB POOL NOTICE] Idle SQL pool client connection closed or reset (non-fatal):', err?.message || err);
     });
   }
   return global._postgresPool;

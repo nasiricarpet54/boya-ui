@@ -7,6 +7,7 @@
     "dev": "tsx server.ts",
     "start": "tsx server.ts",
     "db:migrate:publication-lifecycle": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f drizzle/0001_publication_lifecycle.sql",
+    "db:rollback": "tsx src/db/rollback.ts",
     "build": "vite build",
     "preview": "node server.js",
     "clean": "rm -rf dist server.js",
