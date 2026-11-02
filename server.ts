@@ -250,6 +250,7 @@ async function createServer() {
         secure: isProd,
         sameSite: 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: '/',
       });
 
       res.json({ token, user: dbUser });
@@ -261,7 +262,12 @@ async function createServer() {
 
   // Logout endpoint (Clears HttpOnly cookie)
   app.post('/api/auth/logout', (req, res) => {
-    res.clearCookie('token');
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/',
+    });
     res.json({ success: true, message: 'با موفقیت خارج شدید.' });
   });
 

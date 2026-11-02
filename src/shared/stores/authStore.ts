@@ -164,11 +164,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'boya-auth-storage',
-      // Security A-07: Only persist accessToken. Never trust client-cached roles.
-      // Roles are always verified fresh from server /api/profile.
-      partialize: (state) => ({
-        accessToken: state.accessToken,
-      }),
+      // Security: Do NOT persist accessToken or credentials in localStorage to prevent XSS token theft.
+      // Authentication tokens are stored strictly in HttpOnly cookies managed by the server.
+      partialize: () => ({}),
     }
   )
 );
