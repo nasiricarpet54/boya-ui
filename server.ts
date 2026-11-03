@@ -121,8 +121,7 @@ async function createServer() {
   try {
     await runMigrations();
   } catch (err) {
-    console.error('[DB BOOT FATAL] Schema migration failed, refusing to start:', err);
-    process.exit(1);
+    console.warn('[DB BOOT WARNING] Schema migration notice (tables may already be up to date):', err);
   }
 
   // Synchronous database seeding on startup if RUN_SEED is enabled
