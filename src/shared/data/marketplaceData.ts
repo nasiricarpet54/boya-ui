@@ -45,7 +45,7 @@ export interface Specialist {
   specialtyLine: string;
   bio: string;
   isMobileSpecialist: boolean;
-  specialistType?: 'salon_specialist' | 'independent_specialist' | 'mobile_specialist';
+  specialistType?: 'salon_specialist' | 'line_manager' | 'mobile_specialist';
   workingHours?: string;
   workingDays?: string[];
   phone: string;
@@ -381,7 +381,7 @@ export const INITIAL_SALONS: Salon[] = [
         experienceYears: 10,
         specialtyLine: 'hair',
         isMobileSpecialist: false,
-        specialistType: 'independent_specialist',
+        specialistType: 'line_manager',
         workingHours: 'شنبه تا پنجشنبه ۱۱:۰۰ الی ۲۰:۰۰',
         workingDays: ['شنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه'],
         phone: '۰۹۱۲۴۵۶۷۷۸۸',

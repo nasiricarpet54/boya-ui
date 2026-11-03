@@ -1,5 +1,5 @@
 import { db } from './index.ts';
-import { users, salons, services, specialists, notifications, adminProfile } from './schema.ts';
+import { users, salons, services, specialists, adminProfile } from './schema.ts';
 import { INITIAL_SALONS, INITIAL_USERS } from '../shared/data/marketplaceData.ts';
 import { eq } from 'drizzle-orm';
 import { normalizePhone } from '../shared/utils/persianUtils.ts';

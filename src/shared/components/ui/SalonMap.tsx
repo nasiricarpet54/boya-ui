@@ -85,13 +85,26 @@ export const SalonMap: React.FC<SalonMapProps> = ({ salons, onSelectSalon, onBoo
 
       const marker = L.marker([lat, lng], { icon: customIcon });
 
+      function escapeHtml(str: string = ''): string {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      const safeName = escapeHtml(salon.name);
+      const safeAddress = escapeHtml(salon.district || salon.address);
+      const safeCoverImage = escapeHtml(salon.coverImage);
+
       const popupContent = document.createElement('div');
       popupContent.style.cssText = 'text-right; font-family: Vazirmatn, sans-serif; direction: rtl; min-width: 200px;';
       popupContent.innerHTML = `
         <div style="padding: 4px;">
-          <img src="${salon.coverImage}" alt="${salon.name}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 8px;" />
-          <h4 style="font-weight: bold; font-size: 13px; color: #173B3F; margin-bottom: 2px;">${salon.name}</h4>
-          <p style="font-size: 11px; color: #6C6C6C; margin-bottom: 6px;">${salon.district || salon.address}</p>
+          <img src="${safeCoverImage}" alt="${safeName}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 12px; margin-bottom: 8px;" />
+          <h4 style="font-weight: bold; font-size: 13px; color: #173B3F; margin-bottom: 2px;">${safeName}</h4>
+          <p style="font-size: 11px; color: #6C6C6C; margin-bottom: 6px;">${safeAddress}</p>
           ${distanceKm !== undefined ? `<span style="font-size: 10px; background: #EAF2EF; color: #2E5E52; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-bottom: 6px;">فاصله: ${toPersianDigits(distanceKm.toFixed(1))} کیلومتر</span>` : ''}
           <div style="display: flex; gap: 6px; margin-top: 6px;">
             <button id="map-book-${salon.id}" style="flex: 1; background: #173B3F; color: white; border: none; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer;">رزرو نوبت</button>

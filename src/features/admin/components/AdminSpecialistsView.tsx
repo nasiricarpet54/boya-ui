@@ -6,13 +6,14 @@ import api from '../../../shared/api/apiClient';
 import { useDataStore } from '../../../shared/stores/dataStore';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { Specialist, Salon } from '../../../shared/data/marketplaceData';
+import { ROLE_LABELS, ROLES } from '../../../shared/constants/roles';
 
 export const AdminSpecialistsView: React.FC = () => {
   const { salons, updateSpecialist, createSpecialist, deleteSpecialist } = useDataStore();
   const { user } = useAuthStore(); const { showToast } = useUIStore();
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [mobileOnly, setMobileOnly] = useState(false);
-  const [typeFilter, setTypeFilter] = useState<'all' | 'salon_specialist' | 'independent_specialist' | 'mobile_specialist'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'salon_specialist' | 'line_manager' | 'mobile_specialist'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals state
@@ -24,7 +25,7 @@ export const AdminSpecialistsView: React.FC = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [roleTitle, setRoleTitle] = useState('میکاپ آرتیست و متخصص زیبایی');
-  const [specialistType, setSpecialistType] = useState<'salon_specialist' | 'independent_specialist' | 'mobile_specialist'>('salon_specialist');
+  const [specialistType, setSpecialistType] = useState<'salon_specialist' | 'line_manager' | 'mobile_specialist'>('salon_specialist');
   const [specialtyLine, setSpecialtyLine] = useState('hair');
   const [experienceYears, setExperienceYears] = useState(5);
   const [bio, setBio] = useState('متخصص حرفه‌ای زیبایی با سابقه فعالیت در سالن‌های برتر کشور');
@@ -44,8 +45,8 @@ export const AdminSpecialistsView: React.FC = () => {
     if (mobileOnly && !item.specialist.isMobileSpecialist) return false;
     if (typeFilter !== 'all') {
       if (typeFilter === 'mobile_specialist' && !item.specialist.isMobileSpecialist) return false;
-      if (typeFilter === 'independent_specialist' && item.specialist.specialistType !== 'independent_specialist') return false;
-      if (typeFilter === 'salon_specialist' && item.specialist.specialistType === 'independent_specialist') return false;
+      if (typeFilter === 'line_manager' && item.specialist.specialistType !== 'line_manager') return false;
+      if (typeFilter === 'salon_specialist' && item.specialist.specialistType === 'line_manager') return false;
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -76,7 +77,7 @@ export const AdminSpecialistsView: React.FC = () => {
     setName(sp.name);
     setPhone(sp.phone || '');
     setRoleTitle(sp.role);
-    setSpecialistType(sp.specialistType || (sp.isMobileSpecialist ? 'mobile_specialist' : 'salon_specialist'));
+    setSpecialistType((sp.specialistType as any) || (sp.isMobileSpecialist ? ROLES.MOBILE_SPECIALIST : ROLES.SALON_SPECIALIST));
     setSpecialtyLine(sp.specialtyLine || 'hair');
     setExperienceYears(sp.experienceYears || 5);
     setBio(sp.bio || '');
@@ -95,9 +96,9 @@ export const AdminSpecialistsView: React.FC = () => {
         await updateSpecialist(editingSpecialist.id, payload);
       } else {
         const { data: users = [] } = await api.get('/users');
-        let candidate = users.find((u: any) => String(u.phone) === phone.trim() && String(u.salonId) === String(selectedSalonId) && ['salon_specialist', 'mobile_specialist'].includes(u.role));
+        let candidate = users.find((u: any) => String(u.phone) === phone.trim() && String(u.salonId) === String(selectedSalonId) && [ROLES.SALON_SPECIALIST, ROLES.MOBILE_SPECIALIST, ROLES.LINE_MANAGER].includes(u.role));
         if (!candidate) {
-          const role = specialistType === 'mobile_specialist' ? 'mobile_specialist' : 'salon_specialist';
+          const role = specialistType === ROLES.MOBILE_SPECIALIST ? ROLES.MOBILE_SPECIALIST : (specialistType === ROLES.LINE_MANAGER ? ROLES.LINE_MANAGER : ROLES.SALON_SPECIALIST);
           const { data: createdUser } = await api.post('/users', { fullName: name.trim(), phone: phone.trim(), role, ...(user?.role === 'super_admin' ? { salonId: Number(selectedSalonId) } : {}) });
           candidate = createdUser;
         }
@@ -153,9 +154,9 @@ export const AdminSpecialistsView: React.FC = () => {
             className="text-xs border border-[#E7E2DA] rounded-xl p-2 bg-[#FAF7F2] font-semibold text-[#173B3F] outline-none"
           >
             <option value="all">همه دسته‌بندی‌ها</option>
-            <option value="salon_specialist">متخصصین شاغل در سالن</option>
-            <option value="independent_specialist">متخصصین مستقل (مدیر لاین)</option>
-            <option value="mobile_specialist">متخصصین خدمات سیار در محل</option>
+            <option value="salon_specialist">{ROLE_LABELS.salon_specialist}</option>
+            <option value="line_manager">{ROLE_LABELS.line_manager}</option>
+            <option value="mobile_specialist">{ROLE_LABELS.mobile_specialist}</option>
           </select>
 
           <button
@@ -199,15 +200,15 @@ export const AdminSpecialistsView: React.FC = () => {
 
               <span
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  specialist.specialistType === 'independent_specialist'
+                  specialist.specialistType === 'line_manager'
                     ? 'bg-[#C99558]/15 text-[#8A5A20] border-[#C99558]/30'
                     : specialist.isMobileSpecialist
                     ? 'bg-[#173B3F]/10 text-[#173B3F] border-[#173B3F]/20'
                     : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                 }`}
               >
-                {specialist.specialistType === 'independent_specialist'
-                  ? 'مدیر لاین / مستقل'
+                {specialist.specialistType === 'line_manager'
+                  ? ROLE_LABELS.line_manager
                   : specialist.isMobileSpecialist
                   ? 'خدمات سیار'
                   : 'متخصص سالن'}
@@ -255,6 +256,7 @@ export const AdminSpecialistsView: React.FC = () => {
                   onClick={() => handleOpenEdit(specialist, salon)}
                   className="p-1.5 bg-[#EAF2EF] hover:bg-[#173B3F] hover:text-white text-[#173B3F] rounded-xl transition-colors border border-[#6F9A8D]/30"
                   title="ویرایش کامل متخصص"
+                  aria-label="ویرایش کامل متخصص"
                 >
                   <Edit className="w-3.5 h-3.5" />
                 </button>
@@ -263,6 +265,7 @@ export const AdminSpecialistsView: React.FC = () => {
                   onClick={() => handleDeleteSpecialist(specialist.id, salon.id, specialist.name)}
                   className="p-1.5 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded-xl transition-colors border border-red-200"
                   title="حذف کامل متخصص"
+                  aria-label="حذف کامل متخصص"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -281,7 +284,7 @@ export const AdminSpecialistsView: React.FC = () => {
                 <Scissors className="w-4 h-4 text-[#C99558]" />
                 <span>{editingSpecialist ? `ویرایش اطلاعات «${editingSpecialist.name}»` : 'تعریف متخصص / بیوتیشن جدید'}</span>
               </h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="p-1 hover:bg-slate-100 rounded-full">
+              <button onClick={() => setIsAddModalOpen(false)} className="p-1 hover:bg-slate-100 rounded-full" aria-label="بستن">
                 <X className="w-4 h-4 text-[#6C6C6C]" />
               </button>
             </div>
@@ -338,9 +341,9 @@ export const AdminSpecialistsView: React.FC = () => {
                     onChange={(e: any) => setSpecialistType(e.target.value)}
                     className="w-full h-10 px-3 rounded-xl border border-[#E7E2DA] bg-[#FAF7F2] font-semibold text-[#173B3F] outline-none"
                   >
-                    <option value="salon_specialist">متخصص شاغل در سالن</option>
-                    <option value="independent_specialist">متخصص مستقل (مدیر لاین)</option>
-                    <option value="mobile_specialist">متخصص خدمات سیار در محل</option>
+                    <option value="salon_specialist">{ROLE_LABELS.salon_specialist}</option>
+                    <option value="line_manager">{ROLE_LABELS.line_manager}</option>
+                    <option value="mobile_specialist">{ROLE_LABELS.mobile_specialist}</option>
                   </select>
                 </div>
 

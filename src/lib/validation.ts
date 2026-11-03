@@ -78,8 +78,14 @@ export const serviceCreateSchema = z.object({
   serviceLineId: z.string().default('hair'),
   name: z.string().min(1, 'نام خدمت الزامی است'),
   description: z.string().optional().nullable(),
-  price: z.union([z.number(), z.string()]),
-  durationMinutes: z.number().int().min(1).default(30),
+  price: z.union([
+    z.number().positive('قیمت خدمت باید بزرگتر از صفر باشد'),
+    z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0, 'قیمت خدمت باید بزرگتر از صفر باشد')
+  ]),
+  durationMinutes: z.union([
+    z.number().int().positive('مدت زمان خدمت باید حداقل ۱ دقیقه باشد'),
+    z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0, 'مدت زمان خدمت باید حداقل ۱ دقیقه باشد')
+  ]).transform(val => Number(val)),
   isMobileAvailable: z.boolean().default(false),
   imageUrl: z.string().optional().nullable(),
 });

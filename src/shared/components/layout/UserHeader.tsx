@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useModalStore } from '../../stores/modalStore';
+import { ROLE_LABELS, UserRole } from '../../constants/roles';
 
 export const UserHeader: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,12 +35,7 @@ export const UserHeader: React.FC = () => {
     );
   }
 
-  const roleFa = 
-    user.role === 'super_admin' ? 'مدیر کل سیستم' :
-    user.role === 'salon_admin' ? 'مدیر سالن' :
-    user.role === 'salon_specialist' ? 'متخصص سالن' :
-    user.role === 'mobile_specialist' ? 'متخصص سیار' :
-    user.role === 'line_manager' ? 'مدیر لاین' : 'مشتری';
+  const roleFa = ROLE_LABELS[user.role as UserRole] || 'مشتری';
 
   const handleLogout = async () => {
     setIsOpen(false);
@@ -57,6 +53,9 @@ export const UserHeader: React.FC = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-label="منوی کاربری"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
         className="flex items-center gap-2.5 bg-white hover:bg-[#FAF7F2] border border-[#E7E2DA] px-3 py-1.5 rounded-2xl transition-all cursor-pointer shadow-xs group"
         title="منوی کاربری"
       >

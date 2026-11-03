@@ -12,7 +12,7 @@ import {
   Map,
   List,
 } from 'lucide-react';
-import { useSearch } from '@tanstack/react-router';
+import { useSearch, useNavigate } from '@tanstack/react-router';
 import { SERVICE_LINES, Salon } from '../../../shared/data/marketplaceData';
 import { IRAN_PROVINCES, CountyCity } from '../../../shared/data/iranLocations';
 import { calculateDistanceKm } from '../../../shared/utils/geoUtils';
@@ -28,7 +28,11 @@ import { useUIStore } from '../../../shared/stores/uiStore';
 import { useSalons } from '../../../shared/api/queries';
 import { RefreshCw } from 'lucide-react';
 
+import { useFavoritesStore } from '../../../shared/stores/favoritesStore';
+import { SEO } from '../../../shared/components/SEO';
+
 export const SalonsScreen: React.FC = () => {
+  const { savedSalonIds, toggleFavorite, isFavorite } = useFavoritesStore();
   const searchParams = useSearch({ from: '/salons' }) as any;
   const initialServiceLine = searchParams?.serviceLine || 'all';
 
@@ -52,7 +56,41 @@ export const SalonsScreen: React.FC = () => {
   const [sortByOption, setSortByOption] = useState<'distance' | 'vip' | 'rating' | 'popular'>('distance');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
-  const savedSalonIds: any[] = [];
+  const navigate = useNavigate();
+
+  // Reactively sync and validate search params from URL
+  React.useEffect(() => {
+    const rawLine = searchParams?.serviceLine;
+    const rawQuery = searchParams?.q;
+    const rawProvince = searchParams?.province;
+    const validLines = ['all', ...SERVICE_LINES.map((s) => s.id)];
+
+    if (rawLine && validLines.includes(String(rawLine))) {
+      setSelectedServiceLine(String(rawLine));
+    }
+    if (rawQuery && typeof rawQuery === 'string') {
+      setSearchQuery(rawQuery.trim());
+    }
+    if (rawProvince && typeof rawProvince === 'string' && IRAN_PROVINCES.some(p => p.name === rawProvince)) {
+      setSelectedProvince(rawProvince);
+    }
+  }, [searchParams?.serviceLine, searchParams?.q, searchParams?.province, setSelectedProvince]);
+
+  // Push state changes back to URL for shareable search results
+  React.useEffect(() => {
+    const newSearch: any = { ...searchParams };
+    if (selectedServiceLine && selectedServiceLine !== 'all') newSearch.serviceLine = selectedServiceLine;
+    else delete newSearch.serviceLine;
+    
+    if (searchQuery.trim()) newSearch.q = searchQuery.trim();
+    else delete newSearch.q;
+
+    if (selectedProvince && selectedProvince !== 'همه') newSearch.province = selectedProvince;
+    else delete newSearch.province;
+
+    navigate({ search: newSearch, replace: true });
+  }, [selectedServiceLine, searchQuery, selectedProvince, navigate]);
+
   const publishedSalons = useMemo(() => salons.filter((salon: any) =>
     salon?.isApproved !== false && salon?.isActive !== false && salon?.active !== false &&
     (salon?.publicationStatus == null || salon.publicationStatus === 'active') &&
@@ -97,167 +135,139 @@ export const SalonsScreen: React.FC = () => {
         return true;
       });
 
-    list.sort((a: any, b: any) => {
-      if (sortByOption === 'distance' && sortByDistance && a.distanceKm !== undefined && b.distanceKm !== undefined) {
-        return a.distanceKm - b.distanceKm;
-      }
-      if (sortByOption === 'rating') return Number(b.salon.rating) - Number(a.salon.rating);
-      return 0;
-    });
+    return sortSalonsForSearchResults(list, sortByOption);
+  }, [publishedSalons, customerLocation, selectedProvince, selectedCity, selectedDistrict, maxDistanceKm, onlyVipFilter, onlyMobileService, selectedServiceLine, searchQuery, sortByOption]);
 
-    return list;
-  }, [publishedSalons, selectedProvince, selectedCity, selectedDistrict, customerLocation, maxDistanceKm, sortByDistance, onlyVipFilter, onlyMobileService, selectedServiceLine, searchQuery, sortByOption]);
-
-  const handleToggleWishlistSalon = (id: string) => {
-    showToast('وضعیت علاقه‌مندی به‌روز شد.');
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <RefreshCw className="w-8 h-8 text-[#173B3F] animate-spin" />
-        <p className="text-sm font-bold text-[#173B3F]">در حال بارگذاری سالن‌ها...</p>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="text-center py-20 bg-white rounded-3xl border border-red-100 m-4">
-        <p className="text-red-500 font-bold">خطایی در دریافت اطلاعات رخ داد.</p>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-3">
+      <RefreshCw className="w-8 h-8 text-[#173B3F] animate-spin" />
+      <span className="text-xs font-bold text-[#173B3F]">در حال دریافت اطلاعات سالن‌ها...</span>
+    </div>
+  );
 
   return (
-    <div className="space-y-4 pb-24 text-right">
-      <div className="px-1 flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-extrabold text-[#173B3F] font-serif">سالن‌ها و مراکز تخصصی</h1>
-          <p className="text-xs text-[#6C6C6C] mt-0.5">فیلتر هوشمند بر اساس موقعیت GPS و ۳۱ استان کشور</p>
-        </div>
-
-        {/* View Mode Toggle: List vs Map */}
-        <div className="flex p-1 bg-white rounded-xl border border-[#E7E2DA] shadow-xs">
-          <button
-            onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'list'
-                ? 'bg-[#173B3F] text-white shadow-xs'
-                : 'text-[#6C6C6C] hover:text-[#173B3F]'
-            }`}
-          >
-            <List className="w-3.5 h-3.5" />
-            <span>لیست</span>
-          </button>
-          <button
-            onClick={() => setViewMode('map')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'map'
-                ? 'bg-[#173B3F] text-white shadow-xs'
-                : 'text-[#6C6C6C] hover:text-[#173B3F]'
-            }`}
-          >
-            <Map className="w-3.5 h-3.5" />
-            <span>نقشه</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-gradient-to-r from-[#173B3F] to-[#1F4E53] rounded-3xl p-3.5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <Compass className="w-10 h-10 p-2 rounded-2xl bg-white/10 text-[#D9A2B0] animate-pulse" />
+    <>
+      <SEO 
+        title="جستجوی سالن‌ها" 
+        description="جستجو و رزرو آنلاین برترین سالن‌های زیبایی و خدمات آرایشی در سراسر ایران با تفکیک لاین‌های تخصصی." 
+      />
+      <div className="space-y-5 pb-20">
+        <header className="flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold block">
-              {selectedProvince === 'همه' ? 'سراسر کشور' : `${selectedProvince}، ${selectedCity}`}
-            </span>
-            <p className="text-[11px] text-[#E8F0EF]/80">{customerLocation.label}</p>
+            <h1 className="text-xl font-bold text-[#173B3F] font-serif">سالن‌ها و خدمات</h1>
+            <p className="text-[11px] text-[#6C6C6C]">مشاهده {toPersianDigits(processedSalons.length)} مورد تایید شده در محدوده شما</p>
           </div>
-        </div>
-        <button onClick={() => setIsLocationModalOpen(true)} className="h-9 px-4 rounded-xl bg-white text-[#173B3F] text-xs font-bold shadow-sm">تغییر مکان</button>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-[#E7E2DA] p-3 space-y-2.5 shadow-xs">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-[#173B3F]">فیلتر مکانی:</span>
-          <button onClick={() => { setSelectedProvince('همه'); setSelectedCity('همه'); setSelectedDistrict('همه'); }} className="text-[11px] text-[#8A3838] flex items-center gap-1"><RotateCcw className="w-3 h-3" />ریست</button>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <div className="relative">
-            <select value={selectedProvince} onChange={(e) => { setSelectedProvince(e.target.value); setSelectedCity('همه'); }} className="w-full h-10 px-3 pl-7 rounded-xl bg-[#FAF7F2] border text-xs font-semibold appearance-none">
-              <option value="همه">همه استان‌ها</option>
-              {IRAN_PROVINCES.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-            </select>
-            <ChevronDown className="absolute left-2.5 top-3 w-3.5 h-3.5 text-[#6C6C6C]" />
-          </div>
-          <div className="relative">
-            <select value={selectedCity} disabled={selectedProvince === 'همه'} onChange={(e) => setSelectedCity(e.target.value)} className="w-full h-10 px-3 pl-7 rounded-xl bg-[#FAF7F2] border text-xs font-semibold appearance-none disabled:opacity-50">
-              <option value="همه">همه شهرها</option>
-              {availableCounties.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-            </select>
-            <ChevronDown className="absolute left-2.5 top-3 w-3.5 h-3.5 text-[#6C6C6C]" />
-          </div>
-          <div className="relative">
-             <input type="text" placeholder="منطقه یا محله..." value={selectedDistrict === 'همه' ? '' : selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value || 'همه')} className="w-full h-10 px-3 rounded-xl bg-[#FAF7F2] border text-xs outline-none" />
-          </div>
-        </div>
-      </div>
-
-      <div className="relative">
-        <Search className="absolute right-4 top-4 w-4 h-4 text-[#173B3F]" />
-        <input type="text" placeholder="جستجوی نام سالن، متخصص یا خدمت..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-12 pr-11 pl-4 rounded-2xl bg-white border text-xs outline-none shadow-sm" />
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-        {SERVICE_LINES.map(line => {
-          const isActive = selectedServiceLine === line.id;
-          return (
-            <button key={line.id} onClick={() => setSelectedServiceLine(line.id)} className={`h-11 px-3.5 rounded-2xl text-xs font-semibold shrink-0 flex items-center gap-2 border transition-all ${isActive ? 'bg-[#173B3F] text-white border-[#173B3F] shadow-md' : 'bg-white border-[#E7E2DA]'}`}>
-              <BeautyActivityIcon activityId={line.id} size="sm" isActive={isActive} />
-              <span>{line.name}</span>
+          <div className="flex bg-white rounded-xl border border-[#E7E2DA] p-1">
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-[#173B3F] text-white' : 'text-[#6C6C6C]'}`}
+            >
+              <List className="w-4 h-4" />
             </button>
-          );
-        })}
-      </div>
+            <button 
+              onClick={() => setViewMode('map')}
+              className={`p-1.5 rounded-lg transition-all ${viewMode === 'map' ? 'bg-[#173B3F] text-white' : 'text-[#6C6C6C]'}`}
+            >
+              <Map className="w-4 h-4" />
+            </button>
+          </div>
+        </header>
 
-      {viewMode === 'map' ? (
-        <div className="space-y-4 animate-fadeIn">
-          <SalonMap
-            salons={processedSalons}
-            onBookNow={(salon) => {
-              const serv = salon.services?.[0];
-              const spec = salon.specialists?.[0];
-              const date = salon.availableSlots?.[0]?.date || 'شنبه ۵ آبان';
-              const time = salon.availableSlots?.[0]?.slots?.[0]?.time || '۱۱:۰۰';
-              if (serv && spec) {
-                openBookingModal(salon, serv, spec, date, time);
-              }
-            }}
-          />
-          <p className="text-[11px] text-center text-[#6C6C6C]">
-            روی نشانگرهای نقشه کلیک کنید تا اطلاعات سالن و دکمه رزرو نوبت نمایش داده شود.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4 animate-fadeIn">
-          {processedSalons.length === 0 ? (
-            <div className="text-center py-10 bg-white rounded-3xl border border-[#E7E2DA]">سالنی یافت نشد.</div>
-          ) : (
-            processedSalons.map(({ salon, distanceKm }: any) => (
-              <SalonCard
-                key={salon.id}
-                salon={salon}
-                distanceKm={distanceKm}
-                isWishlisted={savedSalonIds.includes(salon.id)}
-                onToggleWishlist={() => handleToggleWishlistSalon(salon.id)}
-                onBookNow={openBookingModal}
-                onViewSpecialistPortfolio={openPortfolioModal}
+        {/* Filters */}
+        <div className="space-y-3">
+          {/* Quick Line Filters */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
+            <button
+              onClick={() => setSelectedServiceLine('all')}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border transition-all ${
+                selectedServiceLine === 'all'
+                  ? 'bg-[#173B3F] text-white border-[#173B3F]'
+                  : 'bg-white text-[#1C1C1C] border-[#E7E2DA] hover:border-[#173B3F]'
+              }`}
+            >
+              همه لاین‌ها
+            </button>
+            {SERVICE_LINES.map((line) => (
+              <button
+                key={line.id}
+                onClick={() => setSelectedServiceLine(line.id)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold border flex items-center gap-1.5 transition-all ${
+                  selectedServiceLine === line.id
+                    ? 'bg-[#173B3F] text-white border-[#173B3F]'
+                    : 'bg-white text-[#1C1C1C] border-[#E7E2DA] hover:border-[#173B3F]'
+                }`}
+              >
+                <BeautyActivityIcon activityId={line.id} size="sm" />
+                <span>{line.name}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6C6C6C]" />
+              <input 
+                type="text" 
+                placeholder="جستجوی نام..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-10 pr-9 pl-3 rounded-xl bg-white border border-[#E7E2DA] text-xs outline-none focus:border-[#173B3F]"
               />
-            ))
-          )}
+            </div>
+            <button
+              onClick={() => setIsLocationModalOpen(true)}
+              className="flex items-center justify-between px-3 h-10 rounded-xl bg-white border border-[#E7E2DA] text-xs font-bold text-[#173B3F]"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <MapPin className="w-3.5 h-3.5" />
+                <span className="truncate">{selectedCity === 'همه' ? 'موقعیت من' : selectedCity}</span>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-      )}
 
-    </div>
+        {viewMode === 'map' ? (
+          <div className="space-y-4 animate-fadeIn">
+            <SalonMap
+              salons={processedSalons.map((p: any) => p.salon)}
+              onBookNow={(salon) => {
+                const serv = salon.services?.[0];
+                const spec = salon.specialists?.[0];
+                const date = salon.availableSlots?.[0]?.date || 'شنبه ۵ آبان';
+                const time = salon.availableSlots?.[0]?.slots?.[0]?.time || '۱۱:۰۰';
+                if (serv && spec) {
+                  openBookingModal(salon, serv, spec, date, time);
+                }
+              }}
+            />
+            <p className="text-[11px] text-center text-[#6C6C6C]">
+              روی نشانگرهای نقشه کلیک کنید تا اطلاعات سالن و دکمه رزرو نوبت نمایش داده شود.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4 animate-fadeIn">
+            {processedSalons.length === 0 ? (
+              <div className="text-center py-10 bg-white rounded-3xl border border-[#E7E2DA]">سالنی یافت نشد.</div>
+            ) : (
+              processedSalons.map(({ salon, distanceKm }: any) => (
+                <SalonCard
+                  key={salon.id}
+                  salon={salon}
+                  distanceKm={distanceKm}
+                  isWishlisted={isFavorite(salon.id)}
+                  onToggleWishlist={() => {
+                    const isAdded = toggleFavorite(salon.id);
+                    showToast(isAdded ? 'به نشان‌شده‌ها اضافه شد.' : 'از نشان‌شده‌ها حذف شد.');
+                  }}
+                  onBookNow={openBookingModal}
+                  onViewSpecialistPortfolio={openPortfolioModal}
+                />
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </>
   );
 };

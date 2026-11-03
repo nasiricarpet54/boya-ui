@@ -12,12 +12,12 @@ export const AdminSearchRankingView: React.FC = () => {
   const [cityFilter, setCityFilter] = useState<string>('all');
   
   const allSalons = (salons && salons.length > 0) ? salons : (querySalons || []);
-  const sortedSalons = sortSalonsForSearchResults(allSalons);
+  const sortedSalons = sortSalonsForSearchResults(allSalons.map(salon => ({ salon })));
   const filteredSalons = sortedSalons.filter(s => {
-    if (!s) return false;
+    if (!s || !s.salon) return false;
     if (cityFilter === 'all') return true;
-    const prov = s.province || '';
-    const ct = s.city || '';
+    const prov = s.salon.province || '';
+    const ct = s.salon.city || '';
     return prov.includes(cityFilter) || ct.includes(cityFilter);
   });
 
@@ -53,23 +53,26 @@ export const AdminSearchRankingView: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {filteredSalons.map((salon, index) => (
-              <tr key={salon.id} className={salon.isVip ? 'bg-amber-50/30' : ''}>
-                <td className="p-3 font-bold text-center">{toPersianDigits(index + 1)}</td>
-                <td className="p-3">
-                  <div className="font-bold">{salon.name}</div>
-                  <div className="text-[10px] opacity-60">{salon.city}</div>
-                </td>
-                <td className="p-3">
-                  <button onClick={() => handleToggleVip(salon)} className={`px-2 py-1 rounded-lg font-bold flex items-center gap-1 ${salon.isVip ? 'bg-amber-100 text-amber-800' : 'bg-gray-100'}`}>
-                    <Crown className="w-3 h-3" /> {salon.isVip ? 'VIP' : 'عادی'}
-                  </button>
-                </td>
-                <td className="p-3 text-center">
-                   <button onClick={() => handlePinToTop(salon.id)} className="text-[#173B3F] font-bold flex items-center gap-1 mx-auto"><Pin className="w-3 h-3" /> پین در صدر</button>
-                </td>
-              </tr>
-            ))}
+            {filteredSalons.map((s, index) => {
+              const salon = s.salon;
+              return (
+                <tr key={salon.id} className={salon.isVip ? 'bg-amber-50/30' : ''}>
+                  <td className="p-3 font-bold text-center">{toPersianDigits(index + 1)}</td>
+                  <td className="p-3">
+                    <div className="font-bold">{salon.name}</div>
+                    <div className="text-[10px] opacity-60">{salon.city}</div>
+                  </td>
+                  <td className="p-3">
+                    <button onClick={() => handleToggleVip(salon)} className={`px-2 py-1 rounded-lg font-bold flex items-center gap-1 ${salon.isVip ? 'bg-amber-100 text-amber-800' : 'bg-gray-100'}`}>
+                      <Crown className="w-3 h-3" /> {salon.isVip ? 'VIP' : 'عادی'}
+                    </button>
+                  </td>
+                  <td className="p-3 text-center">
+                     <button onClick={() => handlePinToTop(salon.id)} className="text-[#173B3F] font-bold flex items-center gap-1 mx-auto"><Pin className="w-3 h-3" /> پین در صدر</button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

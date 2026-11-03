@@ -38,6 +38,7 @@ export const Header: React.FC = () => {
             {appMode === 'customer' && (
               <button
                 onClick={() => setIsLocationModalOpen(true)}
+                aria-label="تغییر استان، شهرستان یا تعیین موقعیت با GPS"
                 className="flex items-center gap-1.5 bg-white border border-[#E7E2DA] hover:border-[#173B3F] px-2.5 py-1 rounded-full text-xs text-[#1C1C1C] hover:bg-[#FAF7F2] transition-all shadow-xs group"
                 title="تغییر استان، شهرستان یا تعیین موقعیت با GPS"
               >
@@ -61,6 +62,7 @@ export const Header: React.FC = () => {
             {/* Viewport Frame Mode Toggle */}
             <button
               onClick={() => setIsMobileFrame(!isMobileFrame)}
+              aria-label={isMobileFrame ? 'نمای گسترده مانیتور' : 'نمای استاندارد ۳۹۰ پیکسل'}
               title={isMobileFrame ? 'نمای گسترده مانیتور' : 'نمای استاندارد ۳۹۰ پیکسل'}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs text-[#173B3F] bg-white border border-[#E7E2DA] hover:border-[#173B3F] transition-colors shadow-sm"
             >

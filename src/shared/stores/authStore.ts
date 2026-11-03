@@ -32,6 +32,19 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
+export const isSuperAdmin = (role?: UserRole | null): boolean => role === 'super_admin';
+
+export const isSalonStaffRole = (role?: UserRole | null): boolean =>
+  ['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager'].includes(role || '');
+
+export const isCustomerRole = (role?: UserRole | null): boolean => role === 'customer';
+
+export const getAppModeForRole = (role?: UserRole | null): 'admin_panel' | 'salon_panel' | 'customer' => {
+  if (isSuperAdmin(role)) return 'admin_panel';
+  if (isSalonStaffRole(role)) return 'salon_panel';
+  return 'customer';
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -42,14 +55,7 @@ export const useAuthStore = create<AuthState>()(
 
       setAuth: (user) => {
         set({ user, isAuthenticated: true, isLoading: false, isSessionVerified: true });
-        const uiStore = useUIStore.getState();
-        if (user.role === 'super_admin') {
-          uiStore.setAppMode('admin_panel');
-        } else if (['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager'].includes(user.role)) {
-          uiStore.setAppMode('salon_panel');
-        } else {
-          uiStore.setAppMode('customer');
-        }
+        useUIStore.getState().setAppMode(getAppModeForRole(user.role));
       },
 
       clearAuth: () => {
@@ -67,7 +73,9 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (!response.ok) {
-            get().clearAuth();
+            if (response.status === 401 || response.status === 403) {
+              get().clearAuth();
+            }
             return null;
           }
 
@@ -79,18 +87,11 @@ export const useAuthStore = create<AuthState>()(
             isSessionVerified: true,
           });
 
-          const uiStore = useUIStore.getState();
-          if (verifiedUser.role === 'super_admin') {
-            uiStore.setAppMode('admin_panel');
-          } else if (['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager'].includes(verifiedUser.role)) {
-            uiStore.setAppMode('salon_panel');
-          } else {
-            uiStore.setAppMode('customer');
-          }
+          useUIStore.getState().setAppMode(getAppModeForRole(verifiedUser.role));
 
           return verifiedUser;
         } catch (err) {
-          get().clearAuth();
+          console.warn('[AUTH SESSION VERIFY NOTICE] Temporary network glitch or connection error, keeping cached session:', err);
           return null;
         } finally {
           set({ isLoading: false, isSessionVerified: true });

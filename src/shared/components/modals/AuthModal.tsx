@@ -15,7 +15,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  const [devOtpCode, setDevOtpCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(60);
   const [isTimerActive, setIsTimerActive] = useState(false);
@@ -187,13 +186,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   ویرایش شماره
                 </button>
               </div>
-
-              {devOtpCode && (
-                <div className="bg-[#FAF7F2] border border-[#C99558]/40 p-2.5 rounded-2xl text-[11px] text-[#8A5A20] flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#C99558] shrink-0" />
-                  <span>کد تایید ارسالی (تستی): <strong className="font-mono text-sm text-[#173B3F]">{devOtpCode}</strong></span>
-                </div>
-              )}
 
               <div>
                 <label className="text-xs font-bold text-[#1C1C1C] block mb-1.5 flex items-center gap-1.5">

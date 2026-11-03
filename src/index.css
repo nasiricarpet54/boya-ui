@@ -54,8 +54,11 @@
 
   /* Persian numbers and typography styling */
   .persian-nums {
-    font-feature-settings: "ss01";
-    font-variant-numeric: proportional-nums;
+    font-variant-numeric: tabular-nums;
+    /* ss01 is specifically for Persian digits in Vazirmatn font */
+    font-feature-settings: "ss01" on;
+    -moz-font-feature-settings: "ss01";
+    -webkit-font-feature-settings: "ss01";
   }
 }
 

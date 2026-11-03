@@ -3,6 +3,7 @@ import { Users, Plus, Edit, Trash2, Phone, Mail, Shield, ShieldCheck, CheckCircl
 import { useDataStore } from '../../../shared/stores/dataStore';
 import { toPersianDigits, normalizePhone } from '../../../shared/utils/persianUtils';
 import { PlatformUser } from '../../../shared/data/marketplaceData';
+import { ROLE_LABELS, ROLES, UserRole } from '../../../shared/constants/roles';
 
 export const AdminUsersView: React.FC = () => {
   const { users, addUser, updateUser, deleteUser, salons } = useDataStore();
@@ -17,7 +18,7 @@ export const AdminUsersView: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'customer' | 'salon_admin' | 'line_manager' | 'salon_specialist' | 'mobile_specialist' | 'super_admin'>('customer');
+  const [role, setRole] = useState<UserRole>(ROLES.CUSTOMER);
   const [selectedSalonId, setSelectedSalonId] = useState<string>('');
 
   const filtered = users.filter((u) => {
@@ -36,7 +37,7 @@ export const AdminUsersView: React.FC = () => {
     setFullName('');
     setPhone('');
     setEmail('');
-    setRole('customer');
+    setRole(ROLES.CUSTOMER);
     setSelectedSalonId('');
     setEditingUser(null);
   };
@@ -46,40 +47,46 @@ export const AdminUsersView: React.FC = () => {
     setFullName(u.fullName || u.name || '');
     setPhone(u.phone || '');
     setEmail(u.email || '');
-    setRole((u.role as any) || 'customer');
+    setRole((u.role as UserRole) || ROLES.CUSTOMER);
     setSelectedSalonId(u.salonId || '');
     setIsModalOpen(true);
   };
 
-  const handleSaveUser = (e: React.FormEvent) => {
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !phone.trim()) return;
+    setFormError(null);
 
     const cleanPhone = normalizePhone(phone.trim());
 
-    if (editingUser) {
-      // Edit user
-      updateUser(editingUser.id, {
-        fullName: fullName.trim(),
-        name: fullName.trim(),
-        phone: cleanPhone,
-        email: email.trim() || `${cleanPhone}@boya.ir`,
-        role,
-        salonId: selectedSalonId || undefined,
-      });
-    } else {
-      // Create user
-      addUser({
-        fullName: fullName.trim(),
-        phone: cleanPhone,
-        email: email.trim() || `${cleanPhone}@boya.ir`,
-        role: role as any,
-        salonId: selectedSalonId || undefined,
-      });
-    }
+    try {
+      if (editingUser) {
+        await updateUser(editingUser.id, {
+          fullName: fullName.trim(),
+          phone: cleanPhone,
+          email: email.trim() || `${cleanPhone}@boya.ir`,
+          role,
+          salonId: selectedSalonId || undefined,
+        });
+      } else {
+        await addUser({
+          fullName: fullName.trim(),
+          phone: cleanPhone,
+          email: email.trim() || `${cleanPhone}@boya.ir`,
+          role: role as any,
+          salonId: selectedSalonId || undefined,
+        });
+      }
 
-    setIsModalOpen(false);
-    resetForm();
+      setIsModalOpen(false);
+      resetForm();
+    } catch (err: any) {
+      console.error('Error saving user:', err);
+      const errMsg = err?.response?.data?.error || err?.message || 'خطا در افزودن یا به‌روزرسانی کاربر.';
+      setFormError(errMsg);
+    }
   };
 
   const handleDeleteUser = (id: string | number, nameStr: string) => {
@@ -95,21 +102,20 @@ export const AdminUsersView: React.FC = () => {
   };
 
   const getRoleBadge = (uRole: string) => {
+    const label = ROLE_LABELS[uRole as UserRole] || 'مشتری';
     switch (uRole) {
-      case 'super_admin':
-        return { label: 'ادمین کل پلتفرم', color: 'bg-[#173B3F] text-white border-[#173B3F]' };
-      case 'salon_admin':
-      case 'salon_owner':
-        return { label: 'مدیر سالن', color: 'bg-[#C99558]/20 text-[#8A5A20] border-[#C99558]/40' };
-      case 'line_manager':
-        return { label: 'مدیر لاین (متخصص مستقل)', color: 'bg-[#D9A2B0]/30 text-[#173B3F] border-[#D9A2B0]/50' };
-      case 'salon_specialist':
-      case 'specialist':
-        return { label: 'متخصص زیبایی', color: 'bg-blue-50 text-blue-700 border-blue-200' };
-      case 'mobile_specialist':
-        return { label: 'متخصص خدمات سیار', color: 'bg-purple-50 text-purple-700 border-purple-200' };
+      case ROLES.SUPER_ADMIN:
+        return { label, color: 'bg-[#173B3F] text-white border-[#173B3F]' };
+      case ROLES.SALON_ADMIN:
+        return { label, color: 'bg-[#C99558]/20 text-[#8A5A20] border-[#C99558]/40' };
+      case ROLES.LINE_MANAGER:
+        return { label, color: 'bg-[#D9A2B0]/30 text-[#173B3F] border-[#D9A2B0]/50' };
+      case ROLES.SALON_SPECIALIST:
+        return { label, color: 'bg-blue-50 text-blue-700 border-blue-200' };
+      case ROLES.MOBILE_SPECIALIST:
+        return { label, color: 'bg-purple-50 text-purple-700 border-purple-200' };
       default:
-        return { label: 'مشتری', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
+        return { label, color: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
     }
   };
 
@@ -141,12 +147,9 @@ export const AdminUsersView: React.FC = () => {
             className="text-xs border border-[#E7E2DA] rounded-xl p-2 bg-[#FAF7F2] font-semibold text-[#173B3F] outline-none"
           >
             <option value="all">همه نقش‌ها</option>
-            <option value="super_admin">ادمین کل</option>
-            <option value="salon_admin">مدیران سالن</option>
-            <option value="line_manager">مدیران لاین (مستقل)</option>
-            <option value="salon_specialist">متخصصین سالن</option>
-            <option value="mobile_specialist">متخصصین سیار</option>
-            <option value="customer">مشتریان</option>
+            {Object.entries(ROLE_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
           </select>
 
           <button
@@ -234,6 +237,7 @@ export const AdminUsersView: React.FC = () => {
                           onClick={() => handleOpenEdit(u)}
                           className="p-1.5 bg-[#EAF2EF] hover:bg-[#173B3F] hover:text-white text-[#173B3F] rounded-lg transition-colors border border-[#6F9A8D]/30"
                           title="ویرایش اطلاعات کاربر"
+                          aria-label="ویرایش اطلاعات کاربر"
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
@@ -253,6 +257,7 @@ export const AdminUsersView: React.FC = () => {
                           onClick={() => handleDeleteUser(u.id, u.fullName || u.name)}
                           className="p-1.5 bg-red-50 hover:bg-red-600 hover:text-white text-red-600 rounded-lg transition-colors border border-red-200"
                           title="حذف کامل کاربر"
+                          aria-label="حذف کامل کاربر"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -275,12 +280,17 @@ export const AdminUsersView: React.FC = () => {
                 <User className="w-4 h-4 text-[#C99558]" />
                 <span>{editingUser ? `ویرایش کاربر «${editingUser.fullName || editingUser.name}»` : 'تعریف کاربر جدید'}</span>
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-slate-100 rounded-full">
+              <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-slate-100 rounded-full" aria-label="بستن">
                 <X className="w-4 h-4 text-[#6C6C6C]" />
               </button>
             </div>
 
             <form onSubmit={handleSaveUser} className="space-y-4 text-xs">
+              {formError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold">
+                  {formError}
+                </div>
+              )}
               <div>
                 <label className="font-bold text-[#1C1C1C] block mb-1">نام و نام خانوادگی:</label>
                 <input
@@ -327,12 +337,12 @@ export const AdminUsersView: React.FC = () => {
                   onChange={(e: any) => setRole(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-[#E7E2DA] bg-[#FAF7F2] font-semibold text-[#173B3F] outline-none"
                 >
-                  <option value="customer">👥 مشتری / مراجع عمومی (Customer)</option>
-                  <option value="salon_admin">🏢 مدیر سالن (Salon Admin)</option>
-                  <option value="line_manager">✂️ مدیر لاین / متخصص مستقل (Line Manager)</option>
-                  <option value="salon_specialist">💄 متخصص زیبایی شاغل در سالن (Specialist)</option>
-                  <option value="mobile_specialist">🚗 متخصص خدمات سیار در محل (Mobile Specialist)</option>
-                  <option value="super_admin">👑 ادمین کل پلتفرم (Super Admin)</option>
+                  <option value={ROLES.CUSTOMER}>👥 {ROLE_LABELS.customer} (Customer)</option>
+                  <option value={ROLES.SALON_ADMIN}>🏢 {ROLE_LABELS.salon_admin} (Salon Admin)</option>
+                  <option value={ROLES.LINE_MANAGER}>✂️ {ROLE_LABELS.line_manager} (Line Manager)</option>
+                  <option value={ROLES.SALON_SPECIALIST}>💄 {ROLE_LABELS.salon_specialist} (Specialist)</option>
+                  <option value={ROLES.MOBILE_SPECIALIST}>🚗 {ROLE_LABELS.mobile_specialist} (Mobile Specialist)</option>
+                  <option value={ROLES.SUPER_ADMIN}>👑 {ROLE_LABELS.super_admin} (Super Admin)</option>
                 </select>
               </div>
 

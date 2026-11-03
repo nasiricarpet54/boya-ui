@@ -91,19 +91,3 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
   return <>{children}</>;
 };
-
-interface RoleGuardProps {
-  children: React.ReactNode;
-  roles: UserRole[];
-  fallback?: React.ReactNode;
-}
-
-export const RoleGuard: React.FC<RoleGuardProps> = ({ children, roles, fallback = null }) => {
-  const { user } = useAuthStore();
-
-  if (!user || !roles.includes(user.role)) {
-    return <>{fallback}</>;
-  }
-
-  return <>{children}</>;
-};

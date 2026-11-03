@@ -61,6 +61,8 @@ import { UserHeader } from '../../../shared/components/layout/UserHeader';
 
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useDataStore } from '../../../shared/stores/dataStore';
+import { SEO } from '../../../shared/components/SEO';
+import { ROLES, STAFF_ROLES, ROLE_LABELS } from '../../../shared/constants/roles';
 
 // Preset beauty images for quick service & portfolio creation
 const PRESET_SERVICE_PHOTOS = [
@@ -228,7 +230,7 @@ export const SalonAdminDashboard: React.FC = () => {
     }
   }, [currentSalon]);
 
-  const isSpecialistRole = user?.role === 'salon_specialist' || user?.role === 'mobile_specialist' || user?.role === 'line_manager';
+  const isSpecialistRole = user?.role === ROLES.SALON_SPECIALIST || user?.role === ROLES.MOBILE_SPECIALIST || user?.role === ROLES.LINE_MANAGER;
 
   const isMobileSpecialist =
     user?.role === 'mobile_specialist' ||
@@ -238,7 +240,7 @@ export const SalonAdminDashboard: React.FC = () => {
   // Lock specialist view when logged in as a specialist
   useEffect(() => {
     if (isSpecialistRole) {
-      if (user?.role === 'mobile_specialist') {
+      if (user?.role === ROLES.MOBILE_SPECIALIST) {
         // Independent Mobile Specialist: Completely standalone, NO salon affiliation
         const mobileSpecObj = {
           id: user.id || 'mobile-spec',
@@ -301,9 +303,9 @@ export const SalonAdminDashboard: React.FC = () => {
         icon: <Car className="w-3.5 h-3.5" />,
       };
     }
-    if (spec.specialistType === 'independent_specialist') {
+    if (spec.specialistType === 'line_manager') {
       return {
-        label: 'متخصص مستقل (Independent)',
+        label: ROLE_LABELS.line_manager,
         color: 'bg-[#5E8B95]/15 text-[#24545F] border-[#5E8B95]/30',
         icon: <Briefcase className="w-3.5 h-3.5" />,
       };
@@ -347,16 +349,49 @@ export const SalonAdminDashboard: React.FC = () => {
   const [serviceError, setServiceError] = useState('');
   const [serviceBusy, setServiceBusy] = useState(false);
   const handleAddService = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!newServiceName.trim()) return;
-    if (!['salon_admin', 'super_admin', 'salon_specialist', 'mobile_specialist'].includes(user?.role || '')) { showToast('حساب شما مجاز به پیشنهاد خدمت نیست.'); return; }
-    setServiceBusy(true); setServiceError('');
+    e.preventDefault();
+    if (!newServiceName.trim()) return;
+    if (![ROLES.SALON_ADMIN, ROLES.SUPER_ADMIN, ROLES.SALON_SPECIALIST, ROLES.MOBILE_SPECIALIST].includes(user?.role as any)) {
+      showToast('حساب شما مجاز به ثبت خدمت نیست.');
+      return;
+    }
+
+    const priceNum = Number(newServicePrice);
+    const durationNum = Number(newServiceDuration);
+
+    if (!priceNum || priceNum <= 0) {
+      setServiceError('قیمت خدمت الزامی و باید بیشتر از صفر باشد.');
+      return;
+    }
+    if (!durationNum || durationNum <= 0) {
+      setServiceError('مدت زمان خدمت الزامی و باید بیشتر از صفر باشد.');
+      return;
+    }
+
+    setServiceBusy(true);
+    setServiceError('');
     try {
       const lineId = activeSpecialistView ? activeSpecialistView.specialtyLine : newServiceLineId;
-      const created = await createService({ salonId: Number(currentSalon.id), serviceLineId: lineId, name: newServiceName.trim(), durationMinutes: Number(newServiceDuration), price: Number(newServicePrice), description: 'سرویس ثبت شده توسط مدیریت سالن در پلتفرم بویا', isMobileAvailable: newServiceMobile, imageUrl: newServiceImage });
-      setSalonServices((prev) => [created, ...prev]); setIsAddingService(false); setNewServiceName(''); showToast('خدمت با موفقیت در سرور ثبت شد.');
+      const created = await createService({
+        salonId: Number(currentSalon.id),
+        serviceLineId: lineId,
+        name: newServiceName.trim(),
+        durationMinutes: durationNum,
+        price: priceNum,
+        description: 'سرویس ثبت شده توسط مدیریت سالن در پلتفرم بویا',
+        isMobileAvailable: newServiceMobile,
+        imageUrl: newServiceImage,
+      });
+      setSalonServices((prev) => [created, ...prev]);
+      setIsAddingService(false);
+      setNewServiceName('');
+      showToast('خدمت با موفقیت ثبت شد.');
       await queryClient.invalidateQueries({ queryKey: ['salons'] });
-    } catch (err: any) { setServiceError(err?.response?.data?.error || err?.message || 'خطا در ثبت خدمت.'); }
-    finally { setServiceBusy(false); }
+    } catch (err: any) {
+      setServiceError(err?.response?.data?.error || err?.message || 'خطا در ثبت خدمت.');
+    } finally {
+      setServiceBusy(false);
+    }
   };
 
   // Handler: Add Portfolio Item (Saved permanently in PostgreSQL portfolio_items table)
@@ -461,7 +496,13 @@ export const SalonAdminDashboard: React.FC = () => {
   // Handler: Save Salon Name & Address
   const handleSaveSalonInfo = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editableSalonName.trim() || !editableSalonAddress.trim()) return;
+    const isNameMissing = !editableSalonName.trim();
+    const isAddressMissing = !isMobileSpecialist && !editableSalonAddress.trim();
+
+    if (isNameMissing || isAddressMissing) {
+      showToast(isNameMissing ? 'نام سالن الزامی است.' : 'آدرس دقیق برای سالن‌های ثابت الزامی است.');
+      return;
+    }
 
     if (currentSalon?.id) {
       updateSalon(currentSalon.id, {
@@ -540,7 +581,8 @@ export const SalonAdminDashboard: React.FC = () => {
         try {
           const base64 = event.target?.result as string;
           const res = await api.post('/upload', { base64, filename: file.name });
-          const avatarUrl = res.data?.url || base64;
+          if (!res.data?.url) throw new Error('پاسخ معتبری از سرور دریافت نشد.');
+          const avatarUrl = res.data.url;
 
           await useAuthStore.getState().updateProfile({ avatar: avatarUrl });
 
@@ -556,9 +598,9 @@ export const SalonAdminDashboard: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ['profile'] });
 
           showToast('تصویر پروفایل با موفقیت در پایگاه‌داده ذخیره شد.');
-        } catch (uploadErr) {
+        } catch (uploadErr: any) {
           console.error('Avatar upload failed', uploadErr);
-          showToast('خطا در ذخیره‌سازی تصویر پروفایل.');
+          showToast(uploadErr?.response?.data?.error || uploadErr?.message || 'خطا در ذخیره‌سازی تصویر پروفایل.');
         } finally {
           setIsUploadingAvatar(false);
         }
@@ -581,7 +623,8 @@ export const SalonAdminDashboard: React.FC = () => {
         try {
           const base64 = event.target?.result as string;
           const res = await api.post('/upload', { base64, filename: file.name });
-          const coverUrl = res.data?.url || base64;
+          if (!res.data?.url) throw new Error('پاسخ معتبری از سرور دریافت نشد.');
+          const coverUrl = res.data.url;
 
           await updateSalon(currentSalon.id, { coverImage: coverUrl });
           queryClient.invalidateQueries({ queryKey: ['salons'] });
@@ -607,7 +650,12 @@ export const SalonAdminDashboard: React.FC = () => {
     : null;
 
   return (
-    <div className="space-y-5 pb-24 animate-fadeIn">
+    <>
+      <SEO 
+        title="پنل مدیریت سالن و متخصصین" 
+        description="مدیریت نوبت‌ها، خدمات، پرسنل و گزارشات مالی اختصاصی سالن‌های زیبایی در پلتفرم بویا." 
+      />
+      <div className="space-y-5 pb-24 animate-fadeIn">
       {/* ========================================================
           ROLE SWITCHER & CONTEXT HEADER
           Allows switching between Salon Owner and Specialists (Only for Salon Admin / Testing)
@@ -618,7 +666,7 @@ export const SalonAdminDashboard: React.FC = () => {
             <div className="flex items-center gap-2">
               <Building2 className="w-4 h-4 text-[#173B3F]" />
               <span className="text-xs font-bold text-[#173B3F]">انتخاب سالن آزمایشی:</span>
-              {user?.role === 'super_admin' ? (
+              {user?.role === ROLES.SUPER_ADMIN ? (
                 <select
                   value={selectedSalonId}
                   onChange={(e) => handleSelectSalon(e.target.value)}
@@ -686,7 +734,7 @@ export const SalonAdminDashboard: React.FC = () => {
                         : 'bg-white text-[#1C1C1C] border-[#E7E2DA] hover:border-[#173B3F]'
                     }`}
                   >
-                    <img src={spec.avatarUrl || 'https://via.placeholder.com/150'} alt={spec.user?.fullName} className="w-4 h-4 rounded-full object-cover" />
+                    <img src={spec.avatarUrl || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=150&h=150&fit=crop'} alt={spec.user?.fullName} className="w-4 h-4 rounded-full object-cover" />
                     <span>{spec.user?.fullName}</span>
                     <span className={`text-[9px] px-1.5 py-0.2 rounded-md ${badge.color}`}>
                       {spec.isMobileActive
@@ -751,7 +799,7 @@ export const SalonAdminDashboard: React.FC = () => {
           <div className="relative rounded-3xl overflow-hidden shadow-lg border border-[#6F9A8D]/40 bg-[#173B3F] text-white">
             <div className="absolute inset-0 bg-gradient-to-r from-[#173B3F] via-[#173B3F]/90 to-transparent z-0" />
             <img
-              src={activeSpecialistView.portfolio?.[0]?.imageUrl || activeSpecialistView.avatarUrl || 'https://via.placeholder.com/150'}
+              src={activeSpecialistView.portfolio?.[0]?.imageUrl || activeSpecialistView.avatarUrl || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&h=400&fit=crop'}
               alt={activeSpecialistView.user?.fullName}
               className="absolute left-0 top-0 w-2/5 h-full object-cover opacity-25 blur-xs"
             />
@@ -760,7 +808,7 @@ export const SalonAdminDashboard: React.FC = () => {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="relative group">
                   <img
-                    src={activeSpecialistView.avatarUrl || user?.avatar || 'https://via.placeholder.com/150'}
+                    src={activeSpecialistView.avatarUrl || user?.avatar || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=200&h=200&fit=crop'}
                     alt={activeSpecialistView.user?.fullName}
                     className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-3 border-[#D9A2B0] shadow-md"
                   />
@@ -1580,6 +1628,7 @@ export const SalonAdminDashboard: React.FC = () => {
                           }}
                           className="w-7 h-7 rounded-full bg-[#B35D67] text-white flex items-center justify-center hover:bg-red-700 shadow-sm"
                           title="حذف نمونه‌کار"
+                          aria-label="حذف نمونه‌کار"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1669,9 +1718,10 @@ export const SalonAdminDashboard: React.FC = () => {
                         </label>
                         <textarea
                           rows={2}
-                          required
+                          required={!isMobileSpecialist}
                           value={editableSalonAddress}
                           onChange={(e) => setEditableSalonAddress(e.target.value)}
+                          placeholder={isMobileSpecialist ? "آدرس برای متخصص سیار اختیاری است (خدمات در محل مشتری ارائه می‌شود)" : "آدرس دقیق سالن خود را وارد کنید..."}
                           className="w-full p-3 rounded-xl border border-[#173B3F] text-xs text-[#1C1C1C] focus:ring-2 focus:ring-[#173B3F]/20 outline-none leading-relaxed"
                         />
                       </div>
@@ -1749,7 +1799,7 @@ export const SalonAdminDashboard: React.FC = () => {
               <div className="p-4 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA] flex flex-col sm:flex-row items-center gap-4">
                 <div className="relative group">
                   <img
-                    src={activeSpecialistView.avatarUrl || user?.avatar || 'https://via.placeholder.com/150'}
+                    src={activeSpecialistView.avatarUrl || user?.avatar || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=200&h=200&fit=crop'}
                     alt={activeSpecialistView.user?.fullName}
                     className="w-20 h-20 rounded-2xl object-cover border-2 border-[#173B3F] shadow-sm"
                   />
@@ -2133,7 +2183,7 @@ export const SalonAdminDashboard: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <div className="relative">
                             <img
-                              src={spec.avatarUrl || 'https://via.placeholder.com/150'}
+                              src={spec.avatarUrl || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=150&h=150&fit=crop'}
                               alt={spec.user?.fullName}
                               className="w-13 h-13 rounded-2xl object-cover border-2 border-[#D9A2B0] shrink-0"
                             />
@@ -2836,6 +2886,7 @@ export const SalonAdminDashboard: React.FC = () => {
               <button
                 onClick={() => setLightboxImage(null)}
                 className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/90 transition-colors"
+                aria-label="بستن تصویر"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2860,5 +2911,6 @@ export const SalonAdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
+    </>
   );
 };

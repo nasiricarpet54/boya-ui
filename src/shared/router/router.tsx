@@ -7,7 +7,7 @@ import { BookingModal } from '../components/modals/BookingModal';
 import { SpecialistPortfolioModal } from '../components/modals/SpecialistPortfolioModal';
 import { LocationSelectorModal } from '../components/modals/LocationSelectorModal';
 import { useUIStore } from '../stores/uiStore';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore, getAppModeForRole } from '../stores/authStore';
 import { useModalStore } from '../stores/modalStore';
 import { useLocationStore } from '../stores/locationStore';
 import { useDataStore } from '../stores/dataStore';
@@ -32,18 +32,7 @@ const Root = () => {
 
   React.useEffect(() => {
     if (isAuthenticated && user) {
-      if (user.role === 'super_admin') {
-        setAppMode('admin_panel');
-      } else if (
-        user.role === 'salon_admin' || 
-        user.role === 'salon_specialist' || 
-        user.role === 'mobile_specialist' || 
-        user.role === 'line_manager'
-      ) {
-        setAppMode('salon_panel');
-      } else {
-        setAppMode('customer');
-      }
+      setAppMode(getAppModeForRole(user.role));
     }
   }, [isAuthenticated, user, setAppMode]);
 
@@ -67,8 +56,9 @@ const Root = () => {
     showToast(`نوبت در سالن «${data.salonName}» ثبت شد.`);
   };
 
-  const isAdminMode = appMode === 'admin_panel' || (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin'));
-  const isSalonPanelMode = appMode === 'salon_panel' || (typeof window !== 'undefined' && (window.location.pathname.startsWith('/salon-admin') || window.location.pathname.startsWith('/salon') || window.location.pathname.startsWith('/salon-panel')));
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  const isSalonPanelMode = appMode === 'salon_panel' || (pathname.startsWith('/salon-admin') || pathname.startsWith('/salon-panel') || (pathname.startsWith('/salon') && !pathname.startsWith('/salons')));
+  const isAdminMode = appMode === 'admin_panel' || pathname.startsWith('/admin');
   
   return (
     <div className="min-h-screen bg-[#E7E2DA] flex flex-col selection:bg-[#D9A2B0] selection:text-[#173B3F]">
@@ -194,6 +184,14 @@ const AdminRouteComponent = () => (
   </Suspense>
 );
 
+import { NotFoundScreen } from '../../features/not-found/NotFoundScreen';
+
+const NotFoundRouteComponent = () => (
+  <Suspense fallback={<div className="p-10 text-center text-xs font-bold text-[#173B3F]">در حال بارگذاری...</div>}>
+    <NotFoundScreen />
+  </Suspense>
+);
+
 const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeRouteComponent });
 const salonsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salons', component: SalonsRouteComponent });
 const bookingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/bookings', component: BookingsRouteComponent });
@@ -203,7 +201,7 @@ const salonAdminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/s
 const salonRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon', component: SalonAdminRouteComponent });
 const salonPanelRoute = createRoute({ getParentRoute: () => rootRoute, path: '/salon-panel', component: SalonAdminRouteComponent });
 const adminRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: AdminRouteComponent });
-const notFoundRoute = createRoute({ getParentRoute: () => rootRoute, path: '*', component: HomeRouteComponent });
+const notFoundRoute = createRoute({ getParentRoute: () => rootRoute, path: '*', component: NotFoundRouteComponent });
 
 const routeTree = rootRoute.addChildren([indexRoute, salonsRoute, bookingsRoute, savedRoute, profileRoute, salonAdminRoute, salonRoute, salonPanelRoute, adminRoute, notFoundRoute]);
 

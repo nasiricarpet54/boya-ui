@@ -82,22 +82,31 @@ export const AdminProfileView: React.FC = () => {
     try {
       const reader = new FileReader();
       reader.onload = async () => {
-        const base64 = reader.result as string;
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, filename: file.name }),
-          credentials: 'include',
-        });
-        const uploadData = await uploadRes.json();
-        if (uploadData.url) {
-          handleChange('avatarUrl', uploadData.url);
+        try {
+          const base64 = reader.result as string;
+          const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ base64, filename: file.name }),
+            credentials: 'include',
+          });
+          const uploadData = await uploadRes.json();
+          if (uploadData.url) {
+            handleChange('avatarUrl', uploadData.url);
+          }
+        } catch (err) {
+          console.error('Error uploading admin avatar:', err);
+        } finally {
+          setIsUploading(false);
         }
+      };
+      reader.onerror = () => {
+        setIsUploading(false);
+        console.error('FileReader error');
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      console.error('Error uploading admin avatar:', err);
-    } finally {
+      console.error('Error in handleAvatarUpload:', err);
       setIsUploading(false);
     }
   };

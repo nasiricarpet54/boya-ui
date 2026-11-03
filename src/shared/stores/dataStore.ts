@@ -104,10 +104,13 @@ export const useDataStore = create<DataState>()(
           let usersData: any[] = [];
           let adminData: any = null;
           let bookingsData: any[] = [];
+          let ticketsData: any[] = [];
+          let auditLogsData: any[] = [];
 
           if (isAuth && authUser) {
             const authRequests: Promise<any>[] = [
               api.get('/bookings').catch(() => ({ data: [] })),
+              api.get('/tickets').catch(() => ({ data: [] })),
             ];
 
             const canViewUsers = ['super_admin', 'salon_admin', 'line_manager'].includes(authUser.role);
@@ -116,18 +119,22 @@ export const useDataStore = create<DataState>()(
             }
             if (authUser.role === 'super_admin') {
               authRequests.push(api.get('/admin/profile').catch(() => ({ data: null })));
+              authRequests.push(api.get('/audit-logs').catch(() => ({ data: [] })));
             }
 
             const results = await Promise.all(authRequests);
             bookingsData = Array.isArray(results[0]?.data) ? results[0].data : [];
+            ticketsData = Array.isArray(results[1]?.data) ? results[1].data : [];
 
-            let resultIndex = 1;
+            let resultIndex = 2;
             if (canViewUsers) {
               usersData = Array.isArray(results[resultIndex]?.data) ? results[resultIndex].data : [];
               resultIndex++;
             }
             if (authUser.role === 'super_admin') {
               adminData = results[resultIndex]?.data || null;
+              resultIndex++;
+              auditLogsData = Array.isArray(results[resultIndex]?.data) ? results[resultIndex].data : [];
             }
           }
 
@@ -137,6 +144,8 @@ export const useDataStore = create<DataState>()(
             notifications: Array.isArray(notifsRes.data) ? notifsRes.data : [],
             adminProfile: adminData,
             bookings: bookingsData,
+            tickets: ticketsData,
+            auditLogs: auditLogsData,
           });
         } catch (err) {
           console.error('[DATA STORE FETCH ERROR]', err);
@@ -196,6 +205,7 @@ export const useDataStore = create<DataState>()(
           await get().fetchServerData();
         } catch (err) {
           console.error('Error adding user:', err);
+          throw err;
         }
       },
 
@@ -207,6 +217,7 @@ export const useDataStore = create<DataState>()(
           }));
         } catch (err) {
           console.error('Error updating user:', err);
+          throw err;
         }
       },
 
@@ -296,7 +307,6 @@ export const useDataStore = create<DataState>()(
     {
       name: 'boya-core-data-v6',
       partialize: (state) => ({ 
-        latestBookingAlert: state.latestBookingAlert,
         tickets: state.tickets,
         auditLogs: state.auditLogs
       }),

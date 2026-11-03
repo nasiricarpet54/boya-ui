@@ -137,16 +137,17 @@ export const ImageFileUploader: React.FC<ImageFileUploaderProps> = ({
         fileData: finalDataUrl,
         fileName: file.name,
         fileType: file.type,
-      }).catch(() => {
-        // Fallback: return compressed Data URL directly if backend route unavailable
-        return { data: { url: finalDataUrl } };
       });
 
-      const uploadedUrl = response.data?.url || finalDataUrl;
-      onChange(uploadedUrl);
+      if (response.data && response.data.url) {
+        await Promise.resolve(onChange(response.data.url));
+      } else {
+        throw new Error('پاسخ معتبری از سرور دریافت نشد.');
+      }
     } catch (err: any) {
       console.error('File upload error:', err);
-      setError('خطایی در فشرده‌سازی و بارگذاری فایل رخ داد.');
+      const serverErrMsg = err?.response?.data?.error || err?.message || 'خطایی در فشرده‌سازی و بارگذاری تصویر رخ داد.';
+      setError(serverErrMsg);
     } finally {
       setIsUploading(false);
     }

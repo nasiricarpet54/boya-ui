@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from '@tanstack/react-router';
 import { toPersianDigits } from '../../utils/persianUtils';
 import { useUIStore, NavTab } from '../../stores/uiStore';
 import { useBookings } from '../../api/queries';
+import { useFavoritesStore } from '../../stores/favoritesStore';
 
 export const BottomNav: React.FC = () => {
   const navigate = useNavigate();
@@ -13,16 +14,17 @@ export const BottomNav: React.FC = () => {
   
   // Calculate counts for badges
   const activeBookingsCount = (bookings || []).filter((b: any) => b.status === 'confirmed').length;
-  const savedCount = 2; // This should come from a store too, but for now mocked or from data
+  const { savedSalonIds } = useFavoritesStore();
+  const savedCount = savedSalonIds.length;
 
   // Sync activeTab with current path
   React.useEffect(() => {
     const path = location.pathname;
     if (path === '/') setActiveTab('home');
-    else if (path === '/salons') setActiveTab('home'); // Map salons search to home or separate? 
-    else if (path === '/bookings') setActiveTab('bookings');
-    else if (path === '/saved') setActiveTab('saved');
-    else if (path === '/profile') setActiveTab('profile');
+    else if (path.includes('/salons')) setActiveTab('salons');
+    else if (path.includes('/bookings')) setActiveTab('bookings');
+    else if (path.includes('/saved')) setActiveTab('saved');
+    else if (path.includes('/profile')) setActiveTab('profile');
   }, [location.pathname, setActiveTab]);
 
   const tabs: { id: NavTab; label: string; icon: React.ElementType; badge?: number; path: string }[] = [
@@ -43,12 +45,16 @@ export const BottomNav: React.FC = () => {
       <div className="max-w-md mx-auto px-3 py-2 flex items-center justify-around">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = location.pathname === tab.path || (tab.id === 'home' && location.pathname === '/');
+          const isActive = tab.path === '/' 
+            ? location.pathname === '/' 
+            : location.pathname.startsWith(tab.path);
 
           return (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id, tab.path)}
+              aria-label={tab.label}
+              aria-current={isActive ? 'page' : undefined}
               className={`relative flex flex-col items-center justify-center py-1 px-2.5 transition-all group ${
                 isActive ? 'text-[#173B3F]' : 'text-[#6C6C6C] hover:text-[#173B3F]'
               }`}

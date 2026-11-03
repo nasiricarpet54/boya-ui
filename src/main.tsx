@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from '@tanstack/react-router';
+import { HelmetProvider } from 'react-helmet-async';
 import { ErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { QueryProvider } from './shared/api/queryClient';
 import { router } from './shared/router/router';
@@ -51,10 +52,12 @@ if (typeof window !== 'undefined') {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <QueryProvider>
-        <RouterProvider router={router} />
-      </QueryProvider>
-    </ErrorBoundary>
+    <HelmetProvider>
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <QueryProvider>
+          <RouterProvider router={router} />
+        </QueryProvider>
+      </ErrorBoundary>
+    </HelmetProvider>
   </React.StrictMode>
 );

@@ -84,6 +84,7 @@ export const services = pgTable('services', {
   durationMinutes: integer('duration_minutes').notNull(),
   isMobileAvailable: boolean('is_mobile_available').default(false).notNull(),
   imageUrl: text('image_url'),
+  publicationStatus: publicationStatusEnum('publication_status').default('active').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -97,6 +98,7 @@ export const specialists = pgTable('specialists', {
   isVerified: boolean('is_verified').default(false).notNull(),
   isMobileActive: boolean('is_mobile_active').default(false).notNull(),
   avatarUrl: text('avatar_url'),
+  publicationStatus: publicationStatusEnum('publication_status').default('active').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -264,5 +266,26 @@ export const auditLogs = pgTable('audit_logs', {
   action: text('action').notNull(), // 'LOGIN', 'ROLE_CHANGE', 'SUSPENSION', 'DELETE_USER', etc.
   details: text('details'), // JSON string with payload or context
   ipAddress: text('ip_address'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const supportTickets = pgTable('support_tickets', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  ticketCode: text('ticket_code').notNull(),
+  subject: text('subject').notNull(),
+  category: text('category').default('general').notNull(),
+  priority: text('priority').default('medium').notNull(),
+  status: text('status').default('open').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const ticketMessages = pgTable('ticket_messages', {
+  id: serial('id').primaryKey(),
+  ticketId: integer('ticket_id').references(() => supportTickets.id, { onDelete: 'cascade' }).notNull(),
+  senderId: integer('sender_id').references(() => users.id).notNull(),
+  senderRole: text('sender_role').notNull(),
+  message: text('message').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
