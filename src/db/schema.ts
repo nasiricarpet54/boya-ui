@@ -1,5 +1,5 @@
-import { pgTable, serial, text, integer, timestamp, boolean, pgEnum, decimal, unique } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { pgTable, serial, text, integer, timestamp, boolean, pgEnum, decimal, uniqueIndex } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
 
 // Enums
 export const userRoleEnum = pgEnum('user_role', [
@@ -46,7 +46,7 @@ export const users = pgTable('users', {
   phone: text('phone').notNull().unique(),
   role: userRoleEnum('role').default('customer').notNull(),
   status: userStatusEnum('status').default('active').notNull(),
-  salonId: integer('salon_id').references(() => salons.id), // For salon_admin, specialists, and line_manager
+  salonId: integer('salon_id').references(() => salons.id, { onDelete: 'set null' }), // For salon_admin, specialists, and line_manager
   managedLine: text('managed_line'), // For line_manager (e.g. 'hair', 'nail')
   avatar: text('avatar'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -71,12 +71,15 @@ export const salons = pgTable('salons', {
   isMobileServiceActive: boolean('is_mobile_service_active').default(false).notNull(),
   coverImage: text('cover_image'),
   gallery: text('gallery'),
+  licenseDocUrl: text('license_doc_url'),
+  ownerName: text('owner_name'),
+  displayPriority: integer('display_priority').default(99).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const services = pgTable('services', {
   id: serial('id').primaryKey(),
-  salonId: integer('salon_id').references(() => salons.id).notNull(),
+  salonId: integer('salon_id').references(() => salons.id, { onDelete: 'cascade' }).notNull(),
   serviceLineId: text('service_line_id').notNull(), // e.g. 'hair', 'nail'
   name: text('name').notNull(),
   description: text('description'),
@@ -84,28 +87,30 @@ export const services = pgTable('services', {
   durationMinutes: integer('duration_minutes').notNull(),
   isMobileAvailable: boolean('is_mobile_available').default(false).notNull(),
   imageUrl: text('image_url'),
+  publicationStatus: publicationStatusEnum('publication_status').default('active').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const specialists = pgTable('specialists', {
   id: serial('id').primaryKey(),
-  userId: integer('user_id').references(() => users.id).notNull().unique(),
-  salonId: integer('salon_id').references(() => salons.id).notNull(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),
+  salonId: integer('salon_id').references(() => salons.id, { onDelete: 'cascade' }).notNull(),
   specialtyLine: text('specialty_line').notNull(),
   bio: text('bio'),
   experienceYears: integer('experience_years').default(0).notNull(),
   isVerified: boolean('is_verified').default(false).notNull(),
   isMobileActive: boolean('is_mobile_active').default(false).notNull(),
   avatarUrl: text('avatar_url'),
+  publicationStatus: publicationStatusEnum('publication_status').default('active').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const bookings = pgTable('bookings', {
   id: serial('id').primaryKey(),
-  customerId: integer('customer_id').references(() => users.id).notNull(),
-  salonId: integer('salon_id').references(() => salons.id).notNull(),
-  serviceId: integer('service_id').references(() => services.id).notNull(),
-  specialistId: integer('specialist_id').references(() => specialists.id).notNull(),
+  customerId: integer('customer_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  salonId: integer('salon_id').references(() => salons.id, { onDelete: 'cascade' }).notNull(),
+  serviceId: integer('service_id').references(() => services.id, { onDelete: 'cascade' }).notNull(),
+  specialistId: integer('specialist_id').references(() => specialists.id, { onDelete: 'cascade' }).notNull(),
   date: text('date').notNull(), // Format: YYYY-MM-DD
   time: text('time').notNull(), // Format: HH:MM
   status: bookingStatusEnum('status').default('pending').notNull(),
@@ -117,13 +122,15 @@ export const bookings = pgTable('bookings', {
   price: decimal('price', { precision: 12, scale: 0 }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
-  // Database-level lock for double booking prevention
-  uniqueSpecialistSlot: unique('unique_specialist_slot').on(table.specialistId, table.date, table.time),
+  // Partial index to allow re-booking a slot if the previous booking was cancelled
+  uniqueSpecialistSlot: uniqueIndex('unique_specialist_slot')
+    .on(table.specialistId, table.date, table.time)
+    .where(sql`status != 'cancelled'`),
 }));
 
 export const transactions = pgTable('transactions', {
   id: serial('id').primaryKey(),
-  bookingId: integer('booking_id').references(() => bookings.id).notNull(),
+  bookingId: integer('booking_id').references(() => bookings.id, { onDelete: 'cascade' }).notNull(),
   amount: decimal('amount', { precision: 12, scale: 0 }).notNull(),
   gatewayReference: text('gateway_reference'),
   status: text('status').notNull(), // e.g. 'success', 'failed'
@@ -133,9 +140,9 @@ export const transactions = pgTable('transactions', {
 
 export const portfolioItems = pgTable('portfolio_items', {
   id: serial('id').primaryKey(),
-  specialistId: integer('specialist_id').references(() => specialists.id).notNull(),
+  specialistId: integer('specialist_id').references(() => specialists.id, { onDelete: 'cascade' }).notNull(),
   title: text('title').notNull(),
-  imageUrl: text('imageUrl').notNull(),
+  imageUrl: text('image_url').notNull(),
   category: text('category').notNull(),
   likesCount: integer('likes_count').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -200,7 +207,7 @@ export const bookingsRelations = relations(bookings, ({ one, many }) => ({
   transactions: many(transactions),
 }));
 
-export const servicesRelations = relations(services, ({ one, many }) => ({
+export const servicesRelations = relations(services, ({ many, one }) => ({
   salon: one(salons, {
     fields: [services.salonId],
     references: [salons.id],
@@ -259,7 +266,7 @@ export const adminProfile = pgTable('admin_profile', {
 
 export const auditLogs = pgTable('audit_logs', {
   id: serial('id').primaryKey(),
-  actorId: integer('actor_id').references(() => users.id),
+  actorId: integer('actor_id').references(() => users.id, { onDelete: 'set null' }),
   targetId: text('target_id'), // User ID, Salon ID, or other entity ID
   action: text('action').notNull(), // 'LOGIN', 'ROLE_CHANGE', 'SUSPENSION', 'DELETE_USER', etc.
   details: text('details'), // JSON string with payload or context

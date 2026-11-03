@@ -1,13 +1,22 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+
+const isProd = process.env.NODE_ENV === 'production';
 
 if (!process.env.JWT_SECRET) {
-  console.warn('\x1b[33m%s\x1b[0m', '⚠️ WARNING: JWT_SECRET environment variable is missing.');
-  console.warn('\x1b[33m%s\x1b[0m', 'Using internal fallback secret.');
+  if (isProd) {
+    console.error('🔴 [FATAL] JWT_SECRET is not set in production!');
+    console.error('   Set JWT_SECRET in .env.production or use --env-file.');
+    console.error('   Refusing to start with a random secret (would invalidate all sessions on restart).');
+    process.exit(1); // ← سرور در production اصلاً بالا نمی‌آد
+  } else {
+    console.warn('⚠️  [DEV] JWT_SECRET not set, using random secret for this session only.');
+    console.warn('    All sessions will be invalidated on restart.');
+  }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'boya-beauty-fallback-secret-key-2026-secure-v3';
-
-const JWT_EXPIRES_IN = '30d';
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
+const JWT_EXPIRES_IN = '7d'; // ← از 30 روز به 7 روز کاهش دادم (بهتره)
 
 export interface JwtUserPayload {
   id: number;
@@ -33,18 +42,9 @@ export function generateJwtToken(payload: JwtUserPayload): string {
 
 export function verifyJwtToken(token: string): JwtUserPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET!) as any;
-    if (decoded && (decoded.phone || decoded.id)) {
-      return {
-        id: Number(decoded.id),
-        uid: String(decoded.uid || ''),
-        phone: String(decoded.phone || ''),
-        role: String(decoded.role || 'customer'),
-        salonId: decoded.salonId ? String(decoded.salonId) : null,
-      };
-    }
-    return null;
-  } catch (err) {
+    const decoded = jwt.verify(token, JWT_SECRET!) as JwtUserPayload;
+    return decoded;
+  } catch {
     return null;
   }
 }

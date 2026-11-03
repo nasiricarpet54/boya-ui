@@ -52,10 +52,9 @@
     margin-inline-end: auto;
   }
 
-  /* Persian numbers and typography styling */
+  /* Persian numbers: keep digit columns aligned in prices and times. */
   .persian-nums {
-    font-feature-settings: "ss01";
-    font-variant-numeric: proportional-nums;
+    font-variant-numeric: tabular-nums;
   }
 }
 

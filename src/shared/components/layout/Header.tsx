@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, Monitor, MapPin } from 'lucide-react';
+import { Smartphone, Monitor, MapPin, Search } from 'lucide-react';
 import { BoyaLogo } from '../ui/BoyaLogo';
 import { useUIStore } from '../../stores/uiStore';
 import { useLocationStore } from '../../stores/locationStore';
@@ -18,7 +18,7 @@ export const Header: React.FC = () => {
   
   const { selectedCity, selectedProvince, customerLocation } = useLocationStore();
   const { user, isAuthenticated } = useAuthStore();
-  const { openAuthModal } = useModalStore();
+  const { openAuthModal, openSearchModal } = useModalStore();
   const navigate = useNavigate();
 
   const hasGpsActive = !!customerLocation.coords;
@@ -34,10 +34,27 @@ export const Header: React.FC = () => {
 
           {/* Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Global Search Button */}
+            <button
+              onClick={() => openSearchModal()}
+              aria-label="جستجوی سریع سالن، خدمت یا متخصص (Ctrl+K)"
+              className="flex items-center gap-1.5 sm:gap-2 bg-white border border-[#E7E2DA] hover:border-[#173B3F] px-2.5 sm:px-3 py-1 rounded-full text-xs text-[#173B3F] hover:bg-[#FAF7F2] transition-all shadow-xs group"
+              title="جستجوی سریع (Ctrl+K)"
+            >
+              <Search className="w-3.5 h-3.5 text-[#173B3F] group-hover:scale-110 transition-transform" />
+              <span className="font-bold text-[11px] text-[#6C6C6C] group-hover:text-[#173B3F] hidden sm:inline">
+                جستجو...
+              </span>
+              <kbd className="hidden lg:inline-flex items-center text-[10px] font-mono px-1 rounded bg-[#FAF7F2] border border-[#E7E2DA] text-[#6C6C6C]">
+                ⌘K
+              </kbd>
+            </button>
+
             {/* City & GPS Selector in Customer Mode */}
             {appMode === 'customer' && (
               <button
                 onClick={() => setIsLocationModalOpen(true)}
+                aria-label="تغییر استان، شهرستان یا تعیین موقعیت با GPS"
                 className="flex items-center gap-1.5 bg-white border border-[#E7E2DA] hover:border-[#173B3F] px-2.5 py-1 rounded-full text-xs text-[#1C1C1C] hover:bg-[#FAF7F2] transition-all shadow-xs group"
                 title="تغییر استان، شهرستان یا تعیین موقعیت با GPS"
               >
@@ -61,6 +78,7 @@ export const Header: React.FC = () => {
             {/* Viewport Frame Mode Toggle */}
             <button
               onClick={() => setIsMobileFrame(!isMobileFrame)}
+              aria-label={isMobileFrame ? 'نمای گسترده مانیتور' : 'نمای استاندارد ۳۹۰ پیکسل'}
               title={isMobileFrame ? 'نمای گسترده مانیتور' : 'نمای استاندارد ۳۹۰ پیکسل'}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs text-[#173B3F] bg-white border border-[#E7E2DA] hover:border-[#173B3F] transition-colors shadow-sm"
             >

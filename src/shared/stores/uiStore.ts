@@ -23,13 +23,24 @@ interface UIState {
   setSplashAppName: (name: string) => void;
 }
 
+// Show the splash once per browser session, not on every reload — otherwise
+// a hard refresh or a router navigation replays the full intro animation.
+const hasShownSplashThisSession = typeof window !== 'undefined'
+  && window.sessionStorage.getItem('boya-splash-shown') === '1';
+
+const markSplashShown = () => {
+  if (typeof window !== 'undefined') {
+    window.sessionStorage.setItem('boya-splash-shown', '1');
+  }
+};
+
 export const useUIStore = create<UIState>((set) => ({
   appMode: 'customer',
   activeTab: 'home',
   isMobileFrame: true,
   isLocationModalOpen: false,
   toastMessage: null,
-  showSplashScreen: true,
+  showSplashScreen: !hasShownSplashThisSession,
   splashAppName: 'ورود به اپلیکیشن هوشمند مشتریان بویا',
 
   setAppMode: (appMode) => set({ appMode }),
@@ -41,6 +52,9 @@ export const useUIStore = create<UIState>((set) => ({
     setTimeout(() => set({ toastMessage: null }), 2800);
   },
   hideToast: () => set({ toastMessage: null }),
-  setShowSplashScreen: (showSplashScreen) => set({ showSplashScreen }),
+  setShowSplashScreen: (showSplashScreen) => {
+    if (!showSplashScreen) markSplashShown();
+    set({ showSplashScreen });
+  },
   setSplashAppName: (splashAppName) => set({ splashAppName }),
 }));

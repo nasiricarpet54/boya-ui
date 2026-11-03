@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../api/apiClient';
-import { normalizePhone } from '../utils/persianUtils';
+import { Salon, Booking, PlatformUser, SupportTicket, AuditLogItem } from '../data/marketplaceData';
 
 export interface PlatformNotification {
   id: number;
@@ -39,30 +39,30 @@ export interface AdminProfileData {
 }
 
 export interface DataState {
-  latestBookingAlert: any | null;
-  salons: any[];
-  bookings: any[];
-  users: any[];
-  tickets: any[];
-  auditLogs: any[];
+  latestBookingAlert: Booking | null;
+  salons: Salon[];
+  bookings: Booking[];
+  users: PlatformUser[];
+  tickets: SupportTicket[];
+  auditLogs: AuditLogItem[];
   notifications: PlatformNotification[];
   adminProfile: AdminProfileData | null;
   isLoadingServerData: boolean;
-
+ 
   fetchServerData: () => Promise<void>;
-  setLatestBookingAlert: (alert: any) => void;
+  setLatestBookingAlert: (alert: Booking) => void;
   clearLatestBookingAlert: () => void;
-  setSalons: (salons: any[]) => void;
-  setTickets: (tickets: any[]) => void;
-  addSalon: (salon: any) => Promise<void>;
-  updateSalon: (id: string | number, patch: any) => Promise<void>;
+  setSalons: (salons: Salon[]) => void;
+  setTickets: (tickets: SupportTicket[]) => void;
+  addSalon: (salon: Partial<Salon>) => Promise<Salon>;
+  updateSalon: (id: string | number, patch: Partial<Salon>) => Promise<void>;
   deleteSalon: (id: string | number) => Promise<void>;
-  addUser: (user: any) => Promise<void>;
-  updateUser: (id: string | number, patch: any) => Promise<void>;
+  addUser: (user: Partial<PlatformUser>) => Promise<void>;
+  updateUser: (id: string | number, patch: Partial<PlatformUser>) => Promise<void>;
   deleteUser: (id: string | number) => Promise<void>;
   updateBookingStatus: (id: string | number, status: string) => Promise<void>;
-  addNotification: (n: any) => Promise<void>;
-  updateNotification: (id: string | number, patch: any) => Promise<void>;
+  addNotification: (n: Partial<PlatformNotification>) => Promise<void>;
+  updateNotification: (id: string | number, patch: Partial<PlatformNotification>) => Promise<void>;
   toggleNotification: (id: string | number) => Promise<void>;
   deleteNotification: (id: string | number) => Promise<void>;
   updateAdminProfile: (patch: Partial<AdminProfileData>) => Promise<void>;
@@ -104,10 +104,13 @@ export const useDataStore = create<DataState>()(
           let usersData: any[] = [];
           let adminData: any = null;
           let bookingsData: any[] = [];
+          let ticketsData: any[] = [];
+          let auditLogsData: any[] = [];
 
           if (isAuth && authUser) {
             const authRequests: Promise<any>[] = [
               api.get('/bookings').catch(() => ({ data: [] })),
+              api.get('/tickets').catch(() => ({ data: [] })),
             ];
 
             const canViewUsers = ['super_admin', 'salon_admin', 'line_manager'].includes(authUser.role);
@@ -116,18 +119,22 @@ export const useDataStore = create<DataState>()(
             }
             if (authUser.role === 'super_admin') {
               authRequests.push(api.get('/admin/profile').catch(() => ({ data: null })));
+              authRequests.push(api.get('/audit-logs').catch(() => ({ data: [] })));
             }
 
             const results = await Promise.all(authRequests);
             bookingsData = Array.isArray(results[0]?.data) ? results[0].data : [];
+            ticketsData = Array.isArray(results[1]?.data) ? results[1].data : [];
 
-            let resultIndex = 1;
+            let resultIndex = 2;
             if (canViewUsers) {
               usersData = Array.isArray(results[resultIndex]?.data) ? results[resultIndex].data : [];
               resultIndex++;
             }
             if (authUser.role === 'super_admin') {
               adminData = results[resultIndex]?.data || null;
+              resultIndex++;
+              auditLogsData = Array.isArray(results[resultIndex]?.data) ? results[resultIndex].data : [];
             }
           }
 
@@ -137,6 +144,8 @@ export const useDataStore = create<DataState>()(
             notifications: Array.isArray(notifsRes.data) ? notifsRes.data : [],
             adminProfile: adminData,
             bookings: bookingsData,
+            tickets: ticketsData,
+            auditLogs: auditLogsData,
           });
         } catch (err) {
           console.error('[DATA STORE FETCH ERROR]', err);
@@ -196,6 +205,7 @@ export const useDataStore = create<DataState>()(
           await get().fetchServerData();
         } catch (err) {
           console.error('Error adding user:', err);
+          throw err;
         }
       },
 
@@ -207,6 +217,7 @@ export const useDataStore = create<DataState>()(
           }));
         } catch (err) {
           console.error('Error updating user:', err);
+          throw err;
         }
       },
 
@@ -296,7 +307,6 @@ export const useDataStore = create<DataState>()(
     {
       name: 'boya-core-data-v6',
       partialize: (state) => ({ 
-        latestBookingAlert: state.latestBookingAlert,
         tickets: state.tickets,
         auditLogs: state.auditLogs
       }),

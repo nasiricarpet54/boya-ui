@@ -2,6 +2,11 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Calendar, ChevronRight, ChevronLeft, Clock, Check, X } from 'lucide-react';
 import { toZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { toPersianDigits, WEEKDAYS_FA, formatJalaliDate } from '../../utils/persianUtils';
+import {
+  jalaliMonthLength,
+  jalaliWeekdaySaturdayFirst,
+  jalaliToGregorian,
+} from '../../utils/dateIsoConverter';
 
 export const PERSIAN_MONTHS = [
   'فروردین', 'اردیبهشت', 'خرداد',
@@ -85,25 +90,15 @@ export const JalaliDatePicker: React.FC<JalaliDatePickerProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Calculate days in the current Shamsi month (31 for months 0-5, 30 for months 6-10, 29/30 for month 11)
+  // Days in the current Shamsi month, from the exact ICU Jalali calendar
+  // (leap-year aware) instead of an arithmetic approximation.
   const daysInMonth = useMemo(() => {
-    if (currentMonth < 6) return 31;
-    if (currentMonth < 11) return 30;
-    // Esfand leap year check in Jalali
-    const isLeapYear = ((currentYear % 33) % 4) === 1;
-    return isLeapYear ? 30 : 29;
+    return jalaliMonthLength(currentYear, currentMonth + 1);
   }, [currentYear, currentMonth]);
 
-  // Calculate day of week for the 1st of current Shamsi month
+  // Weekday of the 1st of the current Shamsi month, Saturday-first (0=Sat).
   const firstDayOfWeekOffset = useMemo(() => {
-    // Construct approximate date for 1st of current Shamsi month
-    // Shamsi year 1403 starts ~ March 20, 2024
-    const approxGregYear = currentYear + 621;
-    const approxMonth = (currentMonth + 2) % 12 + 1;
-    const testDate = new Date(Date.UTC(approxGregYear, approxMonth, 21));
-    const day = testDate.getUTCDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
-    // Convert to Saturday-first offset (0 = Sat, 1 = Sun, 2 = Mon, 3 = Tue, 4 = Wed, 5 = Thu, 6 = Fri)
-    return (day + 1) % 7;
+    return jalaliWeekdaySaturdayFirst(currentYear, currentMonth + 1, 1);
   }, [currentYear, currentMonth]);
 
   const handlePrevMonth = () => {
@@ -128,11 +123,10 @@ export const JalaliDatePicker: React.FC<JalaliDatePickerProps> = ({
     const monthFormatted = String(currentMonth + 1).padStart(2, '0');
     const dayFormatted = String(dayNum).padStart(2, '0');
     const jalaliStr = `${currentYear}/${monthFormatted}/${dayFormatted}`;
-    
-    // Create Date object corresponding to selected Jalali date
-    const approxGregYear = currentYear + 621;
-    const approxGregMonth = (currentMonth + 2) % 12;
-    const rawDate = new Date(approxGregYear, approxGregMonth, dayNum, 12, 0, 0);
+
+    // Exact Gregorian date from the ICU Jalali calendar.
+    const rawDate = jalaliToGregorian(currentYear, currentMonth + 1, dayNum);
+    if (isNaN(rawDate.getTime())) return;
 
     onDateChange(jalaliStr, rawDate);
     setIsOpen(false);

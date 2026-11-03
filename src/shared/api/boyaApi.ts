@@ -1,248 +1,137 @@
 /**
- * BOYA Live Backend API Service
- * Directly communicates with the NestJS 11 + PostgreSQL 16 backend hosted at https://boya.bcshopir.ir/api/v1
+ * BOYA API Service
+ * Clean wrapper communicating with local PostgreSQL API endpoints (/api)
+ * All endpoints use clean relative paths without duplicate `/api/` prefixes.
  */
 
-import { Salon, SalonService, Specialist } from '../data/marketplaceData';
 import api from './apiClient';
 
-const BASE_URL = '/api/v1';
-
-export interface LiveHealthStatus {
-  status: string;
-  timestamp: string;
-  latencyMs: number;
-  isConnected: boolean;
-}
-
-export interface LiveBackendSalon {
-  id: string;
-  name: string;
-  specialty?: string;
-  coverImage?: string;
-  address: string;
-  rating: number;
-  reviewCount: number;
-  distanceKm?: number | null;
-  discountPercent?: number | null;
-  minPrice?: number;
-  tags?: string[];
-  isOpenNow?: boolean;
-}
-
-export interface LiveSalonDetail extends LiveBackendSalon {
-  nameEn?: string;
-  slug?: string;
-  phone?: string;
-  latitude?: number;
-  longitude?: number;
-  workingHours?: any;
-  services?: {
-    id: string;
-    name: string;
-    description: string | null;
-    price: number;
-    isMobileAvailable: boolean;
-  }[];
-  specialists?: {
-    id: string;
-    fullName: string;
-    avatarUrl: string | null;
-    bio: string;
-    skills: string[];
-    offersMobileService: boolean;
-  }[];
-  portfolio?: {
-    id: string;
-    imageUrl: string;
-    specialistId: string;
-    specialistName: string;
-  }[];
-}
-
 class BoyaApiService {
-  private baseUrl = BASE_URL;
-
-  // Check health of live NestJS backend
-  async checkHealth(): Promise<LiveHealthStatus> {
-    const start = performance.now();
+  /**
+   * Health check for database and backend connectivity.
+   */
+  async checkHealth(): Promise<{ status: string; timestamp: string; isConnected: boolean }> {
     try {
-      const response = await api.get(`${this.baseUrl}/health`);
-      const end = performance.now();
-      const latencyMs = Math.round(end - start);
-
+      const response = await api.get('/health');
       return {
-        status: response.data.status || 'ok',
-        timestamp: response.data.timestamp || new Date().toISOString(),
-        latencyMs,
+        status: response.data?.status || 'ok',
+        timestamp: response.data?.timestamp || new Date().toISOString(),
         isConnected: true,
       };
     } catch {
-      return { status: 'offline', timestamp: new Date().toISOString(), latencyMs: 0, isConnected: false };
+      return { status: 'offline', timestamp: new Date().toISOString(), isConnected: false };
     }
   }
 
-  // Fetch live salons from PostgreSQL database
-  async fetchLiveSalons(): Promise<LiveBackendSalon[]> {
+  /**
+   * Fetch customer-facing published salons.
+   */
+  async fetchSalons(): Promise<any[]> {
     try {
-      const response = await api.get(`${this.baseUrl}/salons`);
-      return response.data.data || [];
-    } catch {
+      const response = await api.get('/salons');
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (err) {
+      console.error('[BOYA_API] Failed to fetch salons:', err);
       return [];
     }
   }
 
-  // Fetch single salon detail from PostgreSQL database
-  async fetchSalonDetail(salonId: string): Promise<LiveSalonDetail | null> {
+  /**
+   * Fetch all managed salons for administration (preserves pending & unapproved salons).
+   */
+  async fetchManagedSalons(): Promise<any[]> {
     try {
-      const response = await api.get(`${this.baseUrl}/salons/${salonId}`);
-      return response.data;
-    } catch {
+      const response = await api.get('/managed/salons');
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (err) {
+      console.error('[BOYA_API] Failed to fetch managed salons:', err);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch single salon detail by ID.
+   */
+  async fetchSalonDetail(salonId: string | number): Promise<any | null> {
+    try {
+      const response = await api.get(`/salons/${salonId}`);
+      return response.data || null;
+    } catch (err) {
+      console.error(`[BOYA_API] Failed to fetch salon ${salonId}:`, err);
       return null;
     }
   }
 
-  // Send real SMS OTP via Melipayamak API through the backend
-  async sendOtp(phoneNumber: string): Promise<{ success: boolean; message: string }> {
+  /**
+   * Fetch bookings without falling back to stale mock data that conflicts with real PostgreSQL state.
+   */
+  async fetchBookings(): Promise<any[]> {
     try {
-      const response = await api.post(`${this.baseUrl}/auth/otp/send`, { phoneNumber });
-      return {
-        success: true,
-        message: response.data.message || 'کد تأیید ارسال شد.',
-      };
-    } catch (error: any) {
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'خطا در ارتباط با سرور پیامک' 
-      };
+      const response = await api.get('/bookings');
+      if (!Array.isArray(response.data)) {
+        throw new Error('Invalid bookings response: expected an array');
+      }
+      return response.data;
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        return [];
+      }
+      console.error('[BOYA_API] Failed to fetch bookings from server:', err?.message || err);
+      // Re-throw or return empty array rather than injecting stale mock data
+      throw err;
     }
   }
 
-  // Adapt live backend salon to our Salon model
-  adaptLiveSalon(live: LiveSalonDetail): Salon {
-    const defaultCover =
-      live.coverImage ||
-      'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1000&q=80';
+  /**
+   * Send notification or SMS broadcast via Melipayamak.
+   */
+  async broadcastNotification(payload: {
+    title: string;
+    content: string;
+    targetAudience?: 'all' | 'customer' | 'salon';
+    testPhone?: string;
+  }): Promise<{ success: boolean; sentCount?: number; notification?: any }> {
+    const response = await api.post('/notifications/broadcast', payload);
+    return response.data;
+  }
 
-    const services: SalonService[] = (live.services || []).map((s, idx) => ({
-      id: s.id || `serv-${idx}`,
-      serviceLineId: 'hair',
-      name: s.name,
-      durationMinutes: 90,
-      price: s.price || 500000,
-      description: s.description || 'خدمت تایید شده در دیتابیس سالن',
-      isMobileAvailable: s.isMobileAvailable || false,
-    }));
+  /**
+   * Fetch security audit logs (restricted to super_admin).
+   */
+  async fetchAuditLogs(): Promise<any[]> {
+    try {
+      const response = await api.get('/audit-logs');
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (err) {
+      console.error('[BOYA_API] Failed to fetch audit logs:', err);
+      return [];
+    }
+  }
 
-    const specialists: Specialist[] = (live.specialists || []).map((sp, idx) => ({
-      id: sp.id || `spec-${idx}`,
-      salonId: live.id,
-      name: sp.fullName,
-      role: sp.skills?.join('، ') || 'بیوتیشن ارشد',
-      avatar:
-        sp.avatarUrl ||
-        'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
-      verified: true,
-      rating: 4.9,
-      reviewsCount: 120,
-      experienceYears: 8,
-      specialtyLine: 'hair',
-      isMobileSpecialist: sp.offersMobileService || false,
-      phone: '۰۹۱۲۰۰۰۹۹۸۸',
-      bio: sp.bio || 'متخصص تایید شده در پلتفرم بویا با گواهی مهارت بین‌المللی',
-      portfolio: (live.portfolio || [])
-        .filter((p) => p.specialistId === sp.id)
-        .map((p) => ({
-          id: p.id,
-          title: 'نمونه‌کار ثبت‌شده در سرور',
-          imageUrl: p.imageUrl,
-          category: 'خدمات تخصصی',
-          likesCount: 95,
-        })),
-    }));
+  /**
+   * Fetch system users (filtered by role permissions on server).
+   */
+  async fetchUsers(): Promise<any[]> {
+    try {
+      const response = await api.get('/users');
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (err) {
+      console.error('[BOYA_API] Failed to fetch users:', err);
+      return [];
+    }
+  }
 
-    // City and district from address
-    const districtMatch = live.address.split('،')[1] || 'تهران';
-
-    return {
-      id: live.id,
-      tenantId: `tnt-${live.slug || live.id.slice(0, 8)}`,
-      name: live.name,
-      enName: live.nameEn || 'Boya Verified Salon',
-      province: 'تهران',
-      city: 'تهران',
-      district: districtMatch.trim(),
-      address: live.address,
-      latitude: live.latitude || 35.75,
-      longitude: live.longitude || 51.42,
-      phone: live.phone || '۰۲۱-۸۸۰۰۹۹۸۸',
-      instagram: `@${live.slug || 'boya.salon'}`,
-      rating: live.rating || 4.8,
-      reviewsCount: live.reviewCount || 150,
-      coverImage: defaultCover,
-      gallery: [defaultCover],
-      isApproved: true,
-      isMobileServiceActive: specialists.some((s) => s.isMobileSpecialist),
-      workingHours: 'همه روزه ۹:۰۰ الی ۱۹:۰۰',
-      ownerName: 'مدیریت سالن',
-      ownerPhone: '۰۹۱۲۳۴۵۶۷۸۹',
-      createdAt: '۱۴۰۳/۰۱/۱۵',
-      status: 'active',
-      services: services.length > 0 ? services : [
-        {
-          id: `serv-default-${live.id}`,
-          serviceLineId: 'hair',
-          name: live.specialty || 'خدمات تخصصی زیبایی',
-          durationMinutes: 60,
-          price: live.minPrice || 450000,
-          description: 'ارائه با مواد اولیه بهداشتی و دارای مجوز رسمی',
-          isMobileAvailable: true,
-        },
-      ],
-      specialists: specialists.length > 0 ? specialists : [
-        {
-          id: `spec-default-${live.id}`,
-          salonId: live.id,
-          name: 'متخصص ارشد سالن',
-          role: live.specialty || 'بیوتیشن رسمی',
-          avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
-          verified: true,
-          rating: 4.9,
-          reviewsCount: 88,
-          experienceYears: 7,
-          specialtyLine: 'hair',
-          isMobileSpecialist: true,
-          phone: '۰۹۱۲۳۴۵۶۷۸۹',
-          bio: 'متخصص باسابقه سالن دارای مجوز رسمی بهداشت',
-          portfolio: [],
-        },
-      ],
-      availableSlots: [
-        {
-          date: 'شنبه ۵ آبان',
-          dayName: 'شنبه',
-          dayNumber: '۰۵',
-          slots: [
-            { time: '۱۰:۰۰', booked: false },
-            { time: '۱۱:۳۰', booked: false },
-            { time: '۱۴:۰۰', booked: true },
-            { time: '۱۶:۳۰', booked: false },
-            { time: '۱۸:۰۰', booked: false },
-          ],
-        },
-        {
-          date: 'یکشنبه ۶ آبان',
-          dayName: 'یکشنبه',
-          dayNumber: '۰۶',
-          slots: [
-            { time: '۱۰:۳۰', booked: false },
-            { time: '۱۲:۰۰', booked: false },
-            { time: '۱۵:۰۰', booked: false },
-            { time: '۱۷:۰۰', booked: true },
-          ],
-        },
-      ],
-    };
+  /**
+   * Fetch support tickets.
+   */
+  async fetchTickets(): Promise<any[]> {
+    try {
+      const response = await api.get('/tickets');
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (err) {
+      console.error('[BOYA_API] Failed to fetch tickets:', err);
+      return [];
+    }
   }
 }
 

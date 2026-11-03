@@ -13,7 +13,14 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['src/shared/utils/**', 'src/shared/stores/**', 'src/features/**/logic/**'],
+      include: [
+        'src/shared/utils/**',
+        'src/shared/stores/**',
+        'src/db/**',
+        'src/lib/**',
+        'src/features/**',
+        'src/shared/components/**',
+      ],
       exclude: ['src/**/*.d.ts', 'src/main.tsx', 'src/test/**'],
       thresholds: {
         lines: 70,

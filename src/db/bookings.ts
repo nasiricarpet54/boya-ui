@@ -1,7 +1,7 @@
 import { db } from './index.ts';
 import { bookings, salons, services, specialists, users } from './schema.ts';
 import { eq, sql, and } from 'drizzle-orm';
-import { normalizeToIsoDate } from '../shared/utils/dateIsoConverter.ts';
+import { normalizeToIsoDate, normalizeTime } from '../shared/utils/dateIsoConverter.ts';
 import crypto from 'crypto';
 
 export async function createBooking(data: {
@@ -21,7 +21,14 @@ export async function createBooking(data: {
     const randomSuffix = crypto.randomInt(100000, 999999);
     const trackingCode = `BY-${randomSuffix}`;
     
+    // bookingCreateSchema already normalized date/time to YYYY-MM-DD and
+    // Latin HH:MM. Re-normalize defensively, but no longer fall back to a
+    // default when the value is missing — that would silently move the
+    // booking to "today" or to an 11:30 slot the customer never picked.
     const isoDate = normalizeToIsoDate(data.date);
+    const isoTime = normalizeTime(data.time);
+    if (!isoDate) throw new Error('INVALID_BOOKING_DATE');
+    if (!isoTime) throw new Error('INVALID_BOOKING_TIME');
 
     // 1. Resolve Salon ID (Strict - No fallbacks)
     let resolvedSalonId = Number(data.salonId);
@@ -68,7 +75,7 @@ export async function createBooking(data: {
       serviceId: resolvedServiceId,
       specialistId: resolvedSpecialistId,
       date: isoDate,
-      time: data.time || '۱۱:۳۰',
+      time: isoTime,
       status: 'pending',
       paymentStatus: 'unpaid',
       isMobileBooking: Boolean(data.isMobileBooking),

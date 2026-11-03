@@ -26,34 +26,6 @@ export function sanitizeRole(roleInput: any): typeof VALID_ROLES[number] {
   return 'customer';
 }
 
-export async function getOrCreateUser(uid: string, email: string, fullName: string) {
-  try {
-    const result = await db.insert(users)
-      .values({
-        uid,
-        email,
-        fullName,
-        phone: '',
-        role: 'customer',
-        status: 'active',
-
-      })
-      .onConflictDoUpdate({
-        target: users.uid,
-        set: {
-          email,
-          fullName,
-        },
-      })
-      .returning();
-
-    return result[0];
-  } catch (error) {
-    console.error('Database operation failed (getOrCreateUser):', error);
-    throw new Error('Failed to synchronize user profile.', { cause: error });
-  }
-}
-
 /**
  * Retrieve user by phone number from primary PostgreSQL database with unique constraint
  * and onConflictDoUpdate to prevent race conditions (A-11).
