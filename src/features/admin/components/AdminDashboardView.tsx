@@ -10,9 +10,10 @@ import {
 import { useDataStore } from '../../../shared/stores/dataStore';
 import { useSalons } from '../../../shared/api/queries';
 import { formatPrice, toPersianDigits } from '../../../shared/utils/persianUtils';
+import { AdminTab } from './AdminSidebar';
 
 interface AdminDashboardViewProps {
-  onNavigateToTab: (tab: any) => void;
+  onNavigateToTab: (tab: AdminTab) => void;
 }
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({

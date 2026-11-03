@@ -69,7 +69,15 @@ export const BookingsScreen: React.FC = () => {
   // Watch for external alert passed via store
   useEffect(() => {
     if (latestBookingAlert) {
-      triggerToast(latestBookingAlert);
+      const alert: BookingAlertNotification = {
+        id: `ext-${latestBookingAlert.id}-${Date.now()}`,
+        bookingId: latestBookingAlert.id,
+        salonName: latestBookingAlert.salonName || 'سالن بویا',
+        serviceName: latestBookingAlert.serviceName || 'خدمت انتخابی',
+        status: latestBookingAlert.status,
+        time: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+      };
+      triggerToast(alert);
       clearLatestBookingAlert();
     }
   }, [latestBookingAlert, clearLatestBookingAlert]);

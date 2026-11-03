@@ -80,7 +80,7 @@ export function getTehranTime(date: Date | string = new Date()): string {
  * Standardize phone number: convert Persian/Arabic digits, strip non-digits,
  * and format as 11-digit 09xxxxxxxxx
  */
-export function normalizePhone(raw: any): string {
+export function normalizePhone(raw: string | number | null | undefined): string {
   if (!raw) return '';
   const str = String(raw).trim();
   const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Scissors, Star, CheckCircle2, Car, Plus, Edit, Trash2, Building2, Phone, X, ShieldCheck, UserCheck } from 'lucide-react';
+import { Scissors, CheckCircle2, Plus, Edit, Trash2, Phone, X, UserCheck } from 'lucide-react';
 import { useAuthStore } from '../../../shared/stores/authStore';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import api from '../../../shared/api/apiClient';
@@ -35,8 +35,8 @@ export const AdminSpecialistsView: React.FC = () => {
 
   // Extract all specialists across all salons
   const allSpecialists: { specialist: Specialist; salon: Salon }[] = [];
-  salons.forEach((sal: any) => {
-    (sal.specialists || []).forEach((sp: any) => {
+  salons.forEach((sal: Salon) => {
+    (sal.specialists || []).forEach((sp: Specialist) => {
       allSpecialists.push({ specialist: sp, salon: sal });
     });
   });
@@ -297,7 +297,7 @@ export const AdminSpecialistsView: React.FC = () => {
                   onChange={(e) => setSelectedSalonId(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-[#E7E2DA] bg-[#FAF7F2] font-semibold text-[#173B3F] outline-none"
                 >
-                  {salons.map((sal: any) => (
+                  {salons.map((sal: Salon) => (
                     <option key={sal.id} value={sal.id}>
                       {sal.name} ({sal.province} - {sal.city})
                     </option>

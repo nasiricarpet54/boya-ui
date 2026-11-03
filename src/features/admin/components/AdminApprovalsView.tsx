@@ -6,7 +6,7 @@ import { useDataStore } from '../../../shared/stores/dataStore';
 import { useSalons } from '../../../shared/api/queries';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
-import { Salon } from '../../../shared/data/marketplaceData';
+import { Salon, SalonService } from '../../../shared/data/marketplaceData';
 
 export const AdminApprovalsView: React.FC = () => {
   const { salons, updateSalon, updateService } = useDataStore();
@@ -23,10 +23,10 @@ export const AdminApprovalsView: React.FC = () => {
   const allSalons = (salons && salons.length > 0) ? salons : (querySalons || []);
   const pendingTenants = allSalons.filter((s) => !s.isApproved || s.status === 'pending');
   const approvedTenants = allSalons.filter((s) => s.isApproved);
-  const pendingServices = allSalons.flatMap((salon: any) => (salon.services || [])
-    .filter((service: any) => service.publicationStatus === 'pending')
-    .map((service: any) => ({ ...service, salonName: salon.name })));
-  const publishService = async (service: any) => {
+  const pendingServices = allSalons.flatMap((salon: Salon) => (salon.services || [])
+    .filter((service: SalonService) => service.publicationStatus === 'pending')
+    .map((service: SalonService) => ({ ...service, salonName: salon.name })));
+  const publishService = async (service: SalonService & { salonName: string }) => {
     setServiceBusyId(service.id); setError('');
     try { await updateService(service.id, { publicationStatus: 'active' }); showToast('خدمت پس از بررسی منتشر شد.'); }
     catch (e: any) { setError(e?.response?.data?.error || e?.message || 'خطا در انتشار خدمت.'); }
@@ -154,7 +154,7 @@ export const AdminApprovalsView: React.FC = () => {
           <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">{toPersianDigits(pendingServices.length)} خدمت در انتظار</span>
         </div>
         {pendingServices.length === 0 ? <p className="text-sm text-[#6C6C6C]">خدمت در انتظار بررسی وجود ندارد.</p> : <div className="space-y-2">
-          {pendingServices.map((service: any) => <div key={service.id} className="flex flex-wrap items-center justify-between gap-3 border rounded-xl p-3">
+          {pendingServices.map((service) => <div key={service.id} className="flex flex-wrap items-center justify-between gap-3 border rounded-xl p-3">
             <div><strong className="text-sm">{service.name}</strong><div className="text-xs text-[#6C6C6C]">{service.salonName} · {toPersianDigits(service.durationMinutes)} دقیقه · {toPersianDigits(service.price)} تومان</div></div>
             <button disabled={serviceBusyId === service.id} onClick={() => publishService(service)} className="px-3 py-2 rounded-lg bg-[#173B3F] text-white text-xs font-bold disabled:opacity-50">تأیید و انتشار</button>
           </div>)}

@@ -62,7 +62,6 @@ export function generatePersonalizedRecommendations(
 
   // Extract customer booking history lines
   const bookedServiceLines = Array.from(new Set(bookings.map((b) => b.serviceLineId)));
-  const bookedSalonIds = Array.from(new Set(bookings.map((b) => b.tenantId)));
   const latestBooking = bookings[0];
 
   // Helper to get specialist for service

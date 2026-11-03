@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Users, Plus, Edit, Trash2, Phone, Mail, Shield, ShieldCheck, CheckCircle2, X, Building2, User } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
 import { toPersianDigits, normalizePhone } from '../../../shared/utils/persianUtils';
-import { PlatformUser } from '../../../shared/data/marketplaceData';
+import { PlatformUser, Salon } from '../../../shared/data/marketplaceData';
 import { ROLE_LABELS, ROLES, UserRole } from '../../../shared/constants/roles';
 
 export const AdminUsersView: React.FC = () => {
@@ -193,7 +193,7 @@ export const AdminUsersView: React.FC = () => {
                           <span className="font-bold text-[#173B3F] block">{u.fullName || u.name}</span>
                           {u.salonId && (
                             <span className="text-[10px] text-[#6C6C6C] block">
-                              سالن: {salons.find((s: any) => s.id === u.salonId)?.name || u.salonId}
+                              سالن: {salons.find((s: Salon) => s.id === u.salonId)?.name || u.salonId}
                             </span>
                           )}
                         </div>
@@ -355,7 +355,7 @@ export const AdminUsersView: React.FC = () => {
                     className="w-full h-10 px-3 rounded-xl border border-[#E7E2DA] bg-[#FAF7F2] font-semibold text-[#173B3F] outline-none"
                   >
                     <option value="">بدون سالن (مستقل / عمومی)</option>
-                    {salons.map((sal: any) => (
+                    {salons.map((sal: Salon) => (
                       <option key={sal.id} value={sal.id}>
                         {sal.name} ({sal.city})
                       </option>

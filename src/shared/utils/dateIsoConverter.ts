@@ -20,7 +20,7 @@ function jalaliToGregorian(jy: number, jm: number, jd: number): string {
   }
   let gd = days + 1;
   const sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  let gm = 0;
+  let gm;
   for (gm = 0; gm < 13; gm++) {
     const v = sal_a[gm];
     if (gd <= v) break;

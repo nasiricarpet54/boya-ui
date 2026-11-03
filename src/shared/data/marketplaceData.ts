@@ -15,6 +15,7 @@ export interface ServiceLine {
 
 export interface SalonService {
   id: string;
+  salonId?: string;
   serviceLineId: string;
   name: string;
   durationMinutes: number;
@@ -22,6 +23,7 @@ export interface SalonService {
   description: string;
   isMobileAvailable?: boolean;
   imageUrl?: string;
+  publicationStatus?: 'active' | 'pending' | 'suspended';
 }
 
 export interface SpecialistPortfolio {
@@ -45,6 +47,7 @@ export interface Specialist {
   specialtyLine: string;
   bio: string;
   isMobileSpecialist: boolean;
+  publicationStatus?: 'active' | 'pending' | 'suspended';
   specialistType?: 'salon_specialist' | 'line_manager' | 'mobile_specialist';
   workingHours?: string;
   workingDays?: string[];
@@ -69,6 +72,7 @@ export interface Salon {
   reviewsCount: number;
   coverImage: string;
   gallery: string[];
+  licenseDocUrl?: string;
   isApproved: boolean; // Admin approval status
   isMobileServiceActive: boolean;
   workingHours: string;
@@ -84,6 +88,7 @@ export interface Salon {
   displayPriority?: number; // 1, 2, 3... (lower number = higher placement in search)
   vipBadgeLabel?: string; // e.g. "سالن برگزیده VIP", "همکار طلایی بویا"
   vipExpiryDate?: string;
+  pendingApproval?: boolean;
   services: SalonService[];
   specialists: Specialist[];
   availableSlots: {
@@ -102,6 +107,7 @@ export interface Booking {
   id: string;
   trackingCode: string;
   tenantId: string;
+  salonId?: string;
   salonName: string;
   salonAddress: string;
   serviceId: string;
@@ -113,6 +119,7 @@ export interface Booking {
   time: string;
   durationMinutes: number;
   price: number;
+  customerId?: string;
   customerName: string;
   customerPhone: string;
   notes?: string;

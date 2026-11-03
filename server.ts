@@ -49,8 +49,7 @@ if (isProd && process.env.REDIS_URL) {
   }
 }
 
-// Apply Rate Limiter to all API routes (apiLimiter definition removed if unused, but kept for logic if needed)
-// const apiLimiter = ... (usage below)
+// Apply Rate Limiter to all API routes
 
 
 const otpStore = new Map<string, { code: string; expiresAt: number; attempts: number }>();
@@ -162,12 +161,8 @@ async function createServer() {
     // WEBP: RIFF ... WEBP
     else if (buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
       ext = 'webp';
-    }
-    // GIF: GIF87a or GIF89a
-    else if (buffer.length >= 6 && (buffer.toString('ascii', 0, 6) === 'GIF87a' || buffer.toString('ascii', 0, 6) === 'GIF89a')) {
-      ext = 'gif';
     } else {
-      throw new Error('فرمت فایل نامعتبر است. فقط تصاویر معتبر JPEG، PNG، WEBP و GIF پذیرفته می‌شوند.');
+      throw new Error('فرمت فایل نامعتبر است. فقط تصاویر مجاز با فرمت JPEG، PNG و WEBP پذیرفته می‌شوند.');
     }
 
     return { buffer, ext };
@@ -275,7 +270,7 @@ async function createServer() {
 
       res.cookie('token', token, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000, path: '/' });
       
-      const { email: _email, phone: _p, ...safeUser } = dbUser;
+      const { email: _, phone: __, ...safeUser } = dbUser;
       res.json({ user: safeUser });
     } catch (err) {
       res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطای احراز هویت.' });
@@ -364,6 +359,77 @@ async function createServer() {
   });
 
   // --- Salons ---
+
+  app.get('/api/salons/:id', async (req, res) => {
+    try {
+      const salonId = Number(req.params.id);
+      if (!Number.isFinite(salonId)) {
+        return res.status(400).json({ error: 'شناسه سالن نامعتبر است.' });
+      }
+
+      const salon = await db.query.salons.findFirst({
+        where: eq(salons.id, salonId),
+        with: {
+          services: true,
+          specialists: { with: { user: true, portfolio: true } },
+        },
+      });
+
+      if (!salon || !salon.isApproved) {
+        return res.status(404).json({ error: 'سالن مورد نظر یافت نشد یا هنوز تایید نشده است.' });
+      }
+
+      res.json({
+        id: salon.id,
+        tenantId: salon.tenantId,
+        name: salon.name,
+        address: salon.address,
+        province: salon.province,
+        city: salon.city,
+        district: salon.district,
+        latitude: salon.latitude,
+        longitude: salon.longitude,
+        rating: Number(salon.rating) || 5,
+        reviewsCount: salon.reviewsCount,
+        isVip: salon.isVip,
+        vipBadgeLabel: salon.vipBadgeLabel,
+        isMobileServiceActive: salon.isMobileServiceActive,
+        coverImage: salon.coverImage,
+        gallery: salon.gallery ? (salon.gallery.startsWith('[') ? JSON.parse(salon.gallery) : [salon.gallery]) : (salon.coverImage ? [salon.coverImage] : []),
+        services: salon.services.filter(s => s.publicationStatus === 'active').map(s => ({
+          id: s.id,
+          salonId: s.salonId,
+          serviceLineId: s.serviceLineId,
+          name: s.name,
+          description: s.description,
+          price: Number(s.price) || 0,
+          durationMinutes: s.durationMinutes,
+          isMobileAvailable: s.isMobileAvailable,
+          imageUrl: s.imageUrl,
+        })),
+        specialists: salon.specialists.filter(sp => sp.isVerified && sp.publicationStatus === 'active' && sp.user?.status === 'active').map(sp => ({
+          id: sp.id,
+          salonId: sp.salonId,
+          specialtyLine: sp.specialtyLine,
+          bio: sp.bio,
+          experienceYears: sp.experienceYears,
+          avatarUrl: sp.avatarUrl,
+          name: sp.user?.fullName || 'متخصص زیبایی',
+          phone: sp.user?.phone || '',
+          portfolio: sp.portfolio.map(item => ({
+            id: item.id,
+            title: item.title,
+            imageUrl: item.imageUrl,
+            category: item.category,
+            likesCount: item.likesCount,
+          })),
+        })),
+      });
+    } catch (err: any) {
+      console.error('[API SALON BY ID ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت اطلاعات سالن.' });
+    }
+  });
 
   // Staff need a private view of unpublished records for review and management.
   // Customer discovery remains on /api/salons, which applies publication filters.
@@ -503,11 +569,16 @@ async function createServer() {
     }
   });
 
-  // --- Services CRUD ---
+  // --- Services CRUD (Optimized with direct SQL filtering) ---
   app.get('/api/services', requireAuth, async (req: AuthRequest, res) => {
-    const rows = await db.select().from(services);
-    const scoped = req.dbUser.role === 'super_admin' ? rows : rows.filter(row => row.salonId === req.dbUser.salonId);
-    res.json(scoped);
+    try {
+      const rows = req.dbUser.role === 'super_admin'
+        ? await db.select().from(services)
+        : await db.select().from(services).where(eq(services.salonId, Number(req.dbUser.salonId)));
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در دریافت خدمات.' });
+    }
   });
   app.post('/api/services', requireAuth, requireRole(['super_admin', 'salon_admin', 'salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
     try {
@@ -539,10 +610,16 @@ async function createServer() {
     await db.delete(services).where(eq(services.id, id)); res.json({ success: true });
   });
 
-  // --- Specialists CRUD ---
+  // --- Specialists CRUD (Optimized with direct SQL filtering) ---
   app.get('/api/specialists', requireAuth, async (req: AuthRequest, res) => {
-    const rows = await db.select().from(specialists);
-    res.json(req.dbUser.role === 'super_admin' ? rows : rows.filter(row => row.salonId === req.dbUser.salonId));
+    try {
+      const rows = req.dbUser.role === 'super_admin'
+        ? await db.select().from(specialists)
+        : await db.select().from(specialists).where(eq(specialists.salonId, Number(req.dbUser.salonId)));
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ error: 'خطا در دریافت متخصصین.' });
+    }
   });
   app.post('/api/specialists', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
@@ -571,14 +648,13 @@ async function createServer() {
     await db.delete(specialists).where(eq(specialists.id, id)); res.json({ success: true });
   });
 
-  // --- Users ---
+  // --- Users (Optimized with direct SQL filtering) ---
 
   app.get('/api/users', requireAuth, requireRole(['super_admin', 'salon_admin', 'line_manager']), async (req: AuthRequest, res) => {
     try {
-      let userList = await db.select().from(users).orderBy(desc(users.createdAt));
-      if (req.dbUser.role !== 'super_admin') {
-        userList = userList.filter(u => u.salonId === req.dbUser.salonId);
-      }
+      const userList = req.dbUser.role === 'super_admin'
+        ? await db.select().from(users).orderBy(desc(users.createdAt))
+        : await db.select().from(users).where(eq(users.salonId, Number(req.dbUser.salonId))).orderBy(desc(users.createdAt));
 
       // P2-08: Redact PII consistently
       const processed = userList.map(u => redactUserPII(u, req.dbUser));
@@ -588,6 +664,7 @@ async function createServer() {
       res.status(500).json({ error: 'خطا در دریافت کاربران.' });
     }
   });
+
 
   app.post('/api/users', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
@@ -825,6 +902,51 @@ async function createServer() {
   app.delete('/api/notifications/:id', requireAuth, requireRole(['super_admin']), async (req, res) => {
     await db.delete(notifications).where(eq(notifications.id, Number(req.params.id)));
     res.json({ success: true });
+  });
+
+  app.post('/api/notifications/broadcast', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { title, content, targetAudience } = req.body;
+      if (!title || !content) {
+        return res.status(400).json({ error: 'عنوان و متن پیام الزامی است.' });
+      }
+
+      // Fetch target users to broadcast SMS via Melipayamak
+      let targetUsers = await db.select().from(users);
+      if (targetAudience === 'customer') {
+        targetUsers = targetUsers.filter(u => u.role === 'customer');
+      } else if (targetAudience === 'salon') {
+        targetUsers = targetUsers.filter(u => ['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager'].includes(u.role));
+      }
+
+      let sentCount = 0;
+      for (const u of targetUsers) {
+        if (u.phone) {
+          try {
+            await sendMeliPayamakSms(u.phone, `${title}\n${content}`);
+            sentCount++;
+          } catch (smsErr) {
+            console.error(`[BROADCAST SMS FAIL] To ${u.phone}:`, smsErr);
+          }
+        }
+      }
+
+      // Also create an in-app notification record
+      const [newNotif] = await db.insert(notifications).values({
+        title: String(title).trim(),
+        content: String(content).trim(),
+        type: 'promotional',
+        targetAudience: targetAudience || 'all',
+        channel: 'sms',
+        isActive: true,
+        smsSentCount: sentCount,
+      }).returning();
+
+      res.status(201).json({ success: true, sentCount, notification: newNotif });
+    } catch (err: any) {
+      console.error('[BROADCAST ERROR]', err);
+      res.status(500).json({ error: err?.message || 'خطا در ارسال پیامک انبوه.' });
+    }
   });
 
   // --- Audit Logs Endpoint ---

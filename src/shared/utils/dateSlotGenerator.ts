@@ -46,10 +46,10 @@ export function generateUpcomingDays(daysCount = 30, existingSlots?: any[]): Day
     const fullJalaliDate = `${formattedYear}/${formatJalaliDate(d, { month: '2-digit' })}/${formatJalaliDate(d, { day: '2-digit' })}`;
 
     // Check if salon already provided slots for this date label/index
-    let slotsForThisDay: TimeSlot[] = [];
+    let slotsForThisDay: TimeSlot[];
 
     if (existingSlots && existingSlots[i] && existingSlots[i].slots) {
-      slotsForThisDay = existingSlots[i].slots.map((s: any) => ({
+      slotsForThisDay = existingSlots[i].slots.map((s: { time: string; booked: boolean; specialistId?: string }) => ({
         time: toPersianDigits(s.time),
         booked: Boolean(s.booked),
         specialistId: s.specialistId,
@@ -80,11 +80,11 @@ export function generateUpcomingDays(daysCount = 30, existingSlots?: any[]): Day
 /**
  * Generate slots for an arbitrary selected date
  */
-export function getSlotsForArbitraryDate(dateStr: string, existingSlots?: any[]): TimeSlot[] {
+export function getSlotsForArbitraryDate(dateStr: string, existingSlots?: { date: string; slots: { time: string; booked: boolean; specialistId?: string }[] }[]): TimeSlot[] {
   if (existingSlots && existingSlots.length > 0) {
-    const match = existingSlots.find((s: any) => s.date === dateStr || s.date.includes(dateStr));
+    const match = existingSlots.find((s) => s.date === dateStr || s.date.includes(dateStr));
     if (match && match.slots) {
-      return match.slots.map((s: any) => ({
+      return match.slots.map((s) => ({
         time: toPersianDigits(s.time),
         booked: Boolean(s.booked),
         specialistId: s.specialistId,

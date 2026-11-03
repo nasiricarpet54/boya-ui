@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Send } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
+import { SupportTicket } from '../../../shared/data/marketplaceData';
 
 export const AdminSupportView: React.FC = () => {
   const { tickets, setTickets } = useDataStore();
@@ -13,10 +14,10 @@ export const AdminSupportView: React.FC = () => {
   const filteredTickets = tickets.filter(t => statusFilter === 'all' || t.status === statusFilter);
   const activeTicket = tickets.find(t => t.id === selectedTicketId) || filteredTickets[0];
 
-  const onReplyTicket = (id: string, text: string, status: any = 'in_progress') => {
+  const onReplyTicket = (id: string, text: string, status: SupportTicket['status'] = 'in_progress') => {
     setTickets(tickets.map(t => t.id === id ? {
       ...t, status, lastReply: text,
-      messages: [...t.messages, { sender: 'admin', senderName: 'مدیر بویا', text, time: 'هم‌اکنون' }]
+      messages: [...t.messages, { sender: 'admin' as const, senderName: 'مدیر بویا', text, time: 'هم‌اکنون' }]
     } : t));
   };
 
@@ -53,7 +54,7 @@ export const AdminSupportView: React.FC = () => {
             <>
               <div className="border-b pb-3 mb-3 font-bold text-sm">{activeTicket.title}</div>
               <div className="flex-1 overflow-y-auto space-y-3 mb-4 max-h-[300px] p-1">
-                {activeTicket.messages.map((m: any, i: number) => (
+                {activeTicket.messages.map((m, i) => (
                   <div key={i} className={`p-3 rounded-2xl text-xs max-w-[85%] ${m.sender === 'admin' ? 'mr-auto bg-[#1A2942] text-white' : 'ml-auto bg-gray-100'}`}>
                     <p>{m.text}</p>
                   </div>

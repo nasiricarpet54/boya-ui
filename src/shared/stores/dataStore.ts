@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../api/apiClient';
-import { normalizePhone } from '../utils/persianUtils';
+import { Salon, Booking, PlatformUser, SupportTicket, AuditLogItem } from '../data/marketplaceData';
 
 export interface PlatformNotification {
   id: number;
@@ -39,30 +39,30 @@ export interface AdminProfileData {
 }
 
 export interface DataState {
-  latestBookingAlert: any | null;
-  salons: any[];
-  bookings: any[];
-  users: any[];
-  tickets: any[];
-  auditLogs: any[];
+  latestBookingAlert: Booking | null;
+  salons: Salon[];
+  bookings: Booking[];
+  users: PlatformUser[];
+  tickets: SupportTicket[];
+  auditLogs: AuditLogItem[];
   notifications: PlatformNotification[];
   adminProfile: AdminProfileData | null;
   isLoadingServerData: boolean;
-
+ 
   fetchServerData: () => Promise<void>;
-  setLatestBookingAlert: (alert: any) => void;
+  setLatestBookingAlert: (alert: Booking) => void;
   clearLatestBookingAlert: () => void;
-  setSalons: (salons: any[]) => void;
-  setTickets: (tickets: any[]) => void;
-  addSalon: (salon: any) => Promise<void>;
-  updateSalon: (id: string | number, patch: any) => Promise<void>;
+  setSalons: (salons: Salon[]) => void;
+  setTickets: (tickets: SupportTicket[]) => void;
+  addSalon: (salon: Partial<Salon>) => Promise<Salon>;
+  updateSalon: (id: string | number, patch: Partial<Salon>) => Promise<void>;
   deleteSalon: (id: string | number) => Promise<void>;
-  addUser: (user: any) => Promise<void>;
-  updateUser: (id: string | number, patch: any) => Promise<void>;
+  addUser: (user: Partial<PlatformUser>) => Promise<void>;
+  updateUser: (id: string | number, patch: Partial<PlatformUser>) => Promise<void>;
   deleteUser: (id: string | number) => Promise<void>;
   updateBookingStatus: (id: string | number, status: string) => Promise<void>;
-  addNotification: (n: any) => Promise<void>;
-  updateNotification: (id: string | number, patch: any) => Promise<void>;
+  addNotification: (n: Partial<PlatformNotification>) => Promise<void>;
+  updateNotification: (id: string | number, patch: Partial<PlatformNotification>) => Promise<void>;
   toggleNotification: (id: string | number) => Promise<void>;
   deleteNotification: (id: string | number) => Promise<void>;
   updateAdminProfile: (patch: Partial<AdminProfileData>) => Promise<void>;
