@@ -48,3 +48,19 @@ boya_shared_code.txt
 
 # Screenshots / one-off assets
 public/assets/aistudio/Screenshot_*
+# AI Studio temp
+.aistudio/
+.claude/
+
+# Log files
+*.log
+
+# Large archives
+*.zip
+
+# Code dumps
+boya_full_code.txt
+boya_shared_code.txt
+
+# Cloned/build folder
+boya-ui/
