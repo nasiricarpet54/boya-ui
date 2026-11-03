@@ -3,20 +3,20 @@ import crypto from 'crypto';
 
 const isProd = process.env.NODE_ENV === 'production';
 
-if (!process.env.JWT_SECRET) {
+let jwtSecret = process.env.JWT_SECRET;
+
+if (!jwtSecret) {
   if (isProd) {
-    console.error('🔴 [FATAL] JWT_SECRET is not set in production!');
-    console.error('   Set JWT_SECRET in .env.production or use --env-file.');
-    console.error('   Refusing to start with a random secret (would invalidate all sessions on restart).');
-    process.exit(1); // ← سرور در production اصلاً بالا نمی‌آد
+    console.error('🚨 [CRITICAL SECURITY ERROR] JWT_SECRET environment variable is missing in production! Fail-fast termination.');
+    process.exit(1);
   } else {
-    console.warn('⚠️  [DEV] JWT_SECRET not set, using random secret for this session only.');
-    console.warn('    All sessions will be invalidated on restart.');
+    console.warn('⚠️ [DEV WARNING] JWT_SECRET not set in environment. Generating an ephemeral random secret for development.');
+    jwtSecret = crypto.randomBytes(64).toString('hex');
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
-const JWT_EXPIRES_IN = '7d'; // ← از 30 روز به 7 روز کاهش دادم (بهتره)
+const JWT_SECRET: string = jwtSecret;
+const JWT_EXPIRES_IN = '7d';
 
 export interface JwtUserPayload {
   id: number;
@@ -35,14 +35,14 @@ export function generateJwtToken(payload: JwtUserPayload): string {
       role: payload.role,
       salonId: payload.salonId || null,
     },
-    JWT_SECRET!,
+    JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
   );
 }
 
 export function verifyJwtToken(token: string): JwtUserPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET!) as JwtUserPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtUserPayload;
     return decoded;
   } catch {
     return null;
