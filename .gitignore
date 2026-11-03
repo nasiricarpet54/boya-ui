@@ -63,4 +63,6 @@ boya_full_code.txt
 boya_shared_code.txt
 
 # Cloned/build folder
-boya-ui/
+boya-ui/node_modules/
+dist/
+.env
