@@ -1,26 +1,22 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-/**
- * JWT secret resolution.
- *
- * In production a missing JWT_SECRET is a hard failure: the server must not
- * start with a secret nobody configured, because every token minted would be
- * unverifiable after a restart and the operator would have no way to know the
- * secret was ever valid. In development we fall back to a random per-process
- * secret so a missing .env does not block local work.
- */
-const FALLBACK_JWT_SECRET = 'boya_secret_key_prod_326d1670_769f_4463_91dd_97aa21b8f43f';
-const JWT_SECRET = process.env.JWT_SECRET || FALLBACK_JWT_SECRET;
+const isProd = process.env.NODE_ENV === 'production';
 
 if (!process.env.JWT_SECRET) {
-  console.warn('\x1b[33m%s\x1b[0m', '⚠️ NOTICE: JWT_SECRET environment variable is not explicitly defined in process.env.');
-  console.warn('\x1b[33m%s\x1b[0m', 'Using platform-scoped deterministic fallback secret to ensure container health and session persistence.');
+  if (isProd) {
+    console.error('🔴 [FATAL] JWT_SECRET is not set in production!');
+    console.error('   Set JWT_SECRET in .env.production or use --env-file.');
+    console.error('   Refusing to start with a random secret (would invalidate all sessions on restart).');
+    process.exit(1); // ← سرور در production اصلاً بالا نمی‌آد
+  } else {
+    console.warn('⚠️  [DEV] JWT_SECRET not set, using random secret for this session only.');
+    console.warn('    All sessions will be invalidated on restart.');
+  }
 }
 
-// Reduced from 30d to 7d: shorter-lived sessions limit the blast radius of a
-// leaked token on a platform that handles payments.
-const JWT_EXPIRES_IN = '7d';
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
+const JWT_EXPIRES_IN = '7d'; // ← از 30 روز به 7 روز کاهش دادم (بهتره)
 
 export interface JwtUserPayload {
   id: number;
@@ -47,14 +43,7 @@ export function generateJwtToken(payload: JwtUserPayload): string {
 export function verifyJwtToken(token: string): JwtUserPayload | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET!) as JwtUserPayload;
-    if (!decoded || (!decoded.phone && !decoded.id)) return null;
-    return {
-      id: Number(decoded.id),
-      uid: String(decoded.uid || ''),
-      phone: String(decoded.phone || ''),
-      role: String(decoded.role || 'customer'),
-      salonId: decoded.salonId ? String(decoded.salonId) : null,
-    };
+    return decoded;
   } catch {
     return null;
   }
