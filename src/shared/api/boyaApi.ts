@@ -1,12 +1,12 @@
 /**
- * BOYA Live Backend API Service
- * Directly communicates with the NestJS 11 + PostgreSQL 16 backend hosted at https://boya.bcshopir.ir/api/v1
+ * BOYA API Service
+ * Communicates with the local PostgreSQL backend hosted at /api
  */
 
 import { Salon, SalonService, Specialist } from '../data/marketplaceData';
 import api from './apiClient';
 
-const BASE_URL = '/api/v1';
+const BASE_URL = '/api';
 
 export interface LiveHealthStatus {
   status: string;

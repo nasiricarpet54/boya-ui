@@ -85,25 +85,52 @@ export const JalaliDatePicker: React.FC<JalaliDatePickerProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Calculate days in the current Shamsi month (31 for months 0-5, 30 for months 6-10, 29/30 for month 11)
+  function jalaliToGregorianHelper(jy: number, jm: number, jd: number) {
+    let gy = jy <= 979 ? 621 : 1600;
+    jy -= jy <= 979 ? 0 : 979;
+    let days = (365 * jy) + (Math.floor(jy / 33) * 8) + Math.floor(((jy % 33) + 3) / 4) + 78 + jd + (jm < 7 ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
+    gy += 400 * Math.floor(days / 146097);
+    days %= 146097;
+    if (days > 36524) {
+      gy += 100 * Math.floor(--days / 36524);
+      days %= 36524;
+      if (days >= 365) days++;
+    }
+    gy += 4 * Math.floor(days / 1461);
+    days %= 1461;
+    if (days > 365) {
+      gy += Math.floor((days - 1) / 365);
+      days = (days - 1) % 365;
+    }
+    let gd = days + 1;
+    const sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let gm = 0;
+    for (gm = 0; gm < 13; gm++) {
+      const v = sal_a[gm];
+      if (gd <= v) break;
+      gd -= v;
+    }
+    return { gy, gm, gd };
+  }
+
+  // Calculate days in the current Shamsi month
   const daysInMonth = useMemo(() => {
     if (currentMonth < 6) return 31;
     if (currentMonth < 11) return 30;
-    // Esfand leap year check in Jalali
-    const isLeapYear = ((currentYear % 33) % 4) === 1;
-    return isLeapYear ? 30 : 29;
+    // Exact Esfand leap year check
+    const d1 = jalaliToGregorianHelper(currentYear, 1, 1);
+    const d2 = jalaliToGregorianHelper(currentYear + 1, 1, 1);
+    const date1 = new Date(Date.UTC(d1.gy, d1.gm - 1, d1.gd));
+    const date2 = new Date(Date.UTC(d2.gy, d2.gm - 1, d2.gd));
+    const daysInYear = Math.round((date2.getTime() - date1.getTime()) / 86400000);
+    return daysInYear === 366 ? 30 : 29;
   }, [currentYear, currentMonth]);
 
-  // Calculate day of week for the 1st of current Shamsi month
+  // Calculate day of week for the 1st of current Shamsi month (0 = Sat, 1 = Sun, ..., 6 = Fri)
   const firstDayOfWeekOffset = useMemo(() => {
-    // Construct approximate date for 1st of current Shamsi month
-    // Shamsi year 1403 starts ~ March 20, 2024
-    const approxGregYear = currentYear + 621;
-    const approxMonth = (currentMonth + 2) % 12 + 1;
-    const testDate = new Date(Date.UTC(approxGregYear, approxMonth, 21));
-    const day = testDate.getUTCDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
-    // Convert to Saturday-first offset (0 = Sat, 1 = Sun, 2 = Mon, 3 = Tue, 4 = Wed, 5 = Thu, 6 = Fri)
-    return (day + 1) % 7;
+    const g = jalaliToGregorianHelper(currentYear, currentMonth + 1, 1);
+    const dateObj = new Date(Date.UTC(g.gy, g.gm - 1, g.gd));
+    return (dateObj.getUTCDay() + 1) % 7;
   }, [currentYear, currentMonth]);
 
   const handlePrevMonth = () => {
@@ -129,10 +156,8 @@ export const JalaliDatePicker: React.FC<JalaliDatePickerProps> = ({
     const dayFormatted = String(dayNum).padStart(2, '0');
     const jalaliStr = `${currentYear}/${monthFormatted}/${dayFormatted}`;
     
-    // Create Date object corresponding to selected Jalali date
-    const approxGregYear = currentYear + 621;
-    const approxGregMonth = (currentMonth + 2) % 12;
-    const rawDate = new Date(approxGregYear, approxGregMonth, dayNum, 12, 0, 0);
+    const g = jalaliToGregorianHelper(currentYear, currentMonth + 1, dayNum);
+    const rawDate = new Date(g.gy, g.gm - 1, g.gd, 12, 0, 0);
 
     onDateChange(jalaliStr, rawDate);
     setIsOpen(false);

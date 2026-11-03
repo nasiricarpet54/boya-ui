@@ -1,7 +1,7 @@
 import { db } from './index.ts';
 import { bookings, salons, services, specialists, users } from './schema.ts';
 import { eq, sql, and } from 'drizzle-orm';
-import { normalizeToIsoDate } from '../shared/utils/dateIsoConverter.ts';
+import { normalizeToIsoDate, normalizeTime } from '../shared/utils/dateIsoConverter.ts';
 import crypto from 'crypto';
 
 export async function createBooking(data: {
@@ -22,6 +22,7 @@ export async function createBooking(data: {
     const trackingCode = `BY-${randomSuffix}`;
     
     const isoDate = normalizeToIsoDate(data.date);
+    const isoTime = normalizeTime(data.time);
 
     // 1. Resolve Salon ID (Strict - No fallbacks)
     let resolvedSalonId = Number(data.salonId);
@@ -68,7 +69,7 @@ export async function createBooking(data: {
       serviceId: resolvedServiceId,
       specialistId: resolvedSpecialistId,
       date: isoDate,
-      time: data.time || '۱۱:۳۰',
+      time: isoTime,
       status: 'pending',
       paymentStatus: 'unpaid',
       isMobileBooking: Boolean(data.isMobileBooking),

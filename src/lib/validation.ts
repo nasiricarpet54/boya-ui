@@ -17,7 +17,7 @@ export const bookingCreateSchema = z.object({
   isMobileBooking: z.boolean().default(false),
   customerAddress: z.string().optional(),
   notes: z.string().optional(),
-  price: z.union([z.number(), z.string()]),
+  price: z.union([z.number(), z.string()]).optional(),
 });
 
 export const bookingStatusUpdateSchema = z.object({ status: z.enum(['pending', 'confirmed', 'completed', 'cancelled', 'rescheduled']) });
@@ -44,3 +44,57 @@ export const salonCreateSchema = z.object({
   district: z.string().optional().default(''), address: z.string().min(1, 'آدرس دقیق سالن الزامی است'),
   isVip: z.boolean().optional().default(false), isMobileServiceActive: z.boolean().optional().default(false), coverImage: z.string().optional(),
 });
+
+export const notificationCreateSchema = z.object({
+  title: z.string().min(1, 'عنوان اعلان الزامی است'),
+  content: z.string().min(1, 'متن اعلان الزامی است'),
+  type: z.string().default('informational'),
+  targetAudience: z.string().default('all'),
+  channel: z.string().default('in_app'),
+  actionUrl: z.string().optional().nullable(),
+  actionText: z.string().optional().nullable(),
+  badgeText: z.string().optional().nullable(),
+  isActive: z.boolean().default(true),
+});
+
+export const adminProfileUpdateSchema = z.object({
+  fullName: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+  emergencyPhone: z.string().optional().nullable(),
+  positionTitle: z.string().optional().nullable(),
+  bio: z.string().optional().nullable(),
+  province: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  avatarUrl: z.string().optional().nullable(),
+  securityAlertSms: z.boolean().optional(),
+  newSalonsNotifySms: z.boolean().optional(),
+  weeklyReportsEmail: z.boolean().optional(),
+  twoFactorEnabled: z.boolean().optional(),
+});
+
+export const serviceCreateSchema = z.object({
+  salonId: z.union([z.number(), z.string()]),
+  serviceLineId: z.string().default('hair'),
+  name: z.string().min(1, 'نام خدمت الزامی است'),
+  description: z.string().optional().nullable(),
+  price: z.union([z.number(), z.string()]),
+  durationMinutes: z.number().int().min(1).default(30),
+  isMobileAvailable: z.boolean().default(false),
+  imageUrl: z.string().optional().nullable(),
+});
+
+export const serviceUpdateSchema = serviceCreateSchema.partial();
+
+export const specialistCreateSchema = z.object({
+  userId: z.union([z.number(), z.string()]),
+  salonId: z.union([z.number(), z.string()]),
+  specialtyLine: z.string().default('hair'),
+  bio: z.string().optional().nullable(),
+  experienceYears: z.number().int().min(0).default(1),
+  isMobileActive: z.boolean().default(false),
+  avatarUrl: z.string().optional().nullable(),
+});
+
+export const specialistUpdateSchema = specialistCreateSchema.partial();
+

@@ -11,15 +11,14 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
-import { ZodError } from 'zod';
-import { createProxyMiddleware } from 'http-proxy-middleware';
+
 import { requireAuth, requireRole, type AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
 import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems } from './src/db/schema.ts';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
-import { normalizeToIsoDate } from './src/shared/utils/dateIsoConverter.ts';
+import { normalizeToIsoDate, normalizeTime } from './src/shared/utils/dateIsoConverter.ts';
 import { normalizePhone } from './src/shared/utils/persianUtils.ts';
 import { generateJwtToken } from './src/lib/jwt.ts';
 import { seedDatabase } from './src/db/seed.ts';
@@ -50,7 +49,7 @@ if (isProd && process.env.REDIS_URL) {
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000, // Increased for stability
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   store: redisClient ? new RedisStore({ 
@@ -62,6 +61,21 @@ const apiLimiter = rateLimit({
 
 const otpStore = new Map<string, { code: string; expiresAt: number; attempts: number }>();
 const sendOtpRateLimit = new Map<string, { count: number; resetAt: number }>();
+
+// Periodic memory cleanup to prevent memory leaks and resource exhaustion
+setInterval(() => {
+  const now = Date.now();
+  for (const [phone, record] of otpStore.entries()) {
+    if (now > record.expiresAt) {
+      otpStore.delete(phone);
+    }
+  }
+  for (const [phone, record] of sendOtpRateLimit.entries()) {
+    if (now > record.resetAt) {
+      sendOtpRateLimit.delete(phone);
+    }
+  }
+}, 3 * 60 * 1000).unref();
 
 async function createServer() {
   const app = express();
@@ -121,24 +135,56 @@ async function createServer() {
   app.use('/uploads', express.static(uploadsDir));
   app.use('/uploads', express.static(localUploads));
 
+  function validateAndProcessImage(rawData: string): { buffer: Buffer; ext: string } {
+    if (!rawData || typeof rawData !== 'string') {
+      throw new Error('داده تصویر ارسال نشده است.');
+    }
+
+    if (rawData.length > 7 * 1024 * 1024) {
+      throw new Error('حجم فایل بیش از حد مجاز است (حداکثر ۵ مگابایت).');
+    }
+
+    const matches = rawData.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+    const base64Data = matches ? matches[2] : rawData;
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    if (buffer.length > 5 * 1024 * 1024) {
+      throw new Error('حجم فایل بیش از حد مجاز است (حداکثر ۵ مگابایت).');
+    }
+
+    const sampleHeader = buffer.toString('utf8', 0, Math.min(buffer.length, 512)).toLowerCase();
+    if (sampleHeader.includes('<svg') || sampleHeader.includes('<html') || sampleHeader.includes('<script') || sampleHeader.includes('javascript:')) {
+      throw new Error('فایل‌های SVG یا حاوی کدهای اسکریپت قابل قبول نیستند.');
+    }
+
+    let ext = '';
+    // JPEG: FF D8 FF
+    if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+      ext = 'jpg';
+    }
+    // PNG: 89 50 4E 47 0D 0A 1A 0A
+    else if (buffer.length >= 8 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47 && buffer[4] === 0x0d && buffer[5] === 0x0a && buffer[6] === 0x1a && buffer[7] === 0x0a) {
+      ext = 'png';
+    }
+    // WEBP: RIFF ... WEBP
+    else if (buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
+      ext = 'webp';
+    }
+    // GIF: GIF87a or GIF89a
+    else if (buffer.length >= 6 && (buffer.toString('ascii', 0, 6) === 'GIF87a' || buffer.toString('ascii', 0, 6) === 'GIF89a')) {
+      ext = 'gif';
+    } else {
+      throw new Error('فرمت فایل نامعتبر است. فقط تصاویر معتبر JPEG، PNG، WEBP و GIF پذیرفته می‌شوند.');
+    }
+
+    return { buffer, ext };
+  }
+
   // File & Image Upload endpoint (permanent disk storage)
   app.post('/api/upload', requireAuth, async (req: AuthRequest, res) => {
     try {
       const rawData = req.body.fileData || req.body.base64;
-      if (!rawData || typeof rawData !== 'string') {
-        return res.status(400).json({ error: 'داده تصویر ارسال نشده است.' });
-      }
-
-      const matches = rawData.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
-      let ext = 'webp';
-      let buffer: Buffer;
-
-      if (matches) {
-        ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-        buffer = Buffer.from(matches[2], 'base64');
-      } else {
-        buffer = Buffer.from(rawData, 'base64');
-      }
+      const { buffer, ext } = validateAndProcessImage(rawData);
 
       const safeName = `img_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.${ext}`;
       const filePath = path.join(uploadsDir, safeName);
@@ -152,9 +198,9 @@ async function createServer() {
 
       const fileUrl = `/uploads/${safeName}`;
       res.json({ success: true, url: fileUrl });
-    } catch (err) {
-      console.error('[UPLOAD ERROR]', err);
-      res.status(500).json({ error: 'خطا در ذخیره‌سازی فایل تصویر.' });
+    } catch (err: any) {
+      console.error('[UPLOAD ERROR]', err?.message || err);
+      res.status(400).json({ error: err?.message || 'خطا در ذخیره‌سازی فایل تصویر.' });
     }
   });
 
@@ -242,14 +288,15 @@ async function createServer() {
     }
   });
 
-  app.post('/api/auth/logout', async (req, res) => {
+  app.post('/api/auth/logout', requireAuth, async (req: AuthRequest, res) => {
     const token = req.cookies.token;
     if (token) {
       const expiry = new Date();
       expiry.setDate(expiry.getDate() + 30);
       await db.insert(revokedTokens).values({ token, expiresAt: expiry }).onConflictDoNothing().catch(() => {});
-      const jwtPayload = (req as any).dbUser;
-      if (jwtPayload) await logSecurityAction({ actorId: jwtPayload.id, action: 'LOGOUT', ipAddress: req.ip });
+    }
+    if (req.dbUser) {
+      await logSecurityAction({ actorId: req.dbUser.id, action: 'LOGOUT', ipAddress: req.ip });
     }
     res.clearCookie('token', { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/' });
     res.json({ success: true });
@@ -662,7 +709,7 @@ async function createServer() {
       const existingSlot = await db.select().from(bookingsTable).where(and(
         eq(bookingsTable.specialistId, Number(data.specialistId)),
         eq(bookingsTable.date, normalizeToIsoDate(data.date)),
-        eq(bookingsTable.time, data.time)
+        eq(bookingsTable.time, normalizeTime(data.time))
       )).limit(1).then(r => r[0]);
 
       if (existingSlot && existingSlot.status !== 'cancelled') {
@@ -727,13 +774,23 @@ async function createServer() {
   });
 
   app.patch('/api/admin/profile', requireAuth, requireRole(['super_admin']), async (req, res) => {
-    const profile = await db.select().from(adminProfile).limit(1).then(r => r[0]);
-    if (!profile) {
-      const [newP] = await db.insert(adminProfile).values(req.body).returning();
-      return res.json(newP);
+    try {
+      const data = schemas.adminProfileUpdateSchema.parse(req.body);
+      const profile = await db.select().from(adminProfile).limit(1).then(r => r[0]);
+      if (!profile) {
+        const [newP] = await db.insert(adminProfile).values({
+          fullName: data.fullName || 'مدیر ارشد',
+          phone: data.phone || '09120000000',
+          email: data.email || 'admin@boya.ir',
+          ...data
+        }).returning();
+        return res.json(newP);
+      }
+      const [updated] = await db.update(adminProfile).set(data).where(eq(adminProfile.id, profile.id)).returning();
+      res.json(updated);
+    } catch (err) {
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'اطلاعات پروفایل مدیریت نامعتبر است.' });
     }
-    const [updated] = await db.update(adminProfile).set(req.body).where(eq(adminProfile.id, profile.id)).returning();
-    res.json(updated);
   });
 
   app.get('/api/notifications', async (req, res) => {
@@ -741,8 +798,13 @@ async function createServer() {
   });
 
   app.post('/api/notifications', requireAuth, requireRole(['super_admin']), async (req, res) => {
-    const [n] = await db.insert(notifications).values(req.body).returning();
-    res.status(201).json(n);
+    try {
+      const data = schemas.notificationCreateSchema.parse(req.body);
+      const [n] = await db.insert(notifications).values(data).returning();
+      res.status(201).json(n);
+    } catch (err) {
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'اطلاعات اعلان نامعتبر است.' });
+    }
   });
 
   app.delete('/api/notifications/:id', requireAuth, requireRole(['super_admin']), async (req, res) => {
@@ -750,9 +812,7 @@ async function createServer() {
     res.json({ success: true });
   });
 
-  // --- Static & Proxy ---
-
-  app.use('/api/v1', createProxyMiddleware({ target: 'https://boya.bcshopir.ir/api/v1', changeOrigin: true, pathRewrite: { '^/api/v1': '' } }));
+  // --- Static ---
 
   let vite: any;
   if (!isProd) {
