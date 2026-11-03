@@ -218,8 +218,9 @@ async function createServer() {
       
       const { email: _, phone: __, ...safeUser } = dbUser;
       res.json({ user: safeUser });
-    } catch (err) {
-      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطای احراز هویت.' });
+    } catch (err: any) {
+      console.error('[VERIFY-OTP ERROR]', err);
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: err.message || 'خطای احراز هویت.' });
     }
   });
 

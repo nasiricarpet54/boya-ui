@@ -4,7 +4,7 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 COPY . .
 RUN npm run build
 
@@ -14,8 +14,8 @@ ENV NODE_ENV=production PORT=3000
 RUN apk add --no-cache curl
 
 COPY package.json package-lock.json* ./
-RUN npm ci --legacy-peer-deps --omit=dev && \
-    npm install tsx --legacy-peer-deps --no-save
+RUN npm install --legacy-peer-deps --omit=dev && \
+    npm install tsx --legacy-peer-deps --legacy-peer-deps --legacy-peer-deps --no-save
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/drizzle ./drizzle
