@@ -1,40 +1,33 @@
-# --- Stage 1: Build Stage ---
+# ===========================================
+# BOYA — Production Dockerfile
+# ===========================================
 FROM node:20-alpine AS builder
-
 WORKDIR /app
-
-# Install dependencies first (leveraging Docker layer caching)
 COPY package.json package-lock.json* ./
-RUN npm ci
-
-# Copy source code and config files
+RUN npm ci --legacy-peer-deps
 COPY . .
-
-# Build frontend and compile typescript
 RUN npm run build
 
-# --- Stage 2: Production Runner Stage ---
 FROM node:20-alpine AS runner
-
 WORKDIR /app
+ENV NODE_ENV=production PORT=3000
+RUN apk add --no-cache curl
 
-ENV NODE_ENV=production
-ENV PORT=3000
-
-# Install production dependencies only
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev && npm install tsx --no-save
+RUN npm ci --legacy-peer-deps --omit=dev && \
+    npm install tsx --legacy-peer-deps --no-save
 
-# Copy built artifacts and server files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/server.ts ./server.ts
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/src ./src
+COPY --from=builder /app/public ./public
 
-# Create uploads directory for persistent storage volume
-RUN mkdir -p /app/uploads public/uploads
+RUN mkdir -p /app/uploads /app/public/uploads
 
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=25s --retries=3 \
+  CMD curl -fsS http://localhost:3000/api/health || exit 1
 
 CMD ["npx", "tsx", "server.ts"]

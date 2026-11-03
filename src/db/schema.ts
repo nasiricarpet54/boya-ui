@@ -266,3 +266,24 @@ export const auditLogs = pgTable('audit_logs', {
   ipAddress: text('ip_address'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const supportTickets = pgTable('support_tickets', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  ticketCode: text('ticket_code').notNull(),
+  subject: text('subject').notNull(),
+  category: text('category').default('general').notNull(),
+  priority: text('priority').default('medium').notNull(),
+  status: text('status').default('open').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const ticketMessages = pgTable('ticket_messages', {
+  id: serial('id').primaryKey(),
+  ticketId: integer('ticket_id').references(() => supportTickets.id, { onDelete: 'cascade' }).notNull(),
+  senderId: integer('sender_id').references(() => users.id, { onDelete: 'set null' }),
+  senderRole: text('sender_role').notNull(),
+  message: text('message').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

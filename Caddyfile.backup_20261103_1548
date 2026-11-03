@@ -1,0 +1,4 @@
+boya.bcshopir.ir {
+    encode zstd gzip
+    reverse_proxy boya-app-new:3000
+}

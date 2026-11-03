@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    image: boya-app-new:latest
+    container_name: boya-app-new
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - boya_default
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  boya_default:
+    external: true
