@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
+import { sanitizeRole } from './src/db/users.ts';
 import Redis from 'ioredis';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
@@ -84,6 +85,7 @@ async function createServer() {
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
     }));
   }
+
 
   app.use(cors({ origin: true, credentials: true }));
   app.use(express.json({ limit: '2mb' }));
@@ -261,7 +263,7 @@ async function createServer() {
       });
       res.json(list);
     } catch (err) {
-      res.status(500).json({ error: 'خطا در دریافت لیست.' });
+      console.error('❌ API SALONS CRITICAL ERROR:', err); res.status(500).json({ error: 'خطا در دریافت لیست.' });
     }
   });
 
@@ -274,7 +276,7 @@ async function createServer() {
       });
       res.json(rows);
     } catch (err) {
-      res.status(500).json({ error: 'خطا در دریافت لیست.' });
+      console.error('❌ API SALONS CRITICAL ERROR:', err); res.status(500).json({ error: 'خطا در دریافت لیست.' });
     }
   });
 
@@ -395,6 +397,49 @@ async function createServer() {
     vite = await createViteServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' });
     app.use(vite.middlewares);
   } else {
+  // API برای ساخت کاربر جدید (توسط ادمین)
+  // API برای دریافت لیست تمام کاربران
+  app.get('/api/users', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const usersList = await db.select().from(users).orderBy(desc(users.createdAt));
+      res.json(usersList);
+    } catch (err) {
+      console.error('❌ API GET USERS ERROR:', err);
+      res.status(500).json({ error: 'خطا در دریافت لیست کاربران.' });
+    }
+  });
+    app.post('/api/users', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { fullName, phone, email, role } = req.body;
+      const cleanPhone = normalizePhone(phone);
+      
+      if (!cleanPhone) {
+        return res.status(400).json({ error: 'شماره موبایل نامعتبر است.' });
+      }
+
+      // بررسی اینکه آیا کاربر از قبل وجود دارد یا خیر
+      const existingUser = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1);
+      if (existingUser.length > 0) {
+        return res.status(400).json({ error: 'کاربری با این شماره موبایل قبلاً ثبت شده است.' });
+      }
+
+      const uid = `phone_${cleanPhone}`;
+      
+      const [newUser] = await db.insert(users).values({
+        uid,
+        phone: cleanPhone,
+        fullName: fullName || `کاربر ${cleanPhone.slice(-4)}`,
+        email: email || `${cleanPhone}@boya.ir`,
+        role: sanitizeRole(role),
+        status: 'active',
+      }).returning();
+
+      res.json({ success: true, user: newUser });
+    } catch (err) {
+      console.error('❌ API USERS CRITICAL ERROR:', err);
+      res.status(500).json({ error: 'خطا در ایجاد کاربر.' });
+    }
+  });
     app.use(express.static(path.resolve(__dirname, 'dist')));
   }
 
