@@ -2,18 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Crown, Plus, Edit, Trash2, Building2, MapPin, Phone, User, CheckCircle2, X, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../../../shared/stores/authStore';
 import { useDataStore } from '../../../shared/stores/dataStore';
-import { useSalons } from '../../../shared/api/queries';
+import { useAdminSalons } from '../../../shared/api/queries';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useQueryClient } from '@tanstack/react-query';
 import { IRAN_PROVINCES } from '../../../shared/data/iranLocations';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { Salon } from '../../../shared/data/marketplaceData';
 import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
+import { normalizeToIsoDate } from '../../../shared/utils/dateIsoConverter';
 
 export const AdminTenantsView: React.FC = () => {
   const { user } = useAuthStore();
   const { salons, addSalon, updateSalon, deleteSalon, fetchServerData } = useDataStore();
-  const { data: querySalons, isLoading: isLoadingSalons } = useSalons();
+  const { data: querySalons, isLoading: isLoadingSalons } = useAdminSalons();
   const { showToast } = useUIStore();
   const queryClient = useQueryClient();
   if (user?.role !== 'super_admin') return <div role="alert" className="p-6 text-rose-700">دسترسی فقط برای مدیر کل مجاز است.</div>;
@@ -37,6 +38,7 @@ export const AdminTenantsView: React.FC = () => {
   const [district, setDistrict] = useState('منطقه ۱');
   const [address, setAddress] = useState('');
   const [isVip, setIsVip] = useState(false);
+  const [vipExpiryDate, setVipExpiryDate] = useState('');
   const [isMobileServiceActive, setIsMobileServiceActive] = useState(false);
   const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80');
 
@@ -70,6 +72,7 @@ export const AdminTenantsView: React.FC = () => {
     setDistrict('منطقه ۱');
     setAddress('');
     setIsVip(false);
+    setVipExpiryDate('');
     setIsMobileServiceActive(false);
     setCoverImage('https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80');
     setEditingSalon(null);
@@ -86,6 +89,7 @@ export const AdminTenantsView: React.FC = () => {
     setDistrict(s.district || '');
     setAddress(s.address || '');
     setIsVip(!!s.isVip);
+    setVipExpiryDate(s.vipExpiryDate || '');
     setIsMobileServiceActive(!!s.isMobileServiceActive);
     setCoverImage(s.coverImage || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80');
     setFormError(null);
@@ -111,6 +115,15 @@ export const AdminTenantsView: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      let normalizedVipExpiry: string | undefined;
+      if (isVip && vipExpiryDate.trim()) {
+        try {
+          normalizedVipExpiry = normalizeToIsoDate(vipExpiryDate.trim());
+        } catch {
+          normalizedVipExpiry = vipExpiryDate.trim();
+        }
+      }
+
       if (editingSalon) {
         // Edit existing salon
         await updateSalon(editingSalon.id, {
@@ -122,6 +135,7 @@ export const AdminTenantsView: React.FC = () => {
           district: district.trim(),
           address: address.trim(),
           isVip,
+          vipExpiryDate: normalizedVipExpiry,
           isMobileServiceActive,
           coverImage,
         });
@@ -136,6 +150,7 @@ export const AdminTenantsView: React.FC = () => {
           district: district.trim(),
           address: address.trim(),
           isVip,
+          vipExpiryDate: normalizedVipExpiry,
           isMobileServiceActive,
           coverImage,
         });
@@ -496,6 +511,24 @@ export const AdminTenantsView: React.FC = () => {
                   </div>
                 </label>
               </div>
+
+              {isVip && (
+                <div className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#C99558]/30 space-y-1">
+                  <label className="text-xs font-bold text-[#173B3F] block">
+                    تاریخ انقضای اشتراک VIP:
+                  </label>
+                  <input
+                    type="text"
+                    value={vipExpiryDate}
+                    onChange={(e) => setVipExpiryDate(e.target.value)}
+                    placeholder="مثال: ۱۴۰۵/۱۲/۲۹ یا ۲۹ اسفند ۱۴۰۵"
+                    className="w-full h-10 px-3 rounded-xl border border-[#E7E2DA] focus:border-[#173B3F] outline-none text-xs bg-white"
+                  />
+                  <p className="text-[10px] text-[#6C6C6C]">
+                    تاریخ به‌صورت خودکار با استاندارد ISO نرمال‌سازی و در پایگاه‌داده ذخیره می‌شود.
+                  </p>
+                </div>
+              )}
 
               <div className="pt-3 flex items-center justify-between">
                 <button

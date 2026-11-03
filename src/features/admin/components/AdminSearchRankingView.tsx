@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Crown, Pin } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
-import { useSalons } from '../../../shared/api/queries';
+import { useAdminSalons } from '../../../shared/api/queries';
 import { IRAN_PROVINCES } from '../../../shared/data/iranLocations';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { sortSalonsForSearchResults } from '../../../shared/utils/salonRanking';
 
 export const AdminSearchRankingView: React.FC = () => {
   const { salons, updateSalon } = useDataStore();
-  const { data: querySalons } = useSalons();
+  const { data: querySalons } = useAdminSalons();
   const [cityFilter, setCityFilter] = useState<string>('all');
   
   const allSalons = (salons && salons.length > 0) ? salons : (querySalons || []);

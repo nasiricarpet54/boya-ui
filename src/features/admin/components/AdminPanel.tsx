@@ -13,13 +13,13 @@ import { AdminSearchRankingView } from './AdminSearchRankingView';
 import { AdminNotificationsView } from './AdminNotificationsView';
 import { AdminProfileView } from './AdminProfileView';
 import { useDataStore } from '../../../shared/stores/dataStore';
-import { useSalons } from '../../../shared/api/queries';
+import { useAdminSalons } from '../../../shared/api/queries';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { SEO } from '../../../shared/components/SEO';
 
 export const AdminPanel: React.FC = () => {
   const { salons, bookings, users, tickets, auditLogs, notifications, updateSalon, updateBookingStatus, fetchServerData } = useDataStore();
-  const { data: querySalons } = useSalons();
+  const { data: querySalons } = useAdminSalons();
   const { setAppMode, setShowSplashScreen, setSplashAppName } = useUIStore();
   
   React.useEffect(() => {

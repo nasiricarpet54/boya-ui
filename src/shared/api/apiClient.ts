@@ -6,6 +6,18 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// Request interceptor: normalize URL so leading '/api/' does not duplicate baseURL '/api'
+api.interceptors.request.use((config) => {
+  if (config.url) {
+    if (config.url.startsWith('/api/')) {
+      config.url = config.url.replace(/^\/api\//, '/');
+    } else if (config.url === '/api') {
+      config.url = '/';
+    }
+  }
+  return config;
+});
+
 // Response interceptor: On 401 Unauthorized, automatically purge auth state
 api.interceptors.response.use(
   (response) => response,

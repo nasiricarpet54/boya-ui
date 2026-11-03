@@ -130,7 +130,12 @@ export const SalonsScreen: React.FC = () => {
         }
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase().trim();
-          if (!salon.name.toLowerCase().includes(q) && !salon.district.toLowerCase().includes(q)) return false;
+          const matchName = salon.name.toLowerCase().includes(q);
+          const matchDistrict = (salon.district || '').toLowerCase().includes(q);
+          const matchCity = (salon.city || '').toLowerCase().includes(q);
+          const matchService = salon.services?.some((s: any) => s.name.toLowerCase().includes(q));
+          const matchSpecialist = salon.specialists?.some((sp: any) => sp.name.toLowerCase().includes(q));
+          if (!matchName && !matchDistrict && !matchCity && !matchService && !matchSpecialist) return false;
         }
         return true;
       });

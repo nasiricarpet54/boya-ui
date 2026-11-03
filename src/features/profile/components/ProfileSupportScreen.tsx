@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { MapPin, Share2, Plus, Send, CheckCircle2, ChevronLeft, Store, ShieldCheck, Camera, Edit3, LogOut } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MapPin, Share2, Plus, Send, CheckCircle2, ChevronLeft, Store, ShieldCheck, Camera, Edit3, LogOut, RefreshCw } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
-import { SupportTicket, INITIAL_TICKETS } from '../../../shared/data/marketplaceData';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useAuthStore } from '../../../shared/stores/authStore';
 import { SEO } from '../../../shared/components/SEO';
+import api from '../../../shared/api/apiClient';
 
 export const ProfileSupportScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -71,14 +71,40 @@ export const ProfileSupportScreen: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<'profile' | 'tickets' | 'addresses' | 'referral' | 'faq' | 'guide'>('tickets');
   // ... rest of state
-  const [tickets, setTickets] = useState<SupportTicket[]>(INITIAL_TICKETS);
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [isLoadingTickets, setIsLoadingTickets] = useState<boolean>(false);
+  const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
   const [newReplyText, setNewReplyText] = useState<string>('');
   const [isCreatingTicket, setIsCreatingTicket] = useState<boolean>(false);
   const [newTicketTitle, setNewTicketTitle] = useState<string>('');
   const [newTicketCategory, setNewTicketCategory] = useState<'booking' | 'salon' | 'specialist'>('booking');
   const [newTicketMessage, setNewTicketMessage] = useState<string>('');
   const [copiedNotification, setCopiedNotification] = useState<boolean>(false);
+
+  const fetchTickets = async () => {
+    if (!user) return;
+    try {
+      setIsLoadingTickets(true);
+      const res = await api.get('/tickets');
+      if (Array.isArray(res.data)) {
+        setTickets(res.data);
+        if (selectedTicket) {
+          const updatedSelected = res.data.find((t: any) => t.id === selectedTicket.id);
+          if (updatedSelected) setSelectedTicket(updatedSelected);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load tickets from server:', err);
+    } finally {
+      setIsLoadingTickets(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'tickets' && user) {
+      fetchTickets();
+    }
+  }, [activeTab, user]);
 
   const referralCode = user?.phone ? `BOYA-${user.phone.slice(-4)}` : 'BOYA-CLUB';
 
@@ -89,63 +115,42 @@ export const ProfileSupportScreen: React.FC = () => {
     navigate({ to: '/salon-admin' });
   };
 
-  const handleSendReply = (e: React.FormEvent) => {
+  const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newReplyText.trim() || !selectedTicket) return;
 
-    const currentUserName = user?.fullName || 'کاربر بویا';
-    const updated = {
-      ...selectedTicket,
-      messages: [
-        ...selectedTicket.messages,
-        {
-          sender: 'user' as const,
-          senderName: currentUserName,
-          text: newReplyText.trim(),
-          time: 'هم‌اکنون',
-        },
-      ],
-      lastReply: newReplyText.trim(),
-      status: 'in_progress' as const,
-    };
-
-    setTickets((prev) => prev.map((t) => (t.id === selectedTicket.id ? updated : t)));
-    setSelectedTicket(updated);
-    setNewReplyText('');
+    try {
+      await api.post(`/tickets/${selectedTicket.id}/messages`, {
+        message: newReplyText.trim(),
+      });
+      setNewReplyText('');
+      await fetchTickets();
+    } catch (err) {
+      console.error('Failed to send reply to ticket:', err);
+    }
   };
 
-  const handleCreateTicket = (e: React.FormEvent) => {
+  const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTicketTitle.trim() || !newTicketMessage.trim()) return;
 
-    const currentUserName = user?.fullName || 'کاربر بویا';
-    const currentUserPhone = user?.phone || '';
-
-    const newTicket: SupportTicket = {
-      id: `tkt-${Math.floor(100 + Math.random() * 900)}`,
-      title: newTicketTitle.trim(),
-      userName: currentUserName,
-      userPhone: currentUserPhone,
-      userRole: 'customer',
-      category: newTicketCategory,
-      status: 'open',
-      lastReply: newTicketMessage.trim(),
-      createdAt: 'امروز',
-      messages: [
-        {
-          sender: 'user',
-          senderName: currentUserName,
-          text: newTicketMessage.trim(),
-          time: 'هم‌اکنون',
-        },
-      ],
-    };
-
-    setTickets([newTicket, ...tickets]);
-    setIsCreatingTicket(false);
-    setNewTicketTitle('');
-    setNewTicketMessage('');
-    setSelectedTicket(newTicket);
+    try {
+      const res = await api.post('/tickets', {
+        subject: newTicketTitle.trim(),
+        category: newTicketCategory,
+        message: newTicketMessage.trim(),
+        priority: 'medium',
+      });
+      setIsCreatingTicket(false);
+      setNewTicketTitle('');
+      setNewTicketMessage('');
+      await fetchTickets();
+      if (res.data) {
+        setSelectedTicket(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to create ticket on server:', err);
+    }
   };
 
   const handleLogout = async () => {
@@ -313,30 +318,62 @@ export const ProfileSupportScreen: React.FC = () => {
               <span>ارسال تیکت جدید</span>
             </button>
 
-            {selectedTicket ? (
+            {isLoadingTickets ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-gray-400">
+                <RefreshCw className="w-6 h-6 animate-spin text-[#173B3F]" />
+                <span className="text-xs">در حال بارگذاری تیکت‌ها...</span>
+              </div>
+            ) : selectedTicket ? (
               <div className="bg-white rounded-3xl p-4 border border-[#E7E2DA] space-y-4">
                  <button onClick={() => setSelectedTicket(null)} className="text-xs text-[#173B3F] font-bold flex items-center gap-1"><ChevronLeft className="w-3.5 h-3.5 rotate-180" />بازگشت</button>
-                 <h3 className="text-sm font-bold">{selectedTicket.title}</h3>
+                 <div className="flex items-center justify-between border-b pb-2">
+                   <div>
+                     <h3 className="text-sm font-bold text-[#173B3F]">{selectedTicket.subject || selectedTicket.title}</h3>
+                     <span className="text-[10px] text-gray-500">{selectedTicket.ticketCode || ''}</span>
+                   </div>
+                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${selectedTicket.status === 'resolved' ? 'bg-[#EAF2EF] text-[#2E5E52]' : 'bg-[#FBF4EC] text-[#8C5526]'}`}>
+                     {selectedTicket.status === 'resolved' ? 'بسته شده / پاسخ داده شده' : selectedTicket.status === 'in_progress' ? 'در حال بررسی' : 'در انتظار پاسخ'}
+                   </span>
+                 </div>
                  <div className="space-y-3 max-h-60 overflow-y-auto">
-                   {selectedTicket.messages.map((msg, i) => (
-                     <div key={i} className={`p-3 rounded-2xl text-xs max-w-[85%] ${msg.sender === 'user' ? 'mr-auto bg-[#FAF7F2] border' : 'ml-auto bg-[#173B3F] text-white'}`}>
-                       <p>{msg.text}</p>
-                     </div>
-                   ))}
+                   {(selectedTicket.messages || []).map((msg: any, i: number) => {
+                     const isUser = msg.sender === 'user' || msg.senderRole === 'customer' || msg.senderId === user?.id;
+                     return (
+                       <div key={msg.id || i} className={`p-3 rounded-2xl text-xs max-w-[85%] ${isUser ? 'mr-auto bg-[#FAF7F2] border border-[#E7E2DA] text-[#173B3F]' : 'ml-auto bg-[#173B3F] text-white'}`}>
+                         <div className="text-[9px] opacity-70 mb-1 font-bold">
+                           {isUser ? 'شما' : 'پشتیبانی بویا'}
+                         </div>
+                         <p className="leading-relaxed">{msg.message || msg.text}</p>
+                       </div>
+                     );
+                   })}
                  </div>
                  <form onSubmit={handleSendReply} className="flex gap-2 pt-2 border-t">
-                   <input type="text" placeholder="پاسخ خود را بنویسید..." value={newReplyText} onChange={e => setNewReplyText(e.target.value)} className="flex-1 h-10 px-3 rounded-xl border text-xs outline-none" />
-                   <button type="submit" className="px-4 bg-[#173B3F] text-white rounded-xl font-bold text-xs"><Send className="w-4 h-4" /></button>
+                   <input type="text" placeholder="پاسخ خود را بنویسید..." value={newReplyText} onChange={e => setNewReplyText(e.target.value)} className="flex-1 h-10 px-3 rounded-xl border text-xs outline-none focus:border-[#173B3F]" />
+                   <button type="submit" disabled={!newReplyText.trim()} className="px-4 bg-[#173B3F] text-white rounded-xl font-bold text-xs disabled:opacity-50"><Send className="w-4 h-4" /></button>
                  </form>
+              </div>
+            ) : tickets.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 border border-[#E7E2DA] text-center text-gray-400 text-xs">
+                هنوز هیچ تیکتی ثبت نکرده‌اید. برای شروع، روی «ارسال تیکت جدید» کلیک کنید.
               </div>
             ) : (
               <div className="space-y-3">
-                {tickets.map(t => (
-                  <div key={t.id} onClick={() => setSelectedTicket(t)} className="bg-white rounded-2xl p-4 border border-[#E7E2DA] hover:border-[#173B3F] cursor-pointer shadow-xs transition-all">
-                    <div className="flex justify-between items-center mb-1"><span className="text-xs font-bold">{t.title}</span><span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${t.status === 'resolved' ? 'bg-[#EAF2EF] text-[#2E5E52]' : 'bg-[#FBF4EC] text-[#8C5526]'}`}>{t.status === 'resolved' ? 'پاسخ داده شد' : 'در جریان'}</span></div>
-                    <p className="text-[11px] text-[#6C6C6C] truncate">{t.lastReply}</p>
-                  </div>
-                ))}
+                {tickets.map(t => {
+                  const lastMsg = t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1] : null;
+                  const previewText = lastMsg ? (lastMsg.message || lastMsg.text) : (t.lastReply || 'بدون پیام');
+                  return (
+                    <div key={t.id} onClick={() => setSelectedTicket(t)} className="bg-white rounded-2xl p-4 border border-[#E7E2DA] hover:border-[#173B3F] cursor-pointer shadow-xs transition-all">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-bold text-[#173B3F]">{t.subject || t.title}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${t.status === 'resolved' ? 'bg-[#EAF2EF] text-[#2E5E52]' : t.status === 'in_progress' ? 'bg-blue-50 text-blue-700' : 'bg-[#FBF4EC] text-[#8C5526]'}`}>
+                          {t.status === 'resolved' ? 'پاسخ داده شد' : t.status === 'in_progress' ? 'در حال بررسی' : 'جدید'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#6C6C6C] truncate">{previewText}</p>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

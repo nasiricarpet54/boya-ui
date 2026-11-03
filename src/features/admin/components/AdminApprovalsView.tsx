@@ -3,7 +3,7 @@ import { CheckCircle2, ShieldCheck, FileText, Upload, X, Building2, Eye, AlertCi
 import { useAuthStore } from '../../../shared/stores/authStore';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useDataStore } from '../../../shared/stores/dataStore';
-import { useSalons } from '../../../shared/api/queries';
+import { useAdminSalons } from '../../../shared/api/queries';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
 import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
 import { Salon, SalonService } from '../../../shared/data/marketplaceData';
@@ -16,7 +16,7 @@ export const AdminApprovalsView: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [serviceBusyId, setServiceBusyId] = useState<string | number | null>(null);
   if (user?.role !== 'super_admin') return <div role="alert" className="p-6 text-rose-700">دسترسی فقط برای مدیر کل مجاز است.</div>;
-  const { data: querySalons } = useSalons();
+  const { data: querySalons } = useAdminSalons();
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string>('');
 

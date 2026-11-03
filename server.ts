@@ -168,6 +168,11 @@ async function createServer() {
     return { buffer, ext };
   }
 
+  // Health check endpoint
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), database: 'connected' });
+  });
+
   // File & Image Upload endpoint (permanent disk storage)
   app.post('/api/upload', requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -939,7 +944,7 @@ async function createServer() {
         targetAudience: targetAudience || 'all',
         channel: 'sms',
         isActive: true,
-        smsSentCount: sentCount,
+        badgeText: `${sentCount} پیامک`,
       }).returning();
 
       res.status(201).json({ success: true, sentCount, notification: newNotif });

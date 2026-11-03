@@ -36,7 +36,7 @@ export const HomeScreen: React.FC = () => {
   const { data: salons = [], isLoading, isError } = useSalons();
   const { data: bookings = [] } = useBookings();
   const { selectedCity, selectedProvince, customerLocation } = useLocationStore();
-  const { openBookingModal, openPortfolioModal } = useModalStore();
+  const { openBookingModal, openPortfolioModal, openSearchModal } = useModalStore();
   const { showToast, setIsLocationModalOpen } = useUIStore();
   const { savedSalonIds, toggleFavorite, isFavorite } = useFavoritesStore();
 
@@ -188,25 +188,29 @@ export const HomeScreen: React.FC = () => {
           </div>
         </section>
 
-        {/* Quick Search */}
+        {/* Quick Search Trigger */}
         <section className="relative">
-          <div className="relative flex items-center">
-            <Search className="absolute right-4 w-5 h-5 text-[#173B3F]/40" />
+          <div
+            onClick={() => openSearchModal(searchQuery)}
+            className="relative flex items-center cursor-pointer group"
+          >
+            <Search className="absolute right-4 w-5 h-5 text-[#173B3F]/50 group-hover:text-[#173B3F] transition-colors" />
             <input
               type="text"
-              placeholder="جستجوی سالن، تخصص یا نام خدمات..."
-              className="w-full h-14 pr-12 pl-4 rounded-2xl bg-white border border-[#E7E2DA] focus:border-[#173B3F] focus:ring-2 focus:ring-[#173B3F]/5 outline-none text-sm transition-all shadow-sm shadow-[#173B3F]/5"
+              readOnly
+              onClick={() => openSearchModal(searchQuery)}
+              placeholder="جستجوی هوشمند سالن، نام خدمات، متخصص یا منطقه... (کلیک کنید یا ⌘K)"
+              className="w-full h-14 pr-12 pl-28 rounded-2xl bg-white border border-[#E7E2DA] group-hover:border-[#173B3F] cursor-pointer text-xs sm:text-sm text-[#173B3F] placeholder:text-[#6C6C6C]/60 transition-all shadow-sm shadow-[#173B3F]/5"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
             />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute left-4 text-xs text-[#6C6C6C] font-bold hover:text-[#173B3F]"
-              >
-                پاک کردن
-              </button>
-            )}
+            <div className="absolute left-3.5 flex items-center gap-1.5">
+              <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-xl bg-[#FAF7F2] border border-[#E7E2DA] text-[11px] font-bold text-[#173B3F] group-hover:bg-[#173B3F] group-hover:text-white transition-all">
+                جستجوی سراسری
+              </span>
+              <kbd className="hidden md:inline-flex items-center text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#FAF7F2] border border-[#E7E2DA] text-[#6C6C6C]">
+                ⌘K
+              </kbd>
+            </div>
           </div>
         </section>
 

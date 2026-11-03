@@ -53,6 +53,7 @@ import {
   SERVICE_LINES,
 } from '../../../shared/data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../../../shared/utils/persianUtils';
+import { normalizeToIsoDate, normalizeTime } from '../../../shared/utils/dateIsoConverter';
 import { BeautyActivityIcon } from '../../../shared/components/ui/BeautyActivityIcon';
 import { SpecialistFinancialsView } from '../../../shared/components/ui/SpecialistFinancialsView';
 import { SafeHtml } from '../../../shared/components/ui/SafeHtml';
@@ -477,11 +478,20 @@ export const SalonAdminDashboard: React.FC = () => {
   // Handler: Add Schedule Block (STRICT REQUIREMENT #3: Specialist blocks own slots)
   const handleAddBlock = (e: React.FormEvent) => {
     e.preventDefault();
+    let normalizedDate = newBlockDate;
+    let normalizedTime = newBlockTime;
+    try {
+      normalizedDate = normalizeToIsoDate(newBlockDate);
+      normalizedTime = normalizeTime(newBlockTime);
+    } catch {
+      // Keep original format if custom or freeform string
+    }
+
     const newBlock = {
       id: `blk-${Date.now()}`,
       specialistId: activeSpecialistView ? activeSpecialistView.id : 'general',
-      date: newBlockDate,
-      time: newBlockTime,
+      date: normalizedDate,
+      time: normalizedTime,
       reason: newBlockReason,
     };
     setScheduleBlocks([...scheduleBlocks, newBlock]);
@@ -493,8 +503,8 @@ export const SalonAdminDashboard: React.FC = () => {
     setScheduleBlocks(scheduleBlocks.filter((b) => b.id !== blockId));
   };
 
-  // Handler: Save Salon Name & Address
-  const handleSaveSalonInfo = (e: React.FormEvent) => {
+  // Handler: Save Salon Name & Address with proper try/catch and 403 error toasts
+  const handleSaveSalonInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     const isNameMissing = !editableSalonName.trim();
     const isAddressMissing = !isMobileSpecialist && !editableSalonAddress.trim();
@@ -504,16 +514,31 @@ export const SalonAdminDashboard: React.FC = () => {
       return;
     }
 
-    if (currentSalon?.id) {
-      updateSalon(currentSalon.id, {
+    if (!currentSalon?.id) {
+      showToast('سالن مورد نظر یافت نشد.');
+      return;
+    }
+
+    try {
+      await updateSalon(currentSalon.id, {
         name: editableSalonName.trim(),
         address: editableSalonAddress.trim(),
         pendingApproval: true,
       });
-    }
 
-    setSalonEditSuccess(true);
-    setTimeout(() => setSalonEditSuccess(false), 3500);
+      setSalonEditSuccess(true);
+      showToast('اطلاعات سالن با موفقیت ثبت شد.');
+      setTimeout(() => setSalonEditSuccess(false), 3500);
+    } catch (err: any) {
+      setSalonEditSuccess(false);
+      const status = err?.response?.status;
+      const errorMsg =
+        status === 403
+          ? 'عدم دسترسی (۴۰۳): شما به عنوان متخصص مجاز به ویرایش اطلاعات کلی سالن نیستید.'
+          : err?.response?.data?.error || err?.message || 'خطا در ثبت اطلاعات سالن.';
+      showToast(errorMsg);
+      console.error('[SALON_INFO_UPDATE_ERROR]', err);
+    }
   };
 
   // Handler: Save specialist's working hours

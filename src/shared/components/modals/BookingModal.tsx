@@ -9,9 +9,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { bookingSchema } from '../../utils/validation';
 import { useAuthStore } from '../../stores/authStore';
 import { useModalStore } from '../../stores/modalStore';
+import { useUIStore } from '../../stores/uiStore';
 import api from '../../api/apiClient';
 import { JalaliDatePicker } from '../ui/JalaliDatePicker';
 import { getSlotsForArbitraryDate } from '../../utils/dateSlotGenerator';
+import { normalizeToIsoDate, normalizeTime } from '../../utils/dateIsoConverter';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -34,6 +36,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 }) => {
   const { user, isAuthenticated } = useAuthStore();
   const { openAuthModal } = useModalStore();
+  const { showToast } = useUIStore();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -114,12 +117,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
     setIsProcessing(true);
     try {
+      let isoDate = selectedDate;
+      let isoTime = selectedTime;
+      try {
+        isoDate = normalizeToIsoDate(selectedDate);
+        isoTime = normalizeTime(selectedTime);
+      } catch (normErr: any) {
+        console.warn('Date normalization fallback:', normErr);
+      }
+
       const response = await api.post('/bookings', {
         salonId: salon.id,
         serviceId: service.id,
         specialistId: specialist.id,
-        date: selectedDate,
-        time: selectedTime,
+        date: isoDate,
+        time: isoTime,
         customerName: formData.customerName,
         isMobileBooking: isMobileService,
         customerAddress: formData.customerAddress,
@@ -135,8 +147,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         salonName: salon.name,
       });
     } catch (err: any) {
-      console.error(err);
-      alert(err.response?.data?.error || 'خطایی در ثبت نوبت رخ داد.');
+      console.error('Booking creation failed:', err);
+      const errMsg = err.response?.data?.error || err.message || 'خطایی در ثبت نوبت رخ داد.';
+      showToast(errMsg);
     } finally {
       setIsProcessing(false);
     }

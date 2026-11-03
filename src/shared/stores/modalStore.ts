@@ -20,6 +20,11 @@ interface ModalState {
 
   isAuthModalOpen: boolean;
 
+  isSearchModalOpen: boolean;
+  searchInitialQuery: string;
+  openSearchModal: (initialQuery?: string) => void;
+  closeSearchModal: () => void;
+
   openBookingModal: (salon: Salon, service: SalonService, specialist: Specialist, date: string, time: string) => void;
   closeBookingModal: () => void;
   
@@ -45,6 +50,11 @@ export const useModalStore = create<ModalState>((set) => ({
   isQuickViewModalOpen: false,
 
   isAuthModalOpen: false,
+
+  isSearchModalOpen: false,
+  searchInitialQuery: '',
+  openSearchModal: (initialQuery = '') => set({ isSearchModalOpen: true, searchInitialQuery: initialQuery }),
+  closeSearchModal: () => set({ isSearchModalOpen: false, searchInitialQuery: '' }),
 
   openBookingModal: (salon, service, specialist, date, time) => set({
     bookingData: { salon, service, specialist, date, time },

@@ -76,7 +76,7 @@ export const AdminNotificationsView: React.FC = () => {
     // Trigger SMS broadcast if applicable
     if (channel === 'sms' || channel === 'both') {
       try {
-        await api.post('/api/notifications/broadcast', {
+        await api.post('/notifications/broadcast', {
           title: newNotif.title,
           content: newNotif.content,
           targetAudience: newNotif.targetAudience,
@@ -96,7 +96,7 @@ export const AdminNotificationsView: React.FC = () => {
     setSmsResult(null);
 
     try {
-      await api.post('/api/notifications/broadcast', {
+      await api.post('/notifications/broadcast', {
         title: notif.title,
         content: notif.content,
         targetAudience: notif.targetAudience,

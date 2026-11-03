@@ -29,9 +29,15 @@ export interface BookingAlertNotification {
 }
 
 import { useBookings } from '../../../shared/api/queries';
+import { useAuthStore } from '../../../shared/stores/authStore';
+import { useModalStore } from '../../../shared/stores/modalStore';
+import { useUIStore } from '../../../shared/stores/uiStore';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const BookingsScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuthStore();
+  const { openAuthModal } = useModalStore();
   const { data: bookings = [], isLoading, isError, refetch } = useBookings();
   const { latestBookingAlert, clearLatestBookingAlert } = useDataStore();
 
@@ -130,25 +136,33 @@ export const BookingsScreen: React.FC = () => {
       ? completedBookings
       : cancelledBookings;
 
+  const queryClient = useQueryClient();
+  const { showToast: showGlobalToast } = useUIStore();
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewModalBooking) return;
 
     try {
-      const targetSalonId = reviewModalBooking.salonId || reviewModalBooking.salon?.id || 1;
-      await api.post(`/salons/${targetSalonId}/reviews`, {
-        rating: reviewRating,
-        comment: reviewComment,
+      const targetSalonId = Number(reviewModalBooking.salonId || reviewModalBooking.salon?.id || 1);
+      const res = await api.post(`/salons/${targetSalonId}/reviews`, {
+        rating: Number(reviewRating),
+        comment: reviewComment.trim(),
         bookingId: reviewModalBooking.id,
       });
+
       setReviewSubmitted(true);
+      showGlobalToast(res.data?.message || 'نظر و امتیاز شما با موفقیت ثبت شد و امتیاز سالن به‌روزرسانی گردید.');
+      await queryClient.invalidateQueries({ queryKey: ['salons'] });
+      await queryClient.invalidateQueries({ queryKey: ['salon', String(targetSalonId)] });
       setTimeout(() => {
         setReviewSubmitted(false);
         setReviewModalBooking(null);
         setReviewComment('');
       }, 1500);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to submit review:', err);
+      showGlobalToast(err.response?.data?.error || 'خطا در ثبت نظر در پایگاه داده.');
     }
   };
 
@@ -254,7 +268,23 @@ export const BookingsScreen: React.FC = () => {
         </div>
 
         <div className="space-y-4">
-          {isLoading ? (
+          {!isAuthenticated ? (
+            <div className="text-center py-16 bg-white rounded-3xl border border-[#E7E2DA] p-6 space-y-4 shadow-xs">
+              <div className="w-16 h-16 rounded-full bg-[#173B3F]/10 text-[#173B3F] flex items-center justify-center mx-auto">
+                <Calendar className="w-8 h-8" />
+              </div>
+              <h3 className="text-base font-bold text-[#173B3F]">ورود به حساب کاربری برای مشاهده نوبت‌ها</h3>
+              <p className="text-xs text-[#6C6C6C] max-w-sm mx-auto leading-relaxed">
+                برای پیگیری وضعیت نوبت‌های رزرو شده، مشاهده کد رهگیری و دریافت اعلانات تغییر وضعیت، لطفاً وارد حساب خود شوید.
+              </p>
+              <button
+                onClick={() => openAuthModal()}
+                className="mt-2 px-6 py-2.5 rounded-full bg-[#173B3F] hover:bg-[#1a464a] text-white text-xs font-bold transition-all shadow-sm"
+              >
+                ورود / ثبت‌نام در بویا
+              </button>
+            </div>
+          ) : isLoading ? (
             <div className="text-center py-16 bg-white rounded-3xl border border-[#E7E2DA] p-6 space-y-3 shadow-xs">
               <RefreshCw className="w-10 h-10 text-[#173B3F] mx-auto animate-spin" />
               <h3 className="text-base font-bold text-[#173B3F]">در حال دریافت نوبت‌های شما...</h3>
