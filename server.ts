@@ -297,7 +297,11 @@ async function createServer() {
       });
 
       res.json({ user: redactUserPII(dbUser, dbUser) });
-    } catch (err) {
+    } catch (err: any) {
+      console.error('[VERIFY-OTP ERROR]', err);
+      if (err.cause) {
+        console.error('[VERIFY-OTP CAUSE]', err.cause);
+      }
       res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطای احراز هویت.' });
     }
   });
