@@ -1,0 +1,80 @@
+import { create } from 'zustand';
+import { Salon, SalonService, Specialist } from '../data/marketplaceData';
+
+interface ModalState {
+  bookingData: {
+    salon: Salon;
+    service: SalonService;
+    specialist: Specialist;
+    date: string;
+    time: string;
+  } | null;
+  isBookingModalOpen: boolean;
+  
+  portfolioSpecialist: Specialist | null;
+  portfolioSalon: Salon | null;
+  isPortfolioModalOpen: boolean;
+
+  quickViewSalon: Salon | null;
+  isQuickViewModalOpen: boolean;
+
+  isAuthModalOpen: boolean;
+
+  isSearchModalOpen: boolean;
+  searchInitialQuery: string;
+  openSearchModal: (initialQuery?: string) => void;
+  closeSearchModal: () => void;
+
+  openBookingModal: (salon: Salon, service: SalonService, specialist: Specialist, date: string, time: string) => void;
+  closeBookingModal: () => void;
+  
+  openPortfolioModal: (specialist: Specialist, salon: Salon) => void;
+  closePortfolioModal: () => void;
+
+  openQuickViewModal: (salon: Salon) => void;
+  closeQuickViewModal: () => void;
+
+  openAuthModal: () => void;
+  closeAuthModal: () => void;
+}
+
+export const useModalStore = create<ModalState>((set) => ({
+  bookingData: null,
+  isBookingModalOpen: false,
+  
+  portfolioSpecialist: null,
+  portfolioSalon: null,
+  isPortfolioModalOpen: false,
+
+  quickViewSalon: null,
+  isQuickViewModalOpen: false,
+
+  isAuthModalOpen: false,
+
+  isSearchModalOpen: false,
+  searchInitialQuery: '',
+  openSearchModal: (initialQuery = '') => set({ isSearchModalOpen: true, searchInitialQuery: initialQuery }),
+  closeSearchModal: () => set({ isSearchModalOpen: false, searchInitialQuery: '' }),
+
+  openBookingModal: (salon, service, specialist, date, time) => set({
+    bookingData: { salon, service, specialist, date, time },
+    isBookingModalOpen: true,
+  }),
+  closeBookingModal: () => set({ isBookingModalOpen: false, bookingData: null }),
+
+  openPortfolioModal: (specialist, salon) => set({
+    portfolioSpecialist: specialist,
+    portfolioSalon: salon,
+    isPortfolioModalOpen: true,
+  }),
+  closePortfolioModal: () => set({ isPortfolioModalOpen: false, portfolioSpecialist: null, portfolioSalon: null }),
+
+  openQuickViewModal: (salon) => set({
+    quickViewSalon: salon,
+    isQuickViewModalOpen: true,
+  }),
+  closeQuickViewModal: () => set({ isQuickViewModalOpen: false, quickViewSalon: null }),
+
+  openAuthModal: () => set({ isAuthModalOpen: true }),
+  closeAuthModal: () => set({ isAuthModalOpen: false }),
+}));

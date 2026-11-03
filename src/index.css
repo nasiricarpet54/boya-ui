@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-vazir: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    
+    /* BOYA Official Design System Tokens */
+    --color-brand-primary: #173B3F;      /* Deep Petrol Teal */
+    --color-brand-hover: #0F3232;        /* Petrol Hover */
+    --color-brand-pressed: #0B2626;      /* Petrol Pressed */
+    --color-brand-subtle: #E8F0EF;       /* Petrol Tint Background */
+    
+    --color-rose: #D9A2B0;               /* BOYA Rose Gold Accent */
+    --color-rose-subtle: #E6B5C0;        /* Subtle Rose */
+    --color-rose-container: #F8ECEE;     /* Soft Rose Container */
+    
+    --color-sage: #6F9A8D;               /* Sage Green (Verified/Success) */
+    --color-sage-subtle: #EAF2EF;        /* Light Sage Tint */
+    
+    --color-gold: #C99558;               /* Warm Caramel / Honey VIP Gold */
+    --color-gold-subtle: #FBF4EC;        /* Light Gold Tint */
+    
+    --color-cream: #F7F3EE;              /* Official Soft Cream Page Canvas */
+    --color-surface: #FFFFFF;            /* Pure White Surface */
+    --color-line: #E7E2DA;               /* Soft Hairline Border */
+    --color-line-subtle: #ECE8E0;
+    
+    --color-ink: #1C1C1C;                /* Ink Black Text */
+    --color-ink-muted: #6C6C6C;          /* Muted Gray Secondary Text */
+    
+    --color-error: #B35D67;              /* Error Wine */
+    --color-error-subtle: #F8ECEE;
+  }
+
+  body {
+    font-family: var(--font-vazir);
+    background-color: #F7F3EE;
+    color: #1C1C1C;
+    direction: rtl;
+    text-align: right;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* RTL Logical Alignment Helpers */
+  .rtl-start {
+    text-align: right;
+    margin-inline-start: auto;
+  }
+
+  .rtl-end {
+    text-align: left;
+    margin-inline-end: auto;
+  }
+
+  /* Persian numbers: keep digit columns aligned in prices and times. */
+  .persian-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Custom scrollbars with petrol and rose gold touch */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D9DEDB;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #173B3F;
+}
+
+/* Remove default focus outline and replace with elegant ring */
+*:focus-visible {
+  outline: 2px solid #173B3F;
+  outline-offset: 2px;
+}
+
+/* Luxury card soft ambient glow */
+.boya-card-shadow {
+  box-shadow: 0 4px 20px -2px rgba(23, 59, 63, 0.05), 0 2px 6px -1px rgba(23, 59, 63, 0.03);
+}
+
+.boya-card-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.boya-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -4px rgba(23, 59, 63, 0.09), 0 4px 10px -2px rgba(23, 59, 63, 0.04);
+}
+
+/* Custom shimmer animation for VIP and recommendation badges */
+@keyframes boya-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.vip-shimmer {
+  background: linear-gradient(90deg, rgba(201, 149, 88, 0.15) 0%, rgba(201, 149, 88, 0.35) 50%, rgba(201, 149, 88, 0.15) 100%);
+  background-size: 200% 100%;
+  animation: boya-shimmer 3.5s infinite;
+}
