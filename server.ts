@@ -22,6 +22,7 @@ import { normalizeToIsoDate, normalizeTime } from './src/shared/utils/dateIsoCon
 import { normalizePhone } from './src/shared/utils/persianUtils.ts';
 import { generateJwtToken } from './src/lib/jwt.ts';
 import { seedDatabase } from './src/db/seed.ts';
+import { runMigrations } from './src/db/migrate.ts';
 import { logSecurityAction } from './src/db/audit.ts';
 import * as schemas from './src/lib/validation.ts';
 import { redactUserPII, processBookingData } from './src/lib/piiRedactor.ts';
@@ -109,9 +110,8 @@ async function createServer() {
   app.use(cookieParser());
 
   // Apply Rate Limiter to all API routes
-  app.use('/api/', apiLimiter);
-
-
+  // Run Drizzle migrations on startup
+  await runMigrations();
 
   // Synchronous database seeding on startup if RUN_SEED is enabled
   if (process.env.RUN_SEED === 'true') {

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "tsx server.ts",
+    "db:generate": "drizzle-kit generate --config=src/db/drizzle.config.ts",
+    "db:migrate": "tsx src/db/migrate.ts",
     "db:migrate:publication-lifecycle": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f drizzle/0001_publication_lifecycle.sql",
     "db:rollback": "tsx src/db/rollback.ts",
     "build": "vite build",
