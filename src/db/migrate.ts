@@ -10,23 +10,52 @@ import { db } from './index.ts';
  *
  * In development we only warn, so a stale migration folder does not block
  * local iteration.
+ *
+ * A transient failure (DB restart, network blip) should not kill the server
+ * on the first try, so we retry with exponential backoff before giving up.
  */
+
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function runMigrations() {
   const isProd = process.env.NODE_ENV === 'production';
   console.log('[DB MIGRATE] Running schema migrations from ./drizzle...');
-  try {
-    await migrate(db as any, {
-      migrationsFolder: './drizzle',
-      migrationsSchema: 'public',
-    });
-    console.log('[DB MIGRATE] All migrations applied successfully.');
-  } catch (err: any) {
-    if (isProd) {
-      console.error('[DB MIGRATE FATAL] Schema migration failed in production. Refusing to serve requests against a possibly inconsistent database:', err);
-      process.exit(1);
+
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await migrate(db as any, {
+        migrationsFolder: './drizzle',
+        migrationsSchema: 'public',
+      });
+      console.log('[DB MIGRATE] All migrations applied successfully.');
+      return;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[DB MIGRATE] Attempt ${attempt}/${MAX_RETRIES} failed:`, err?.message || err);
+      if (attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+        console.warn(`[DB MIGRATE] Retrying in ${delay}ms...`);
+        await sleep(delay);
+      }
     }
-    console.warn('[DB MIGRATE NOTICE] Non-fatal migration notice (dev only):', err?.message || err);
   }
+
+  // All retries exhausted.
+  if (isProd) {
+    console.error(
+      '[DB MIGRATE FATAL] Schema migration failed after retries in production. ' +
+        'Refusing to serve requests against a possibly inconsistent database:',
+      lastError
+    );
+    process.exit(1);
+  }
+  console.warn('[DB MIGRATE NOTICE] Non-fatal migration notice (dev only):', (lastError as any)?.message || lastError);
 }
 
 if (process.argv[1]?.includes('migrate.ts')) {
