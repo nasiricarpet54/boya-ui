@@ -1,0 +1,29 @@
+{
+  "assets": {},
+  "config": {
+    "build_asset_types": [
+      "code_assets/code"
+    ],
+    "extensions": {
+      "code_assets": {
+        "android": {
+          "target_ndk_api": 24
+        },
+        "c_compiler": {
+          "ar": "D:\\Android\\Sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\llvm-ar.exe",
+          "cc": "D:\\Android\\Sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe",
+          "ld": "D:\\Android\\Sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\ld.lld.exe"
+        },
+        "link_mode_preference": "dynamic",
+        "target_architecture": "arm64",
+        "target_os": "android"
+      }
+    },
+    "linking_enabled": true
+  },
+  "out_dir_shared": "E:\\boya\\boya_ai\\mobile\\salon_app\\.dart_tool\\hooks_runner\\shared\\objective_c\\build\\",
+  "out_file": "E:\\boya\\boya_ai\\mobile\\salon_app\\.dart_tool\\hooks_runner\\objective_c\\74b9685c23\\output.json",
+  "package_name": "objective_c",
+  "package_root": "D:\\flutter-cache\\.pub-cache\\hosted\\pub.myket.ir\\objective_c-9.6.2\\",
+  "user_defines": {}
+}

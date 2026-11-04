@@ -77,7 +77,24 @@ router.get('/', async (req, res) => {
             dayName: '', dayNumber: String(jalali.jd), rawDate: d, slots,
           });
         }
-        return { ...s, availableSlots: days };
+        // ADMIN FIX: flatten the nested specialist rows into the shape the
+        // admin panel expects (name/avatar from the related user row).
+        const specialists = (s.specialists || []).map((sp: any) => ({
+          id: sp.id,
+          salonId: sp.salonId,
+          name: sp.user?.fullName || '',
+          role: sp.user?.role || 'salon_specialist',
+          phone: sp.user?.phone || '',
+          avatar: sp.avatarUrl || sp.user?.avatar || '',
+          verified: sp.isVerified,
+          isMobileSpecialist: sp.isMobileActive,
+          specialtyLine: sp.specialtyLine,
+          experienceYears: sp.experienceYears,
+          bio: sp.bio || '',
+          rating: Number(sp.user?.rating ?? 4.8),
+          reviewsCount: Number(sp.user?.reviewsCount ?? 0),
+        }));
+        return { ...s, specialists, availableSlots: days };
       });
     }
 
@@ -95,7 +112,27 @@ router.get('/managed', requireAuth, requireRole(['super_admin', 'salon_admin', '
       where: req.dbUser.role === 'super_admin' ? undefined : eq(salons.id, Number(salonId)),
       with: { services: true, specialists: { with: { user: true, portfolio: true } } },
     });
-    res.json(rows);
+    // ADMIN FIX: same flattening as /salons so the salon panel sees named,
+    // avatar-backed specialists instead of raw relation rows.
+    const mapped = rows.map((s: any) => ({
+      ...s,
+      specialists: (s.specialists || []).map((sp: any) => ({
+        id: sp.id,
+        salonId: sp.salonId,
+        name: sp.user?.fullName || '',
+        role: sp.user?.role || 'salon_specialist',
+        phone: sp.user?.phone || '',
+        avatar: sp.avatarUrl || sp.user?.avatar || '',
+        verified: sp.isVerified,
+        isMobileSpecialist: sp.isMobileActive,
+        specialtyLine: sp.specialtyLine,
+        experienceYears: sp.experienceYears,
+        bio: sp.bio || '',
+        rating: Number(sp.user?.rating ?? 4.8),
+        reviewsCount: Number(sp.user?.reviewsCount ?? 0),
+      })),
+    }));
+    res.json(mapped);
   } catch (err) {
     console.error('❌ API MANAGED SALONS ERROR:', err);
     res.status(500).json({ error: 'خطا در دریافت لیست.' });

@@ -1,0 +1,89 @@
+/// Roles the salon panel admits.
+///
+/// Mirrors `STAFF_ROLES` in `backend/src/modules/salon/salon.service.ts`
+/// (`salon_owner`, `line_manager`, `specialist`, `employed`, `booth_renter`,
+/// `admin`) plus `freelance_mobile` (ADR-011), whose schedule-block routes
+/// resolve the caller through their own `specialists` row instead of a
+/// tenant. `customer` is the only role the backend ever hands out that is
+/// absent here.
+///
+/// This is an allow-list on purpose. The panel exposes finance, staff and
+/// service-line management, so a role this app has never heard of must be
+/// refused rather than waved through: unknown and blank roles fail closed.
+const Set<String> salonPanelRoles = {
+  'salon_owner',
+  'line_manager',
+  'specialist',
+  'employed',
+  'booth_renter',
+  'freelance_mobile',
+  'admin',
+};
+
+/// Whether [role] may enter the salon panel.
+///
+/// Null, empty and unrecognised roles are all denied. The router calls this on
+/// every navigation, so a cached session whose role no longer qualifies is
+/// bounced to the forbidden screen instead of the dashboard.
+bool hasSalonAccess(String? role) =>
+    role != null && salonPanelRoles.contains(role);
+
+/// A staff user, as returned inside the session of `POST /auth/otp/verify`.
+class SalonUser {
+  const SalonUser({
+    required this.id,
+    required this.phoneNumber,
+    required this.role,
+    this.fullName,
+    this.tenantId,
+    this.profileCompleted = true,
+  });
+
+  factory SalonUser.fromJson(Map<String, dynamic> json) => SalonUser(
+        id: json['id'] as String? ?? '',
+        phoneNumber: json['phoneNumber'] as String? ?? '',
+        role: json['role'] as String? ?? '',
+        fullName: json['fullName'] as String?,
+        tenantId: json['tenantId'] as String?,
+        profileCompleted: json['profileCompleted'] as bool? ?? true,
+      );
+
+  final String id;
+  final String phoneNumber;
+
+  /// Null until the user completes their profile.
+  final String? fullName;
+
+  final String role;
+
+  /// Salon the user belongs to; null for users without a tenant yet.
+  final String? tenantId;
+
+  /// Whether this account still owes the panel a profile (ADR-010 follow-up).
+  ///
+  /// `GET /auth/me` is the authority here: it resolves the flag per role — a
+  /// `specialist` reads their own `specialists` row, an owner or line manager
+  /// reads `tenants.profile_completed`. The login reply does not carry it, so
+  /// [AuthController.refreshUser] re-reads this before the router opens the
+  /// panel.
+  ///
+  /// Defaults to `true` because the router fails open: a cached or legacy
+  /// session that cannot reach `/auth/me` must not be parked on the setup
+  /// screen forever. The server is re-consulted on the next restore or 401.
+  final bool profileCompleted;
+
+  /// Whether this user may enter the salon panel.
+  ///
+  /// Reads [salonPanelRoles] directly rather than calling the top-level
+  /// [hasSalonAccess], which this getter would otherwise shadow.
+  bool get hasSalonAccess => salonPanelRoles.contains(role);
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'phoneNumber': phoneNumber,
+        'role': role,
+        'fullName': fullName,
+        'tenantId': tenantId,
+        'profileCompleted': profileCompleted,
+      };
+}

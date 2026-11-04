@@ -1,0 +1,43 @@
+name: salon_app
+description: Beauty Platform salon panel.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  boya_shared:
+    path: ../shared
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.0.0
+  flutter_localizations:
+    sdk: flutter
+  dio: ^5.4.0
+  shared_preferences: 2.5.3
+  flutter_secure_storage: ^9.2.4
+  url_launcher: ^6.3.1
+  fl_chart: 0.68.0
+  image_picker: 1.1.2
+
+dev_dependencies:
+  flutter_launcher_icons: ^0.14.3
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+dependency_overrides:
+  intl: 0.20.2
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon.png"
+  min_sdk_android: 21
