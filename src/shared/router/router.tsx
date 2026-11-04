@@ -15,6 +15,7 @@ import { QuickServicesModal } from '../components/modals/QuickServicesModal';
 import { ProtectedRoute } from '../components/guards/ProtectedRoute';
 import { AuthModal } from '../components/modals/AuthModal';
 import { GlobalSearchModal } from '../components/search/GlobalSearchModal';
+import { PlatformNotificationsRenderer } from '../components/ui/PlatformNotificationsRenderer';
 
 // Root layout
 const Root = () => {
@@ -66,6 +67,7 @@ const Root = () => {
       {isSalonPanelMode ? (
         <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased">
           <Header />
+          <PlatformNotificationsRenderer currentPanelOverride="salon" />
           <main className="flex-1 w-full min-h-screen">
             <Outlet />
           </main>
@@ -73,6 +75,7 @@ const Root = () => {
       ) : isAdminMode ? (
         <div className="min-h-screen w-full bg-[#F5F0E8] text-[#1D1C17] flex flex-col antialiased">
           <Header />
+          <PlatformNotificationsRenderer currentPanelOverride="admin" />
           <main className="flex-1 w-full min-h-screen">
             <Outlet />
           </main>
@@ -87,6 +90,7 @@ const Root = () => {
             }`}
           >
             <Header />
+            <PlatformNotificationsRenderer currentPanelOverride="customer" />
             <main className="flex-1 px-4 pt-4 pb-20 overflow-y-auto">
               <Outlet />
             </main>

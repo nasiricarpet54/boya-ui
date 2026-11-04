@@ -16,12 +16,12 @@ import { ZodError } from 'zod';
 import { requireAuth, requireRole, type AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
 import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems, auditLogs, supportTickets, ticketMessages, refreshTokens } from './src/db/schema.ts';
-import { eq, desc, and, inArray, asc, ne } from 'drizzle-orm';
+import { eq, desc, and, inArray, asc, ne, sql } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
 import { normalizeToIsoDate, normalizeTime, normalizeTimeToLatin, toLatinDigits, toIsoDate, gregorianToJalali, JALALI_MONTHS, STANDARD_HOURLY_SLOTS } from './src/shared/utils/dateIsoConverter.ts';
 import { normalizePhone } from './src/shared/utils/persianUtils.ts';
-import { generateJwtToken, generateRefreshTokenValue, decodeTokenExpiry, REFRESH_TOKEN_EXPIRES_IN_MS } from './src/lib/jwt.ts';
+import { generateJwtToken, generateRefreshTokenValue, decodeTokenExpiry, REFRESH_TOKEN_EXPIRES_IN_MS, verifyJwtToken } from './src/lib/jwt.ts';
 import { seedDatabase } from './src/db/seed.ts';
 import { getOrCreateUserByPhone } from './src/db/users.ts';
 import { runMigrations } from './src/db/migrate.ts';
@@ -842,11 +842,20 @@ async function createServer() {
   });
 
   // ==========================================
-  // AUDIT (P0): Notifications read/update/delete — admin panel
+  // AUDIT (P0): Notifications CRUD & Campaign Management
   // ==========================================
-  app.get('/api/notifications', requireAuth, async (req: AuthRequest, res) => {
+  app.get('/api/notifications', async (req, res) => {
     try {
-      const isStaff = ['super_admin', 'salon_admin', 'line_manager'].includes(req.dbUser.role);
+      let isStaff = false;
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : (req as any).cookies?.auth_token;
+      if (token) {
+        const decoded = verifyJwtToken(token);
+        if (decoded && ['super_admin', 'salon_admin', 'line_manager'].includes(decoded.role)) {
+          isStaff = true;
+        }
+      }
+
       const list = isStaff
         ? await db.select().from(notifications).orderBy(desc(notifications.createdAt))
         : await db.select().from(notifications).where(eq(notifications.isActive, true)).orderBy(desc(notifications.createdAt));
@@ -857,15 +866,67 @@ async function createServer() {
     }
   });
 
+  app.post('/api/notifications', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const {
+        title,
+        content,
+        type = 'promotional',
+        targetAudience = 'all',
+        channel = 'in_app',
+        displayPosition = 'banner',
+        targetPanels = 'all',
+        badgeText,
+        actionUrl,
+        actionText,
+        expiresAt,
+      } = req.body;
+
+      if (!title || !content) {
+        return res.status(400).json({ error: 'عنوان و متن پیام الزامی است.' });
+      }
+
+      const [created] = await db.insert(notifications).values({
+        title: String(title).trim(),
+        content: String(content).trim(),
+        type: String(type || 'promotional'),
+        targetAudience: String(targetAudience || 'all'),
+        channel: String(channel || 'in_app'),
+        displayPosition: String(displayPosition || 'banner'),
+        targetPanels: String(targetPanels || 'all'),
+        badgeText: badgeText ? String(badgeText).trim() : null,
+        actionUrl: actionUrl ? String(actionUrl).trim() : null,
+        actionText: actionText ? String(actionText).trim() : null,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        isActive: true,
+        viewsCount: 0,
+        clicksCount: 0,
+      }).returning();
+
+      res.status(201).json(created);
+    } catch (err: any) {
+      console.error('[POST NOTIFICATIONS ERROR]', err);
+      res.status(500).json({ error: 'خطا در ایجاد اعلان.' });
+    }
+  });
+
   app.patch('/api/notifications/:id', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
     try {
       const id = Number(req.params.id);
       const patch: Record<string, any> = {};
-      const { isActive, title, content, badgeText } = req.body;
+      const { isActive, title, content, badgeText, displayPosition, targetPanels, type, targetAudience, channel, actionUrl, actionText, expiresAt } = req.body;
       if (typeof isActive === 'boolean') patch.isActive = isActive;
       if (typeof title === 'string') patch.title = title.trim();
       if (typeof content === 'string') patch.content = content.trim();
       if (typeof badgeText === 'string') patch.badgeText = badgeText.trim();
+      if (typeof displayPosition === 'string') patch.displayPosition = displayPosition;
+      if (typeof targetPanels === 'string') patch.targetPanels = targetPanels;
+      if (typeof type === 'string') patch.type = type;
+      if (typeof targetAudience === 'string') patch.targetAudience = targetAudience;
+      if (typeof channel === 'string') patch.channel = channel;
+      if (actionUrl !== undefined) patch.actionUrl = actionUrl ? String(actionUrl).trim() : null;
+      if (actionText !== undefined) patch.actionText = actionText ? String(actionText).trim() : null;
+      if (expiresAt !== undefined) patch.expiresAt = expiresAt ? new Date(expiresAt) : null;
 
       const [updated] = await db.update(notifications).set(patch).where(eq(notifications.id, id)).returning();
       if (!updated) return res.status(404).json({ error: 'اعلان یافت نشد.' });
@@ -884,6 +945,69 @@ async function createServer() {
     } catch (err: any) {
       console.error('[DELETE NOTIFICATIONS ERROR]', err);
       res.status(500).json({ error: 'خطا در حذف اعلان.' });
+    }
+  });
+
+  app.post('/api/notifications/:id/view', async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid ID' });
+      await db.update(notifications).set({ viewsCount: sql`${notifications.viewsCount} + 1` }).where(eq(notifications.id, id));
+      res.json({ success: true });
+    } catch {
+      res.json({ success: false });
+    }
+  });
+
+  app.post('/api/notifications/:id/click', async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid ID' });
+      await db.update(notifications).set({ clicksCount: sql`${notifications.clicksCount} + 1` }).where(eq(notifications.id, id));
+      res.json({ success: true });
+    } catch {
+      res.json({ success: false });
+    }
+  });
+
+  app.post('/api/notifications/broadcast', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { title, content, targetAudience, testPhone } = req.body;
+      if (!title || !content) return res.status(400).json({ error: 'عنوان و متن الزامی است.' });
+      let sc = 0;
+
+      if (testPhone) {
+        const clean = normalizePhone(testPhone);
+        if (clean) {
+          try {
+            await sendMeliPayamakSms(clean, `${title}\n${content}`);
+            sc++;
+          } catch (e) {
+            console.error('[TEST SMS ERROR]', e);
+          }
+        }
+      } else {
+        const audienceRoles = targetAudience === 'customer'
+          ? ['customer']
+          : targetAudience === 'salon'
+          ? ['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']
+          : null;
+        const tu = audienceRoles
+          ? await db.select({ phone: users.phone }).from(users).where(inArray(users.role as any, audienceRoles))
+          : await db.select({ phone: users.phone }).from(users);
+        for (const u of tu) {
+          if (u.phone) {
+            try {
+              await sendMeliPayamakSms(u.phone, `${title}\n${content}`);
+              sc++;
+            } catch {}
+          }
+        }
+      }
+
+      res.status(200).json({ success: true, sentCount: sc });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'خطا در ارسال پیامک.' });
     }
   });
 

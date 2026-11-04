@@ -235,9 +235,11 @@ export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),
   title: text('title').notNull(),
   content: text('content').notNull(),
-  type: text('type').notNull(), // 'promotional', 'informational', 'alert', 'discount'
-  targetAudience: text('target_audience').notNull(), // 'customer', 'salon', 'all'
-  channel: text('channel').notNull(), // 'in_app', 'sms', 'push', 'both'
+  type: text('type').default('promotional').notNull(), // 'promotional', 'informational', 'alert', 'discount'
+  targetAudience: text('target_audience').default('all').notNull(), // 'customer', 'salon', 'all'
+  channel: text('channel').default('in_app').notNull(), // 'in_app', 'sms', 'push', 'both'
+  displayPosition: text('display_position').default('banner').notNull(), // 'banner', 'popup', 'toast', 'card'
+  targetPanels: text('target_panels').default('all').notNull(), // 'all', 'customer', 'salon', 'admin'
   actionUrl: text('action_url'),
   actionText: text('action_text'),
   badgeText: text('badge_text'),

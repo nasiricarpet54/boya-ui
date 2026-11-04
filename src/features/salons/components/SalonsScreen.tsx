@@ -11,6 +11,9 @@ import {
   Car,
   Map,
   List,
+  Sparkles,
+  Megaphone,
+  ChevronLeft,
 } from 'lucide-react';
 import { useSearch, useNavigate } from '@tanstack/react-router';
 import { SERVICE_LINES, Salon } from '../../../shared/data/marketplaceData';
@@ -46,6 +49,7 @@ export const SalonsScreen: React.FC = () => {
     sortByDistance, setSortByDistance,
   } = useLocationStore();
   
+  const { notifications, trackNotificationClick } = useDataStore();
   const { openBookingModal, openPortfolioModal } = useModalStore();
   const { isLocationModalOpen, setIsLocationModalOpen, showToast } = useUIStore();
 
@@ -58,6 +62,15 @@ export const SalonsScreen: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   const navigate = useNavigate();
+
+  const promoCards = useMemo(() => {
+    return notifications.filter((n) => {
+      if (!n.isActive) return false;
+      if (n.displayPosition !== 'card') return false;
+      const tp = (n.targetPanels || n.targetAudience || 'all').toLowerCase();
+      return tp === 'all' || tp.includes('customer');
+    });
+  }, [notifications]);
 
   // Reactively sync and validate search params from URL
   React.useEffect(() => {
@@ -286,6 +299,41 @@ export const SalonsScreen: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4 animate-fadeIn">
+            {/* Promotional Cards / In-Feed Banners */}
+            {promoCards.map((pc) => (
+              <div
+                key={pc.id}
+                className="bg-gradient-to-r from-[#FAF7F2] via-white to-[#FAF7F2] p-5 rounded-3xl border border-[#D9A2B0]/60 shadow-xs relative overflow-hidden"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="p-1.5 rounded-xl bg-[#173B3F]/10 text-[#173B3F]">
+                    <Sparkles className="w-4 h-4" />
+                  </span>
+                  {pc.badgeText && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#173B3F] text-white">
+                      {pc.badgeText}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-[#6C6C6C] mr-auto font-bold">پیشنهاد ویژه پلتفرم</span>
+                </div>
+                <h4 className="text-sm font-bold text-[#173B3F] mb-1">{pc.title}</h4>
+                <p className="text-xs text-[#6C6C6C] leading-relaxed whitespace-pre-line mb-3">{pc.content}</p>
+                {pc.actionUrl && (
+                  <button
+                    onClick={() => {
+                      trackNotificationClick(pc.id);
+                      if (pc.actionUrl?.startsWith('http')) window.open(pc.actionUrl, '_blank');
+                      else navigate({ to: pc.actionUrl as any });
+                    }}
+                    className="px-4 py-2 rounded-xl bg-[#173B3F] hover:bg-[#122e31] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>{pc.actionText || 'مشاهده پیشنهاد'}</span>
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+
             {processedSalons.length === 0 ? (
               <div className="text-center py-10 bg-white rounded-3xl border border-[#E7E2DA]">سالنی یافت نشد.</div>
             ) : (

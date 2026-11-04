@@ -4,10 +4,11 @@ import {
   users, notifications, adminProfile, auditLogs, supportTickets, ticketMessages,
   services, specialists, portfolioItems,
 } from '../db/schema.ts';
-import { eq, desc, inArray, asc } from 'drizzle-orm';
+import { eq, desc, inArray, asc, sql } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import crypto from 'crypto';
 import { requireAuth, requireRole, type AuthRequest } from '../middleware/auth.ts';
+import { verifyJwtToken } from '../lib/jwt.ts';
 import * as schemas from '../lib/validation.ts';
 import { sanitizeRole } from '../db/users.ts';
 import { normalizePhone } from '../shared/utils/persianUtils.ts';
@@ -260,9 +261,21 @@ router.delete('/specialists/portfolio/:id', requireAuth, requireRole(['super_adm
 // ==========================================
 // Notifications (read/update/delete + broadcast)
 // ==========================================
-router.get('/notifications', requireAuth, async (req: AuthRequest, res) => {
+// ==========================================
+// Notifications (read/create/update/delete + broadcast + tracking)
+// ==========================================
+router.get('/notifications', async (req, res) => {
   try {
-    const isStaff = ['super_admin', 'salon_admin', 'line_manager'].includes(req.dbUser.role);
+    let isStaff = false;
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : (req as any).cookies?.auth_token;
+    if (token) {
+      const decoded = verifyJwtToken(token);
+      if (decoded && ['super_admin', 'salon_admin', 'line_manager'].includes(decoded.role)) {
+        isStaff = true;
+      }
+    }
+
     const list = isStaff
       ? await db.select().from(notifications).orderBy(desc(notifications.createdAt))
       : await db.select().from(notifications).where(eq(notifications.isActive, true)).orderBy(desc(notifications.createdAt));
@@ -273,25 +286,86 @@ router.get('/notifications', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+router.post('/notifications', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+  try {
+    const {
+      title,
+      content,
+      type = 'promotional',
+      targetAudience = 'all',
+      channel = 'in_app',
+      displayPosition = 'banner',
+      targetPanels = 'all',
+      badgeText,
+      actionUrl,
+      actionText,
+      expiresAt,
+    } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ error: 'عنوان و متن پیام الزامی است.' });
+    }
+
+    const [created] = await db.insert(notifications).values({
+      title: String(title).trim(),
+      content: String(content).trim(),
+      type: String(type || 'promotional'),
+      targetAudience: String(targetAudience || 'all'),
+      channel: String(channel || 'in_app'),
+      displayPosition: String(displayPosition || 'banner'),
+      targetPanels: String(targetPanels || 'all'),
+      badgeText: badgeText ? String(badgeText).trim() : null,
+      actionUrl: actionUrl ? String(actionUrl).trim() : null,
+      actionText: actionText ? String(actionText).trim() : null,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      isActive: true,
+      viewsCount: 0,
+      clicksCount: 0,
+    }).returning();
+
+    res.status(201).json(created);
+  } catch (err: any) {
+    console.error('[POST NOTIFICATIONS ERROR]', err);
+    res.status(500).json({ error: 'خطا در ایجاد اعلان.' });
+  }
+});
+
 router.post('/notifications/broadcast', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
   try {
-    const { title, content, targetAudience } = req.body;
+    const { title, content, targetAudience, testPhone } = req.body;
     if (!title || !content) return res.status(400).json({ error: 'عنوان و متن الزامی است.' });
-    const audienceRoles = targetAudience === 'customer'
-      ? ['customer']
-      : targetAudience === 'salon'
-      ? ['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']
-      : null;
-    const tu = audienceRoles
-      ? await db.select({ phone: users.phone }).from(users).where(inArray(users.role as any, audienceRoles))
-      : await db.select({ phone: users.phone }).from(users);
     let sc = 0;
-    for (const u of tu) if (u.phone) { try { await sendMeliPayamakSms(u.phone, `${title}\\n${content}`); sc++; } catch {} }
-    const [n] = await db.insert(notifications).values({
-      title: String(title).trim(), content: String(content).trim(), type: 'promotional',
-      targetAudience: targetAudience || 'all', channel: 'sms', isActive: true, badgeText: `${sc} پیامک`,
-    }).returning();
-    res.status(201).json({ success: true, sentCount: sc, notification: n });
+
+    if (testPhone) {
+      const clean = normalizePhone(testPhone);
+      if (clean) {
+        try {
+          await sendMeliPayamakSms(clean, `${title}\n${content}`);
+          sc++;
+        } catch (e) {
+          console.error('[TEST SMS ERROR]', e);
+        }
+      }
+    } else {
+      const audienceRoles = targetAudience === 'customer'
+        ? ['customer']
+        : targetAudience === 'salon'
+        ? ['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']
+        : null;
+      const tu = audienceRoles
+        ? await db.select({ phone: users.phone }).from(users).where(inArray(users.role as any, audienceRoles))
+        : await db.select({ phone: users.phone }).from(users);
+      for (const u of tu) {
+        if (u.phone) {
+          try {
+            await sendMeliPayamakSms(u.phone, `${title}\n${content}`);
+            sc++;
+          } catch {}
+        }
+      }
+    }
+
+    res.status(200).json({ success: true, sentCount: sc });
   } catch (e: any) { res.status(500).json({ error: e?.message || 'خطا در ارسال پیامک.' }); }
 });
 
@@ -299,11 +373,19 @@ router.patch('/notifications/:id', requireAuth, requireRole(['super_admin']), as
   try {
     const id = Number(req.params.id);
     const patch: Record<string, any> = {};
-    const { isActive, title, content, badgeText } = req.body;
+    const { isActive, title, content, badgeText, displayPosition, targetPanels, type, targetAudience, channel, actionUrl, actionText, expiresAt } = req.body;
     if (typeof isActive === 'boolean') patch.isActive = isActive;
     if (typeof title === 'string') patch.title = title.trim();
     if (typeof content === 'string') patch.content = content.trim();
     if (typeof badgeText === 'string') patch.badgeText = badgeText.trim();
+    if (typeof displayPosition === 'string') patch.displayPosition = displayPosition;
+    if (typeof targetPanels === 'string') patch.targetPanels = targetPanels;
+    if (typeof type === 'string') patch.type = type;
+    if (typeof targetAudience === 'string') patch.targetAudience = targetAudience;
+    if (typeof channel === 'string') patch.channel = channel;
+    if (actionUrl !== undefined) patch.actionUrl = actionUrl ? String(actionUrl).trim() : null;
+    if (actionText !== undefined) patch.actionText = actionText ? String(actionText).trim() : null;
+    if (expiresAt !== undefined) patch.expiresAt = expiresAt ? new Date(expiresAt) : null;
 
     const [updated] = await db.update(notifications).set(patch).where(eq(notifications.id, id)).returning();
     if (!updated) return res.status(404).json({ error: 'اعلان یافت نشد.' });
@@ -322,6 +404,28 @@ router.delete('/notifications/:id', requireAuth, requireRole(['super_admin']), a
   } catch (err: any) {
     console.error('[DELETE NOTIFICATIONS ERROR]', err);
     res.status(500).json({ error: 'خطا در حذف اعلان.' });
+  }
+});
+
+router.post('/notifications/:id/view', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid ID' });
+    await db.update(notifications).set({ viewsCount: sql`${notifications.viewsCount} + 1` }).where(eq(notifications.id, id));
+    res.json({ success: true });
+  } catch {
+    res.json({ success: false });
+  }
+});
+
+router.post('/notifications/:id/click', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid ID' });
+    await db.update(notifications).set({ clicksCount: sql`${notifications.clicksCount} + 1` }).where(eq(notifications.id, id));
+    res.json({ success: true });
+  } catch {
+    res.json({ success: false });
   }
 });
 

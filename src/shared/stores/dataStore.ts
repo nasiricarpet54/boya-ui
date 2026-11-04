@@ -10,7 +10,10 @@ export interface PlatformNotification {
   type: 'promotional' | 'informational' | 'alert' | 'discount';
   targetAudience: 'customer' | 'salon' | 'all';
   channel: 'in_app' | 'sms' | 'push' | 'both';
+  displayPosition?: 'banner' | 'popup' | 'toast' | 'card';
+  targetPanels?: string; // 'all', 'customer', 'salon', 'admin' or comma-separated
   actionUrl?: string;
+  actionText?: string;
   badgeText?: string;
   isActive: boolean;
   createdAt: string;
@@ -65,6 +68,8 @@ export interface DataState {
   updateNotification: (id: string | number, patch: Partial<PlatformNotification>) => Promise<void>;
   toggleNotification: (id: string | number) => Promise<void>;
   deleteNotification: (id: string | number) => Promise<void>;
+  trackNotificationView: (id: number) => Promise<void>;
+  trackNotificationClick: (id: number) => Promise<void>;
   updateAdminProfile: (patch: Partial<AdminProfileData>) => Promise<void>;
   createSpecialist: (payload: any) => Promise<any>;
   updateSpecialist: (id: string | number, patch: any) => Promise<any>;
@@ -286,6 +291,28 @@ export const useDataStore = create<DataState>()(
         } catch (err) {
           console.error('Error deleting notification:', err);
         }
+      },
+
+      trackNotificationView: async (id: number) => {
+        try {
+          await api.post(`/notifications/${id}/view`, {}).catch(() => {});
+          set((state) => ({
+            notifications: state.notifications.map((n) =>
+              n.id === id ? { ...n, viewsCount: (n.viewsCount || 0) + 1 } : n
+            ),
+          }));
+        } catch {}
+      },
+
+      trackNotificationClick: async (id: number) => {
+        try {
+          await api.post(`/notifications/${id}/click`, {}).catch(() => {});
+          set((state) => ({
+            notifications: state.notifications.map((n) =>
+              n.id === id ? { ...n, clicksCount: (n.clicksCount || 0) + 1 } : n
+            ),
+          }));
+        } catch {}
       },
 
       createSpecialist: async (payload) => { const { data } = await api.post('/specialists', payload); await get().fetchServerData(); return data; },

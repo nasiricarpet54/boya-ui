@@ -186,6 +186,24 @@ export async function runMigrations() {
         sender_role TEXT NOT NULL,
         message TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT NOW() NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        type TEXT DEFAULT 'promotional' NOT NULL,
+        target_audience TEXT DEFAULT 'all' NOT NULL,
+        channel TEXT DEFAULT 'in_app' NOT NULL,
+        display_position TEXT DEFAULT 'banner' NOT NULL,
+        target_panels TEXT DEFAULT 'all' NOT NULL,
+        action_url TEXT,
+        action_text TEXT,
+        badge_text TEXT,
+        is_active BOOLEAN DEFAULT TRUE NOT NULL,
+        views_count INTEGER DEFAULT 0 NOT NULL,
+        clicks_count INTEGER DEFAULT 0 NOT NULL,
+        expires_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW() NOT NULL
       )`
     ];
 
@@ -234,6 +252,8 @@ export async function runMigrations() {
       { table: 'bookings', column: 'notes', definition: 'TEXT' },
       { table: 'bookings', column: 'payment_status', definition: "TEXT DEFAULT 'unpaid' NOT NULL" },
       { table: 'portfolio_items', column: 'likes_count', definition: 'INTEGER DEFAULT 0 NOT NULL' },
+      { table: 'notifications', column: 'display_position', definition: "TEXT DEFAULT 'banner' NOT NULL" },
+      { table: 'notifications', column: 'target_panels', definition: "TEXT DEFAULT 'all' NOT NULL" },
       { table: 'notifications', column: 'action_url', definition: 'TEXT' },
       { table: 'notifications', column: 'action_text', definition: 'TEXT' },
       { table: 'notifications', column: 'badge_text', definition: 'TEXT' },
