@@ -172,7 +172,7 @@ export const JalaliDatePicker: React.FC<JalaliDatePickerProps> = ({
 
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-[#2E5E52] bg-[#EAF2EF] px-2 py-0.5 rounded-full font-bold border border-[#6F9A8D]/30">
-            زمان تهران
+            {toPersianDigits(formattedDisplayDate || '')}
           </span>
         </div>
       </button>
