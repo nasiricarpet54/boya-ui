@@ -100,8 +100,7 @@ async function createServer() {
       await seedDatabase();
       console.log('[DB BOOT] Database tables and seed data synchronized successfully.');
     } catch (err) {
-      console.error('[DB BOOT CRITICAL ERROR] Seeding failed:', err);
-      if (isProd) process.exit(1);
+      console.error('[DB BOOT WARNING] Seeding encountered an issue:', err);
     }
   } else {
     console.log('[DB BOOT] Skipping seed execution (RUN_SEED != true).');
@@ -492,7 +491,14 @@ async function createServer() {
   app.post('/api/bookings', requireAuth, async (req: AuthRequest, res) => {
     try {
       const data = schemas.bookingCreateSchema.parse(req.body);
-      const booking = await createBooking({ ...data, customerId: req.dbUser.id });
+      const serviceRecord = await db.select().from(services).where(eq(services.id, Number(data.serviceId))).limit(1).then(r => r[0]);
+      if (!serviceRecord) return res.status(404).json({ error: 'سرویس مورد نظر یافت نشد.' });
+
+      const booking = await createBooking({
+        ...data,
+        price: serviceRecord.price,
+        customerId: req.dbUser.id,
+      });
       await sendMeliPayamakSms(req.dbUser.phone, `نوبت ثبت شد. کد رهگیری: ${booking?.trackingCode}`).catch(() => {});
       res.status(201).json(booking);
     } catch (err: any) {
@@ -597,12 +603,9 @@ async function createServer() {
   });
   // === END INJECTED API ROUTES ===
 
-  // --- Static ---
-  let vite: any;
-  if (!isProd) {
-    vite = await createViteServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' });
-    app.use(vite.middlewares);
-  } else {
+  // ==========================================
+  // USERS MANAGEMENT ROUTES
+  // ==========================================
   // API برای ساخت کاربر جدید (توسط ادمین)
   // API برای دریافت لیست تمام کاربران
   app.get('/api/users', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
@@ -932,15 +935,22 @@ async function createServer() {
       res.status(500).json({ error: 'خطا در دریافت پرسنل.' });
     }
   });
-
+  let vite: any = null;
+  if (isProd) {
     app.use(express.static(path.resolve(__dirname, 'dist')));
+  } else {
+    vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
   }
 
   app.get('*', async (req, res, next) => {
     try {
       const url = req.originalUrl;
       let template = fs.readFileSync(path.resolve(__dirname, isProd ? 'dist/index.html' : 'index.html'), 'utf-8');
-      if (!isProd) template = await vite.transformIndexHtml(url, template);
+      if (!isProd && vite) template = await vite.transformIndexHtml(url, template);
       res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
     } catch (e) {
       next(e);
