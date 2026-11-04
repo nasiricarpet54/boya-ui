@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
+import { sanitizeRole } from './src/db/users.ts';
 import Redis from 'ioredis';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
@@ -14,14 +15,13 @@ import { ZodError } from 'zod';
 
 import { requireAuth, requireRole, type AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
-import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems, auditLogs, supportTickets, ticketMessages, refreshTokens } from './src/db/schema.ts';
-import { eq, desc, and, inArray, asc, ne } from 'drizzle-orm';
-import { normalizeToIsoDate, normalizeTime, normalizeTimeToLatin, toLatinDigits, toIsoDate, gregorianToJalali, JALALI_MONTHS, STANDARD_HOURLY_SLOTS } from './src/shared/utils/dateIsoConverter.ts';
+import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems, auditLogs, supportTickets, ticketMessages } from './src/db/schema.ts';
+import { eq, desc, and } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
+import { normalizeToIsoDate, normalizeTime } from './src/shared/utils/dateIsoConverter.ts';
 import { normalizePhone } from './src/shared/utils/persianUtils.ts';
-import { sanitizeRole, getOrCreateUserByPhone } from './src/db/users.ts';
-import { generateJwtToken, generateRefreshTokenValue, decodeTokenExpiry, REFRESH_TOKEN_EXPIRES_IN_MS } from './src/lib/jwt.ts';
+import { generateJwtToken } from './src/lib/jwt.ts';
 import { seedDatabase } from './src/db/seed.ts';
 import { runMigrations } from './src/db/migrate.ts';
 import { logSecurityAction } from './src/db/audit.ts';
@@ -86,13 +86,12 @@ async function createServer() {
     }));
   }
 
+
   app.use(cors({ origin: true, credentials: true }));
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ limit: '2mb', extended: true }));
   app.use(cookieParser());
 
-  // P3: Run schema migrations before serving traffic. In production a failed
-  // migration is fatal (handled inside runMigrations); in dev we continue.
   await runMigrations();
 
   if (process.env.RUN_SEED === 'true') {
@@ -106,25 +105,13 @@ async function createServer() {
     console.log('[DB BOOT] Skipping seed execution (RUN_SEED != true).');
   }
 
-  // AUDIT (P0): Upload persistence. In Docker the container filesystem is
-  // ephemeral — files written to /app/uploads vanish on every restart unless
-  // the operator mounts a volume. We prefer the persistent UPLOADS_DIR env var
-  // (point it at your mounted volume), fall back to /app/uploads when present,
-  // and finally to a local public/uploads folder for bare-metal/PM2 deploys.
-  const envUploads = process.env.UPLOADS_DIR;
   const dockerUploads = '/app/uploads';
   const localUploads = path.resolve(process.cwd(), 'public/uploads');
-  const uploadsDir = envUploads
-    ? path.resolve(envUploads)
-    : fs.existsSync(dockerUploads)
-      ? dockerUploads
-      : localUploads;
+  const uploadsDir = fs.existsSync(dockerUploads) ? dockerUploads : localUploads;
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   if (!fs.existsSync(localUploads)) fs.mkdirSync(localUploads, { recursive: true });
-  console.log(`[BOOT] Upload storage directory: ${uploadsDir}`);
-
+  
   app.use('/uploads', express.static(uploadsDir));
-  // Bare-metal fallback so images uploaded before the env switch still resolve.
   app.use('/uploads', express.static(localUploads));
 
   function validateAndProcessImage(rawData: string): { buffer: Buffer; ext: string } {
@@ -227,21 +214,10 @@ async function createServer() {
 
       await logSecurityAction({ actorId: dbUser.id, action: 'LOGIN', ipAddress: req.ip });
 
-      // P1: Issue a short-lived access token (15m) plus an opaque refresh
-      // token (30d) stored server-side. The access token is what protects
-      // API calls; the refresh token is only used to mint new access tokens.
       const token = generateJwtToken({ id: dbUser.id, uid: dbUser.uid, phone: dbUser.phone, role: dbUser.role, salonId: dbUser.salonId ? String(dbUser.salonId) : null });
-      const refreshTokenValue = generateRefreshTokenValue();
 
-      await db.insert(refreshTokens).values({
-        userId: dbUser.id,
-        token: refreshTokenValue,
-        expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS),
-      }).onConflictDoNothing().catch(() => {});
-
-      res.cookie('token', token, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 15 * 60 * 1000, path: '/' });
-      res.cookie('refreshToken', refreshTokenValue, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: REFRESH_TOKEN_EXPIRES_IN_MS, path: '/' });
-
+      res.cookie('token', token, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000, path: '/' });
+      
       const { email: _, phone: __, ...safeUser } = dbUser;
       res.json({ user: safeUser });
     } catch (err: any) {
@@ -250,68 +226,17 @@ async function createServer() {
     }
   });
 
-  // P1: Exchange a valid refresh token for a fresh access token.
-  // Rotation: the presented refresh token is deleted and a new one issued,
-  // so a stolen refresh token is only usable once and its theft is visible
-  // to the real user as a forced re-login.
-  app.post('/api/auth/refresh', async (req, res) => {
-    try {
-      const presented = req.cookies?.refreshToken || req.headers['x-refresh-token'];
-      if (!presented || typeof presented !== 'string') {
-        return res.status(401).json({ error: 'رفرش توکن یافت نشد. لطفاً دوباره وارد شوید.' });
-      }
-
-      const row = await db.select().from(refreshTokens).where(eq(refreshTokens.token, presented)).limit(1).then(r => r[0]);
-      if (!row) return res.status(401).json({ error: 'رفرش توکن نامعتبر است.' });
-      if (row.expiresAt.getTime() < Date.now()) {
-        await db.delete(refreshTokens).where(eq(refreshTokens.id, row.id)).catch(() => {});
-        return res.status(401).json({ error: 'نشست شما منقضی شده است. لطفاً دوباره وارد شوید.' });
-      }
-
-      const dbUser = await db.select().from(users).where(eq(users.id, row.userId)).limit(1).then(r => r[0]);
-      if (!dbUser || dbUser.status === 'suspended') {
-        await db.delete(refreshTokens).where(eq(refreshTokens.id, row.id)).catch(() => {});
-        return res.status(403).json({ error: 'حساب کاربری مسدود است.' });
-      }
-
-      // Rotate: invalidate the presented token, then mint a new pair.
-      await db.delete(refreshTokens).where(eq(refreshTokens.id, row.id));
-
-      const newAccessToken = generateJwtToken({ id: dbUser.id, uid: dbUser.uid, phone: dbUser.phone, role: dbUser.role, salonId: dbUser.salonId ? String(dbUser.salonId) : null });
-      const newRefreshValue = generateRefreshTokenValue();
-      await db.insert(refreshTokens).values({
-        userId: dbUser.id,
-        token: newRefreshValue,
-        expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS),
-      }).onConflictDoNothing().catch(() => {});
-
-      res.cookie('token', newAccessToken, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 15 * 60 * 1000, path: '/' });
-      res.cookie('refreshToken', newRefreshValue, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: REFRESH_TOKEN_EXPIRES_IN_MS, path: '/' });
-
-      const { email: _, phone: __, ...safeUser } = dbUser;
-      res.json({ user: safeUser });
-    } catch (err: any) {
-      console.error('[REFRESH ERROR]', err);
-      res.status(500).json({ error: 'خطا در بازیابی نشست.' });
-    }
-  });
-
   app.post('/api/auth/logout', requireAuth, async (req: AuthRequest, res) => {
     const token = req.cookies.token;
     if (token) {
-      // Blacklist the access token for the rest of its (now short) life.
-      await db.insert(revokedTokens).values({ token, expiresAt: decodeTokenExpiry(token) }).onConflictDoNothing().catch(() => {});
-    }
-    // P1: Delete the refresh token row so the session cannot be re-created.
-    const refreshToken = req.cookies.refreshToken;
-    if (refreshToken) {
-      await db.delete(refreshTokens).where(eq(refreshTokens.token, refreshToken)).catch(() => {});
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + 30);
+      await db.insert(revokedTokens).values({ token, expiresAt: expiry }).onConflictDoNothing().catch(() => {});
     }
     if (req.dbUser) {
       await logSecurityAction({ actorId: req.dbUser.id, action: 'LOGOUT', ipAddress: req.ip });
     }
     res.clearCookie('token', { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/' });
-    res.clearCookie('refreshToken', { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/' });
     res.json({ success: true });
   });
 
@@ -330,85 +255,15 @@ async function createServer() {
     }
   });
 
-  app.get('/api/salons', async (req, res) => {
+  app.get('/api/salons', async (_req, res) => {
     try {
-      // AUDIT (P0): Push the location/service-line filter into SQL so we do
-      // not load the whole table and filter in memory (N+1 avoidance).
-      const { province, city, district, serviceLine, q } = req.query as Record<string, string | undefined>;
-
-      const conditions = [eq(salons.isApproved, true)];
-      if (province && province !== 'همه') conditions.push(eq(salons.province, province));
-      if (city && city !== 'همه') conditions.push(eq(salons.city, city));
-      if (district && district !== 'همه') conditions.push(eq(salons.district, district));
-
       const list = await db.query.salons.findMany({
-        where: conditions.length === 1 ? conditions[0] : and(...conditions),
+        where: eq(salons.isApproved, true),
         with: { services: true, specialists: { with: { user: true, portfolio: true } } },
       });
-
-      // Text search across salon name and nested service/specialist names.
-      // Kept client-compatible: the frontend already normalizes Persian text.
-      let result = list;
-      if (q && q.trim()) {
-        const needle = q.trim().toLowerCase();
-        result = list.filter((s: any) =>
-          s.name?.toLowerCase().includes(needle) ||
-          s.city?.toLowerCase().includes(needle) ||
-          s.district?.toLowerCase().includes(needle) ||
-          s.services?.some((sv: any) => sv.name?.toLowerCase().includes(needle)) ||
-          s.specialists?.some((sp: any) => sp.user?.fullName?.toLowerCase().includes(needle))
-        );
-      }
-      if (serviceLine && serviceLine !== 'all') {
-        result = result.filter((s: any) =>
-          s.services?.some((sv: any) => sv.serviceLineId === serviceLine) ||
-          s.specialists?.some((sp: any) => sp.specialtyLine === serviceLine)
-        );
-      }
-
-      // AUDIT (P0): Derive real availability from the bookings table. The old
-      // seed data hard-coded `availableSlots`, so the calendar could show an
-      // open slot that was in fact taken. We surface the next N days and mark
-      // slots as booked only when an active booking exists for them.
-      const salonIds = result.map((s: any) => s.id);
-      if (salonIds.length > 0) {
-        const upcomingBookings = await db.select().from(bookingsTable)
-          .where(and(
-            inArray(bookingsTable.salonId, salonIds),
-            ne(bookingsTable.status, 'cancelled'),
-          )).limit(2000);
-
-        const bookedByKey = new Set<string>();
-        for (const b of upcomingBookings) {
-          bookedByKey.add(`${b.salonId}|${normalizeToIsoDate(b.date) ?? ''}|${b.time}`);
-        }
-
-        result = result.map((s: any) => {
-          const days: any[] = [];
-          for (let i = 0; i < 30; i++) {
-            const d = new Date();
-            d.setDate(d.getDate() + i);
-            const iso = toIsoDate(d);
-            const jalali = gregorianToJalali(d);
-            const slots = STANDARD_HOURLY_SLOTS.map((time: string) => {
-              const latin = normalizeTimeToLatin(toLatinDigits(time));
-              const booked = latin ? bookedByKey.has(`${s.id}|${iso}|${latin}`) : false;
-              return { time, booked };
-            });
-            days.push({
-              date: `${jalali.jd} ${JALALI_MONTHS[jalali.jm - 1]}`,
-              fullJalaliDate: `${jalali.jy}/${String(jalali.jm).padStart(2, '0')}/${String(jalali.jd).padStart(2, '0')}`,
-              dayName: '', dayNumber: String(jalali.jd), rawDate: d, slots,
-            });
-          }
-          return { ...s, availableSlots: days };
-        });
-      }
-
-      res.json(result);
-    } catch (err: any) {
-      console.error('[GET SALONS ERROR]', err);
-      res.status(500).json({ error: 'خطا در دریافت لیست.' });
+      res.json(list);
+    } catch (err) {
+      console.error('❌ API SALONS CRITICAL ERROR:', err); res.status(500).json({ error: 'خطا در دریافت لیست.' });
     }
   });
 
@@ -421,7 +276,7 @@ async function createServer() {
       });
       res.json(rows);
     } catch (err) {
-      res.status(500).json({ error: 'خطا در دریافت لیست.' });
+      console.error('❌ API SALONS CRITICAL ERROR:', err); res.status(500).json({ error: 'خطا در دریافت لیست.' });
     }
   });
 
@@ -429,402 +284,10 @@ async function createServer() {
     try {
       const id = Number(req.params.id);
       const data = schemas.salonUpdateSchema.parse(req.body);
-
-      // AUDIT (P0): The DB stores `gallery` as TEXT, but the salon admin sends
-      // an array of image URLs. Serialize here so the update never writes a
-      // raw array into a text column (which Postgres would reject).
-      const patch: Record<string, any> = { ...data };
-      if (Array.isArray(patch.gallery)) {
-        patch.gallery = JSON.stringify(patch.gallery);
-      }
-      // `specialists` is a frontend-only grouping of nested rows; it is not a
-      // column on `salons` and would cause a Postgres error if passed through.
-      delete patch.specialists;
-
-      const [updated] = await db.update(salons).set(patch as any).where(eq(salons.id, id)).returning();
+      const [updated] = await db.update(salons).set(data).where(eq(salons.id, id)).returning();
       res.json({ success: true, salon: updated });
     } catch (err) {
       res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ویرایش.' });
-    }
-  });
-
-  // AUDIT (P0): Salon detail endpoint used by customer flow & salon admin views.
-  app.get('/api/salons/:id', async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) return res.status(400).json({ error: 'شناسه سالن نامعتبر است.' });
-      const salon = await db.query.salons.findFirst({
-        where: eq(salons.id, id),
-        with: { services: true, specialists: { with: { user: true, portfolio: true } } },
-      });
-      if (!salon) return res.status(404).json({ error: 'سالن یافت نشد.' });
-      res.json(salon);
-    } catch (err: any) {
-      console.error('[GET SALON BY ID ERROR]', err);
-      res.status(500).json({ error: 'خطا در دریافت اطلاعات سالن.' });
-    }
-  });
-
-  app.post('/api/salons', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
-    try {
-      const data = schemas.salonCreateSchema.parse(req.body);
-      const [created] = await db.insert(salons).values({
-        ...data,
-        tenantId: `salon_${Date.now()}`,
-      }).returning();
-      res.status(201).json(created);
-    } catch (err) {
-      console.error('[CREATE SALON ERROR]', err);
-      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ایجاد سالن.' });
-    }
-  });
-
-  app.delete('/api/salons/:id', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      await db.delete(salons).where(eq(salons.id, id));
-      res.json({ success: true });
-    } catch (err: any) {
-      console.error('[DELETE SALON ERROR]', err);
-      res.status(500).json({ error: 'خطا در حذف سالن.' });
-    }
-  });
-
-  // ==========================================
-  // AUDIT (P0): Users CRUD — admin panel
-  // ==========================================
-  app.get('/api/users', requireAuth, requireRole(['super_admin', 'salon_admin', 'line_manager']), async (req: AuthRequest, res) => {
-    try {
-      // salon_admin only sees users belonging to their own salon.
-      const list = req.dbUser.role === 'super_admin' || req.dbUser.role === 'line_manager'
-        ? await db.select().from(users)
-        : await db.select().from(users).where(eq(users.salonId, Number(req.dbUser.salonId)));
-      res.json(list);
-    } catch (err: any) {
-      console.error('[GET USERS ERROR]', err);
-      res.status(500).json({ error: 'خطا در دریافت کاربران.' });
-    }
-  });
-
-  app.post('/api/users', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
-    try {
-      const { fullName, phone, email, role, salonId } = req.body;
-      const cleanPhone = normalizePhone(phone);
-      if (!cleanPhone) return res.status(400).json({ error: 'شماره موبایل نامعتبر است.' });
-
-      const existing = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1);
-      if (existing.length > 0) return res.status(400).json({ error: 'کاربری با این شماره موبایل قبلاً ثبت شده است.' });
-
-      const [newUser] = await db.insert(users).values({
-        uid: `phone_${cleanPhone}`,
-        phone: cleanPhone,
-        fullName: fullName || `کاربر ${cleanPhone.slice(-4)}`,
-        email: email || `${cleanPhone}@boya.ir`,
-        role: sanitizeRole(role),
-        salonId: salonId ? Number(salonId) : null,
-        status: 'active',
-      }).returning();
-      res.status(201).json({ success: true, user: newUser });
-    } catch (err: any) {
-      console.error('[POST USERS ERROR]', err);
-      res.status(500).json({ error: 'خطا در ایجاد کاربر.' });
-    }
-  });
-
-  app.patch('/api/users/:id', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      const data = schemas.userUpdateSchema.parse(req.body);
-      const [updated] = await db.update(users).set(data).where(eq(users.id, id)).returning();
-      if (!updated) return res.status(404).json({ error: 'کاربر یافت نشد.' });
-      res.json({ success: true, user: updated });
-    } catch (err) {
-      console.error('[PATCH USER ERROR]', err);
-      res.status(err instanceof ZodError ? 404 : 500).json({ error: 'خطا در ویرایش کاربر.' });
-    }
-  });
-
-  app.delete('/api/users/:id', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      await db.delete(users).where(eq(users.id, id));
-      res.json({ success: true });
-    } catch (err: any) {
-      console.error('[DELETE USER ERROR]', err);
-      res.status(500).json({ error: 'خطا در حذف کاربر.' });
-    }
-  });
-
-  // ==========================================
-  // AUDIT (P0): Services CRUD — salon admin
-  // ==========================================
-  app.get('/api/services', requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const salonIdParam = req.query.salonId;
-      // Salon staff see only their own salon's services; super_admin can pass a salonId filter.
-      const targetSalonId = salonIdParam ? Number(salonIdParam) : Number(req.dbUser.salonId);
-      if (!Number.isFinite(targetSalonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
-
-      // AUDIT (P0): super_admin defaults to all services when no filter given.
-      if (!salonIdParam && req.dbUser.role === 'super_admin') {
-        return res.json(await db.select().from(services));
-      }
-
-      const list = await db.select().from(services).where(eq(services.salonId, targetSalonId));
-      res.json(list);
-    } catch (err: any) {
-      console.error('[GET SERVICES ERROR]', err);
-      res.status(500).json({ error: 'خطا در دریافت خدمات.' });
-    }
-  });
-
-  app.post('/api/services', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const data = schemas.serviceCreateSchema.parse(req.body);
-      const salonId = Number(data.salonId) || Number(req.dbUser.salonId);
-      if (!Number.isFinite(salonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
-
-      // salon_admin can only add services to their own salon.
-      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== salonId) {
-        return res.status(403).json({ error: ' شما فقط می‌توانید به سالن خود خدمت اضافه کنید.' });
-      }
-
-      const [created] = await db.insert(services).values({
-        salonId,
-        serviceLineId: data.serviceLineId,
-        name: data.name,
-        description: data.description ?? null,
-        price: String(data.price),
-        durationMinutes: Number(data.durationMinutes),
-        isMobileAvailable: Boolean(data.isMobileAvailable),
-        imageUrl: data.imageUrl ?? null,
-      } as any).returning();
-      res.status(201).json(created);
-    } catch (err) {
-      console.error('[POST SERVICES ERROR]', err);
-      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ایجاد خدمت.' });
-    }
-  });
-
-  app.patch('/api/services/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      const data = schemas.serviceUpdateSchema.parse(req.body);
-      const [updated] = await db.update(services).set(data as any).where(eq(services.id, id)).returning();
-      if (!updated) return res.status(404).json({ error: 'خدمت یافت نشد.' });
-      res.json({ success: true, service: updated });
-    } catch (err) {
-      console.error('[PATCH SERVICE ERROR]', err);
-      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ویرایش خدمت.' });
-    }
-  });
-
-  app.delete('/api/services/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      await db.delete(services).where(eq(services.id, id));
-      res.json({ success: true });
-    } catch (err: any) {
-      console.error('[DELETE SERVICE ERROR]', err);
-      res.status(500).json({ error: 'خطا در حذف خدمت.' });
-    }
-  });
-
-  // ==========================================
-  // AUDIT (P0): Specialists CRUD + portfolio — salon admin
-  // ==========================================
-  app.get('/api/specialists', requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const salonIdParam = req.query.salonId;
-      const targetSalonId = salonIdParam ? Number(salonIdParam) : Number(req.dbUser.salonId);
-
-      if (!salonIdParam && req.dbUser.role === 'super_admin') {
-        return res.json(await db.select().from(specialists));
-      }
-      if (!Number.isFinite(targetSalonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
-
-      const list = await db.select().from(specialists).where(eq(specialists.salonId, targetSalonId));
-      res.json(list);
-    } catch (err: any) {
-      console.error('[GET SPECIALISTS ERROR]', err);
-      res.status(500).json({ error: 'خطا در دریافت متخصصین.' });
-    }
-  });
-
-  app.post('/api/specialists', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const data = schemas.specialistCreateSchema.parse(req.body);
-      const salonId = Number(data.salonId) || Number(req.dbUser.salonId);
-      if (!Number.isFinite(salonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
-
-      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== salonId) {
-        return res.status(403).json({ error: 'شما فقط می‌توانید به سالن خود متخصص اضافه کنید.' });
-      }
-
-      const [created] = await db.insert(specialists).values({
-        userId: Number(data.userId),
-        salonId,
-        specialtyLine: data.specialtyLine,
-        bio: data.bio ?? null,
-        experienceYears: Number(data.experienceYears ?? 1),
-        isMobileActive: Boolean(data.isMobileActive),
-        avatarUrl: data.avatarUrl ?? null,
-      } as any).returning();
-      res.status(201).json(created);
-    } catch (err) {
-      console.error('[POST SPECIALISTS ERROR]', err);
-      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ایجاد متخصص.' });
-    }
-  });
-
-  app.patch('/api/specialists/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      const data = schemas.specialistUpdateSchema.parse(req.body);
-      const [updated] = await db.update(specialists).set(data as any).where(eq(specialists.id, id)).returning();
-      if (!updated) return res.status(404).json({ error: 'متخصص یافت نشد.' });
-      res.json({ success: true, specialist: updated });
-    } catch (err) {
-      console.error('[PATCH SPECIALIST ERROR]', err);
-      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ویرایش متخصص.' });
-    }
-  });
-
-  app.delete('/api/specialists/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      await db.delete(specialists).where(eq(specialists.id, id));
-      res.json({ success: true });
-    } catch (err: any) {
-      console.error('[DELETE SPECIALIST ERROR]', err);
-      res.status(500).json({ error: 'خطا در حذف متخصص.' });
-    }
-  });
-
-  app.post('/api/specialists/portfolio', requireAuth, requireRole(['super_admin', 'salon_admin', 'salon_specialist']), async (req: AuthRequest, res) => {
-    try {
-      const { specialistId, title, imageUrl, category } = req.body;
-      if (!specialistId || !imageUrl) return res.status(400).json({ error: 'شناسه متخصص و تصویر الزامی است.' });
-      const [created] = await db.insert(portfolioItems).values({
-        specialistId: Number(specialistId),
-        title: String(title || 'نمونه کار'),
-        imageUrl: String(imageUrl),
-        category: String(category || 'general'),
-      }).returning();
-      res.status(201).json(created);
-    } catch (err: any) {
-      console.error('[POST PORTFOLIO ERROR]', err);
-      res.status(500).json({ error: 'خطا در ثبت نمونه کار.' });
-    }
-  });
-
-  app.delete('/api/specialists/portfolio/:id', requireAuth, requireRole(['super_admin', 'salon_admin', 'salon_specialist']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
-      res.json({ success: true });
-    } catch (err: any) {
-      console.error('[DELETE PORTFOLIO ERROR]', err);
-      res.status(500).json({ error: 'خطا در حذف نمونه کار.' });
-    }
-  });
-
-  // ==========================================
-  // AUDIT (P0): Notifications read/update/delete — admin panel
-  // ==========================================
-  app.get('/api/notifications', requireAuth, async (req: AuthRequest, res) => {
-    try {
-      // Customers see active notifications only; staff see all.
-      const isStaff = ['super_admin', 'salon_admin', 'line_manager'].includes(req.dbUser.role);
-      const list = isStaff
-        ? await db.select().from(notifications).orderBy(desc(notifications.createdAt))
-        : await db.select().from(notifications).where(eq(notifications.isActive, true)).orderBy(desc(notifications.createdAt));
-      res.json(list);
-    } catch (err: any) {
-      console.error('[GET NOTIFICATIONS ERROR]', err);
-      res.status(500).json({ error: 'خطا در دریافت اعلانات.' });
-    }
-  });
-
-  app.patch('/api/notifications/:id', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      const patch: Record<string, any> = {};
-      const { isActive, title, content, badgeText } = req.body;
-      if (typeof isActive === 'boolean') patch.isActive = isActive;
-      if (typeof title === 'string') patch.title = title.trim();
-      if (typeof content === 'string') patch.content = content.trim();
-      if (typeof badgeText === 'string') patch.badgeText = badgeText.trim();
-
-      const [updated] = await db.update(notifications).set(patch).where(eq(notifications.id, id)).returning();
-      if (!updated) return res.status(404).json({ error: 'اعلان یافت نشد.' });
-      res.json(updated);
-    } catch (err: any) {
-      console.error('[PATCH NOTIFICATIONS ERROR]', err);
-      res.status(500).json({ error: 'خطا در به‌روزرسانی اعلان.' });
-    }
-  });
-
-  app.delete('/api/notifications/:id', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
-    try {
-      const id = Number(req.params.id);
-      await db.delete(notifications).where(eq(notifications.id, id));
-      res.json({ success: true });
-    } catch (err: any) {
-      console.error('[DELETE NOTIFICATIONS ERROR]', err);
-      res.status(500).json({ error: 'خطا در حذف اعلان.' });
-    }
-  });
-
-  // ==========================================
-  // AUDIT (P0): Admin profile + line-manager staff
-  // ==========================================
-  app.get('/api/admin/profile', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
-    try {
-      const profile = await db.select().from(adminProfile).limit(1).then(r => r[0] || null);
-      res.json(profile);
-    } catch (err: any) {
-      console.error('[GET ADMIN PROFILE ERROR]', err);
-      res.status(500).json({ error: 'خطا در دریافت پروفایل مدیریت.' });
-    }
-  });
-
-  app.patch('/api/admin/profile', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
-    try {
-      const data = schemas.adminProfileUpdateSchema.parse(req.body);
-      const existing = await db.select().from(adminProfile).limit(1).then(r => r[0]);
-      let result;
-      if (!existing) {
-        // admin_profile has NOT NULL columns (fullName, phone, email) that the
-        // partial update schema may omit; seed them from the parsed payload or
-        // sensible defaults so first-time creation never violates the constraint.
-        [result] = await db.insert(adminProfile).values({
-          fullName: data.fullName ?? 'مدیر سیستم',
-          phone: data.phone ?? '۰۹۱۰۰۰۰۰۰۰۰',
-          email: data.email ?? 'admin@boya.ir',
-          ...data,
-        } as any).returning();
-      } else {
-        [result] = await db.update(adminProfile).set(data as any).where(eq(adminProfile.id, existing.id)).returning();
-      }
-      res.json(result);
-    } catch (err) {
-      console.error('[PATCH ADMIN PROFILE ERROR]', err);
-      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در به‌روزرسانی پروفایل مدیریت.' });
-    }
-  });
-
-  app.get('/api/line-manager/staff', requireAuth, requireRole(['super_admin', 'line_manager']), async (req: AuthRequest, res) => {
-    try {
-      // A line_manager manages a specialty line (e.g. 'hair'); show specialists in that line.
-      const line = req.dbUser.managedLine;
-      const list = line
-        ? await db.select().from(specialists).where(eq(specialists.specialtyLine, line))
-        : await db.select().from(specialists);
-      res.json(list);
-    } catch (err: any) {
-      console.error('[GET LINE-MANAGER STAFF ERROR]', err);
-      res.status(500).json({ error: 'خطا در دریافت پرسنل.' });
     }
   });
 
@@ -883,18 +346,9 @@ async function createServer() {
     try {
       const { title, content, targetAudience } = req.body;
       if (!title || !content) return res.status(400).json({ error: 'عنوان و متن الزامی است.' });
-      // P3: Filter the audience in SQL, not in memory — the old code loaded
-      // every user row and then discarded most of them.
-      const audienceRoles = targetAudience === 'customer'
-        ? ['customer']
-        : targetAudience === 'salon'
-        ? ['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']
-        : null;
-      // inArray's typings reject pgEnum columns; the cast is typing-only and
-      // the runtime comparison against the enum text values is correct.
-      const tu = audienceRoles
-        ? await db.select({ phone: users.phone }).from(users).where(inArray(users.role as any, audienceRoles))
-        : await db.select({ phone: users.phone }).from(users);
+      let tu = await db.select().from(users);
+      if (targetAudience === 'customer') tu = tu.filter(u => u.role === 'customer');
+      else if (targetAudience === 'salon') tu = tu.filter(u => ['salon_admin','salon_specialist','mobile_specialist','line_manager'].includes(u.role));
       let sc = 0;
       for (const u of tu) if (u.phone) { try { await sendMeliPayamakSms(u.phone, `${title}\\n${content}`); sc++; } catch {} }
       const [n] = await db.insert(notifications).values({ title: String(title).trim(), content: String(content).trim(), type: 'promotional', targetAudience: targetAudience || 'all', channel: 'sms', isActive: true, badgeText: `${sc} پیامک` }).returning();
@@ -903,26 +357,8 @@ async function createServer() {
   });
   app.get('/api/tickets', requireAuth, async (req: AuthRequest, res) => {
     try {
-      const list = req.dbUser.role === 'super_admin'
-        ? await db.select().from(supportTickets).orderBy(desc(supportTickets.updatedAt))
-        : await db.select().from(supportTickets).where(eq(supportTickets.userId, req.dbUser.id)).orderBy(desc(supportTickets.updatedAt));
-
-      // P3: Batch-load messages in ONE query instead of one per ticket.
-      // With N tickets the old code ran N+1 round-trips to Postgres.
-      if (list.length === 0) return res.json([]);
-
-      const allMessages = await db.select().from(ticketMessages)
-        .where(inArray(ticketMessages.ticketId, list.map(t => t.id)))
-        .orderBy(asc(ticketMessages.createdAt));
-
-      const messagesByTicket = new Map<number, typeof allMessages>();
-      for (const m of allMessages) {
-        const arr = messagesByTicket.get(m.ticketId) ?? [];
-        arr.push(m);
-        messagesByTicket.set(m.ticketId, arr);
-      }
-
-      res.json(list.map(t => ({ ...t, messages: messagesByTicket.get(t.id) ?? [] })));
+      const list = req.dbUser.role === 'super_admin' ? await db.select().from(supportTickets).orderBy(desc(supportTickets.updatedAt)) : await db.select().from(supportTickets).where(eq(supportTickets.userId, req.dbUser.id)).orderBy(desc(supportTickets.updatedAt));
+      res.json(await Promise.all(list.map(async t => ({ ...t, messages: await db.select().from(ticketMessages).where(eq(ticketMessages.ticketId, t.id)).orderBy(ticketMessages.createdAt) }))));
     } catch { res.status(500).json({ error: 'خطا در دریافت تیکت‌ها.' }); }
   });
   app.post('/api/tickets', requireAuth, async (req: AuthRequest, res) => {
@@ -961,6 +397,49 @@ async function createServer() {
     vite = await createViteServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' });
     app.use(vite.middlewares);
   } else {
+  // API برای ساخت کاربر جدید (توسط ادمین)
+  // API برای دریافت لیست تمام کاربران
+  app.get('/api/users', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const usersList = await db.select().from(users).orderBy(desc(users.createdAt));
+      res.json(usersList);
+    } catch (err) {
+      console.error('❌ API GET USERS ERROR:', err);
+      res.status(500).json({ error: 'خطا در دریافت لیست کاربران.' });
+    }
+  });
+    app.post('/api/users', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { fullName, phone, email, role } = req.body;
+      const cleanPhone = normalizePhone(phone);
+      
+      if (!cleanPhone) {
+        return res.status(400).json({ error: 'شماره موبایل نامعتبر است.' });
+      }
+
+      // بررسی اینکه آیا کاربر از قبل وجود دارد یا خیر
+      const existingUser = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1);
+      if (existingUser.length > 0) {
+        return res.status(400).json({ error: 'کاربری با این شماره موبایل قبلاً ثبت شده است.' });
+      }
+
+      const uid = `phone_${cleanPhone}`;
+      
+      const [newUser] = await db.insert(users).values({
+        uid,
+        phone: cleanPhone,
+        fullName: fullName || `کاربر ${cleanPhone.slice(-4)}`,
+        email: email || `${cleanPhone}@boya.ir`,
+        role: sanitizeRole(role),
+        status: 'active',
+      }).returning();
+
+      res.json({ success: true, user: newUser });
+    } catch (err) {
+      console.error('❌ API USERS CRITICAL ERROR:', err);
+      res.status(500).json({ error: 'خطا در ایجاد کاربر.' });
+    }
+  });
     app.use(express.static(path.resolve(__dirname, 'dist')));
   }
 
