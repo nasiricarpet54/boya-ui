@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Send, RefreshCw, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
 import { useUIStore } from '../../../shared/stores/uiStore';
-import { toPersianDigits } from '../../../shared/utils/persianUtils';
+import { toPersianDigits, formatJalaliDate } from '../../../shared/utils/persianUtils';
 import api from '../../../shared/api/apiClient';
 
 interface ApiTicketMessage {

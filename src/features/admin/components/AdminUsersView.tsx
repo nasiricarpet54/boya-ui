@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Users, Plus, Edit, Trash2, Phone, Mail, Shield, ShieldCheck, CheckCircle2, X, Building2, User } from 'lucide-react';
 import { useDataStore } from '../../../shared/stores/dataStore';
-import { toPersianDigits, normalizePhone } from '../../../shared/utils/persianUtils';
+import { toPersianDigits, normalizePhone, formatJalaliDate } from '../../../shared/utils/persianUtils';
 import { PlatformUser, Salon } from '../../../shared/data/marketplaceData';
 import { ROLE_LABELS, ROLES, UserRole } from '../../../shared/constants/roles';
 
@@ -216,7 +216,7 @@ export const AdminUsersView: React.FC = () => {
                     </td>
 
                     <td className="p-3.5 text-[#6C6C6C]">
-                      {u.createdAt || 'امروز'}
+                      {u.createdAt ? formatJalaliDate(u.createdAt) : 'امروز'}
                     </td>
 
                     <td className="p-3.5">

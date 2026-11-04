@@ -22,7 +22,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useDataStore, PlatformNotification } from '../../../shared/stores/dataStore';
-import { toPersianDigits } from '../../../shared/utils/persianUtils';
+import { toPersianDigits, formatJalaliDate } from '../../../shared/utils/persianUtils';
 import api from '../../../shared/api/apiClient';
 
 export const AdminNotificationsView: React.FC = () => {
@@ -146,7 +146,7 @@ export const AdminNotificationsView: React.FC = () => {
                   </span>
                   <div className="flex items-center gap-1.5 text-[10px] text-[#6C6C6C] bg-[#F7F3EE] px-2.5 py-1 rounded-full border border-[#E7E2DA]/50">
                     <Calendar className="w-3 h-3" />
-                    {notif.createdAt}
+                    {notif.createdAt ? formatJalaliDate(notif.createdAt) : ''}
                   </div>
                 </div>
                 
