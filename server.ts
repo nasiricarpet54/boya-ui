@@ -935,6 +935,14 @@ async function createServer() {
       res.status(500).json({ error: 'خطا در دریافت پرسنل.' });
     }
   });
+
+  // ==========================================
+  // MOBILE COMPATIBILITY LAYER (v1 API for the Flutter customer app)
+  // Mounted at /api/v1 — translates the Flutter contract into the new backend.
+  // ==========================================
+  const { default: mobileRoutes } = await import('./src/routes/mobile.ts');
+  app.use('/api/v1', mobileRoutes);
+
   let vite: any = null;
   if (isProd) {
     app.use(express.static(path.resolve(__dirname, 'dist')));
