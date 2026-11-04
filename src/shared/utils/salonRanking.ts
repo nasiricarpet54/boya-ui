@@ -6,7 +6,7 @@
 
 import { Salon } from '../data/marketplaceData';
 
-export type SalonSortOption = 'distance' | 'vip' | 'rating' | 'popular';
+export type SalonSortOption = 'distance' | 'vip' | 'rating' | 'popular' | 'cheapest' | 'expensive';
 
 /**
  * Sorts salons for customer search results and marketplace views:
@@ -45,6 +45,16 @@ export function sortSalonsForSearchResults(
       const revA = sA.reviewsCount || 0;
       const revB = sB.reviewsCount || 0;
       if (revA !== revB) return revB - revA;
+    } else if (sortBy === 'cheapest' || sortBy === 'expensive') {
+      // P0: order salons by the price of their cheapest (cheapest) or most
+      // expensive service, so customers can find affordable options first.
+      const priceFor = (s: Salon) =>
+        sortBy === 'cheapest'
+          ? Math.min(...(s.services?.map((sv: any) => Number(sv.price) || 0) || [0]))
+          : Math.max(...(s.services?.map((sv: any) => Number(sv.price) || 0) || [0]));
+      const prA = priceFor(sA);
+      const prB = priceFor(sB);
+      if (prA !== prB) return sortBy === 'cheapest' ? prA - prB : prB - prA;
     }
 
     // 3. Fallback: compare displayPriority

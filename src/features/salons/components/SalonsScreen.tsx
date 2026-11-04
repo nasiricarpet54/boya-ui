@@ -53,7 +53,8 @@ export const SalonsScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [onlyMobileService, setOnlyMobileService] = useState<boolean>(false);
   const [onlyVipFilter, setOnlyVipFilter] = useState<boolean>(false);
-  const [sortByOption, setSortByOption] = useState<'distance' | 'vip' | 'rating' | 'popular'>('distance');
+  const [onlyAvailableSlots, setOnlyAvailableSlots] = useState<boolean>(false);
+  const [sortByOption, setSortByOption] = useState<'distance' | 'vip' | 'rating' | 'popular' | 'cheapest' | 'expensive'>('distance');
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   const navigate = useNavigate();
@@ -128,6 +129,13 @@ export const SalonsScreen: React.FC = () => {
           const hasServiceInLine = salon.services.some((s: any) => s.serviceLineId === selectedServiceLine);
           if (!hasServiceInLine) return false;
         }
+        // P0: only keep salons that still have at least one free slot for booking.
+        if (onlyAvailableSlots) {
+          const hasFree = (salon.availableSlots || []).some((day: any) =>
+            (day.slots || []).some((slot: any) => !slot.booked)
+          );
+          if (!hasFree) return false;
+        }
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase().trim();
           const matchName = salon.name.toLowerCase().includes(q);
@@ -141,7 +149,7 @@ export const SalonsScreen: React.FC = () => {
       });
 
     return sortSalonsForSearchResults(list, sortByOption);
-  }, [publishedSalons, customerLocation, selectedProvince, selectedCity, selectedDistrict, maxDistanceKm, onlyVipFilter, onlyMobileService, selectedServiceLine, searchQuery, sortByOption]);
+  }, [publishedSalons, customerLocation, selectedProvince, selectedCity, selectedDistrict, maxDistanceKm, onlyVipFilter, onlyMobileService, onlyAvailableSlots, selectedServiceLine, searchQuery, sortByOption]);
 
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -211,23 +219,49 @@ export const SalonsScreen: React.FC = () => {
           <div className="grid grid-cols-2 gap-2">
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6C6C6C]" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="جستجوی نام..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 pr-9 pl-3 rounded-xl bg-white border border-[#E7E2DA] text-xs outline-none focus:border-[#173B3F]"
+                className="w-full h-10 pr-9 pl-3 rounded-xl bg-white border border-[E7E2DA] text-xs outline-none focus:border-[#173B3F]"
               />
             </div>
             <button
               onClick={() => setIsLocationModalOpen(true)}
-              className="flex items-center justify-between px-3 h-10 rounded-xl bg-white border border-[#E7E2DA] text-xs font-bold text-[#173B3F]"
+              className="flex items-center justify-between px-3 h-10 rounded-xl bg-white border border-[E7E2DA] text-xs font-bold text-[#173B3F]"
             >
               <div className="flex items-center gap-2 truncate">
                 <MapPin className="w-3.5 h-3.5" />
                 <span className="truncate">{selectedCity === 'همه' ? 'موقعیت من' : selectedCity}</span>
               </div>
               <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* P0: Sort + availability filters */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
+            <select
+              value={sortByOption}
+              onChange={(e) => setSortByOption(e.target.value as any)}
+              className="flex-shrink-0 h-9 px-2 rounded-xl bg-white border border-[E7E2DA] text-[11px] font-bold text-[#173B3F] outline-none"
+            >
+              <option value="distance">مرتب‌سازی: نزدیک‌ترین</option>
+              <option value="cheapest">مرتب‌سازی: ارزان‌ترین</option>
+              <option value="expensive">مرتب‌سازی: گران‌ترین</option>
+              <option value="rating">مرتب‌سازی: بهترین امتیاز</option>
+              <option value="popular">مرتب‌سازی: محبوب‌ترین</option>
+              <option value="vip">مرتب‌سازی: VIP</option>
+            </select>
+            <button
+              onClick={() => setOnlyAvailableSlots((v) => !v)}
+              className={`flex-shrink-0 px-3 h-9 rounded-full text-[11px] font-bold border transition-all ${
+                onlyAvailableSlots
+                  ? 'bg-[#173B3F] text-white border-[#173B3F]'
+                  : 'bg-white text-[#1C1C1C] border-[E7E2DA] hover:border-[#173B3F]'
+              }`}
+            >
+              سانس آزاد
             </button>
           </div>
         </div>
