@@ -18,10 +18,40 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor: On 401 Unauthorized, automatically purge auth state
+// P1: Single-flight refresh lock. Concurrent 401s (e.g. a dashboard mounting
+// and firing five queries at once) would otherwise each trigger a refresh,
+// and the rotations would invalidate each other.
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = api
+    .post('/auth/refresh', {}, { withCredentials: true })
+    .then(() => {
+      useAuthStore.getState().verifySession();
+      return 'refreshed';
+    })
+    .catch(() => null)
+    .finally(() => { refreshPromise = null; });
+  return refreshPromise;
+}
+
+// Response interceptor: on a 401, try ONE silent refresh; if it works, replay
+// the original request. Only if the refresh itself fails do we purge auth.
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+    const isRefreshCall = originalRequest?.url?.includes('/auth/refresh');
+
+    if (error.response?.status === 401 && !originalRequest._retried && !isRefreshCall) {
+      originalRequest._retried = true;
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        return api(originalRequest);
+      }
+    }
+
     if (error.response?.status === 401) {
       if (useAuthStore.getState().isAuthenticated) {
         console.warn('[AUTH INTERCEPTOR] 401 received - purging invalid or expired authentication state.');

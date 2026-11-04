@@ -101,6 +101,10 @@ export const specialists = pgTable('specialists', {
   isVerified: boolean('is_verified').default(false).notNull(),
   isMobileActive: boolean('is_mobile_active').default(false).notNull(),
   avatarUrl: text('avatar_url'),
+  // AUDIT (P0): Persisted working schedule. Previously the salon admin saved
+  // hours only to local component state, so they vanished on reload.
+  workingHours: text('working_hours'),
+  workingDays: text('working_days'),
   publicationStatus: publicationStatusEnum('publication_status').default('active').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -292,5 +296,16 @@ export const ticketMessages = pgTable('ticket_messages', {
   senderId: integer('sender_id').references(() => users.id, { onDelete: 'set null' }),
   senderRole: text('sender_role').notNull(),
   message: text('message').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Refresh tokens for the JWT refresh-token pattern (P1).
+// A refresh token is long-lived (30d), stored server-side, and rotation-aware:
+// each login mints a new row, and logout/refresh deletes the old row.
+export const refreshTokens = pgTable('refresh_tokens', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  token: text('token').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

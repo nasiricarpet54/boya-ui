@@ -81,7 +81,7 @@ const DAYS_OF_WEEK = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنب
 export const SalonAdminDashboard: React.FC = () => {
   const { setAppMode, setShowSplashScreen, setSplashAppName, showToast } = useUIStore();
   const { user } = useAuthStore();
-  const { salons, updateSalon, createService } = useDataStore();
+  const { salons, updateSalon, updateSpecialist, createService } = useDataStore();
   const queryClient = useQueryClient();
 
   // Fetch real data
@@ -543,26 +543,37 @@ export const SalonAdminDashboard: React.FC = () => {
   };
 
   // Handler: Save specialist's working hours
-  const handleSaveWorkingHours = (e: React.FormEvent) => {
+  const handleSaveWorkingHours = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeSpecialistView) return;
 
-    const updated = specialistsList.map((s) =>
-      s.id === activeSpecialistView.id
-        ? { ...s, workingHours: specialistWorkingHours, workingDays: specialistWorkingDays }
-        : s
-    );
-    setSpecialistsList(updated);
-    setActiveSpecialistView({
-      ...activeSpecialistView,
-      workingHours: specialistWorkingHours,
-      workingDays: specialistWorkingDays,
-    });
-    if (currentSalon?.id) {
-      updateSalon(currentSalon.id, { specialists: updated });
+    // AUDIT (P0): Working hours belong to the SPECIALIST row, not the salon.
+    // The old code pushed `{ specialists: [...] }` into updateSalon(), which
+    // the Zod schema strips and the DB has no column for — so hours were
+    // never persisted and were lost on every reload.
+    try {
+      await updateSpecialist(activeSpecialistView.id, {
+        workingHours: specialistWorkingHours,
+        workingDays: specialistWorkingDays,
+      } as any);
+
+      const updated = specialistsList.map((s) =>
+        s.id === activeSpecialistView.id
+          ? { ...s, workingHours: specialistWorkingHours, workingDays: specialistWorkingDays }
+          : s
+      );
+      setSpecialistsList(updated);
+      setActiveSpecialistView({
+        ...activeSpecialistView,
+        workingHours: specialistWorkingHours,
+        workingDays: specialistWorkingDays,
+      });
+      setScheduleSuccessMsg(true);
+      setTimeout(() => setScheduleSuccessMsg(false), 3000);
+    } catch (err) {
+      console.error('[SAVE WORKING HOURS ERROR]', err);
+      showToast?.('خطا در ذخیره ساعات کاری.');
     }
-    setScheduleSuccessMsg(true);
-    setTimeout(() => setScheduleSuccessMsg(false), 3000);
   };
 
   const handleToggleWorkingDay = (day: string) => {

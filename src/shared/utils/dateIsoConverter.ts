@@ -114,6 +114,16 @@ export function todayIso(): string {
   return toIsoDate(new Date());
 }
 
+/** The standard booking grid the app shows for every day (Persian digits). */
+export const STANDARD_HOURLY_SLOTS = [
+  '۰۹:۳۰', '۱۱:۰۰', '۱۲:۳۰', '۱۴:۰۰', '۱۵:۳۰', '۱۷:۰۰', '۱۸:۳۰', '۲۰:۰۰',
+];
+
+export const JALALI_MONTHS = [
+  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
+];
+
 /** Convert Persian/Arabic digits in a string to Latin digits. */
 export function toLatinDigits(input: string): string {
   const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
