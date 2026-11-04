@@ -1,0 +1,520 @@
+{
+  "configVersion": 2,
+  "packages": [
+    {
+      "name": "_fe_analyzer_shared",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/_fe_analyzer_shared-85.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "analyzer",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/analyzer-7.7.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "args",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/args-2.7.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "async",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/async-2.13.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "boolean_selector",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/boolean_selector-2.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
+      "name": "build",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/build-2.5.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "build_config",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/build_config-1.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "build_daemon",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/build_daemon-4.1.7",
+      "packageUri": "lib/",
+      "languageVersion": "3.11"
+    },
+    {
+      "name": "build_resolvers",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/build_resolvers-2.5.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "build_runner",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/build_runner-2.5.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "build_runner_core",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/build_runner_core-9.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "built_collection",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/built_collection-5.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.11"
+    },
+    {
+      "name": "built_value",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/built_value-8.13.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "characters",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/characters-1.4.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "checked_yaml",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/checked_yaml-2.0.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
+      "name": "clock",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/clock-1.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "code_builder",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/code_builder-4.13.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "collection",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/collection-1.19.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "convert",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/convert-3.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "crypto",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/crypto-3.0.7",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "dart_style",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/dart_style-3.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "dio",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/dio-5.11.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "dio_web_adapter",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/dio_web_adapter-2.2.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "equatable",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/equatable-2.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "fake_async",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/fake_async-1.3.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "file",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/file-7.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "fixnum",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/fixnum-1.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
+      "name": "flutter",
+      "rootUri": "file:///D:/flutter/packages/flutter",
+      "packageUri": "lib/",
+      "languageVersion": "3.11"
+    },
+    {
+      "name": "flutter_lints",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/flutter_lints-5.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "flutter_localizations",
+      "rootUri": "file:///D:/flutter/packages/flutter_localizations",
+      "packageUri": "lib/",
+      "languageVersion": "3.11"
+    },
+    {
+      "name": "flutter_test",
+      "rootUri": "file:///D:/flutter/packages/flutter_test",
+      "packageUri": "lib/",
+      "languageVersion": "3.11"
+    },
+    {
+      "name": "freezed",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/freezed-3.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "freezed_annotation",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/freezed_annotation-3.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "frontend_server_client",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/frontend_server_client-4.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "glob",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/glob-2.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "graphs",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/graphs-2.3.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "http",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/http-1.6.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "http_multi_server",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/http_multi_server-3.2.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "http_parser",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/http_parser-4.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "imperial_persian_date",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/imperial_persian_date-0.0.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "intl",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/intl-0.20.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "io",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/io-1.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "js",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/js-0.7.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "json_annotation",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/json_annotation-4.9.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "json_serializable",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/json_serializable-6.9.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "leak_tracker",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/leak_tracker-11.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "leak_tracker_flutter_testing",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/leak_tracker_flutter_testing-3.0.10",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "leak_tracker_testing",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/leak_tracker_testing-3.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "lints",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/lints-5.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "logging",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/logging-1.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "matcher",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/matcher-0.12.20",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "material_color_utilities",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/material_color_utilities-0.13.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "meta",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/meta-1.19.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "mime",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/mime-2.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "package_config",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/package_config-2.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "parsi_datetime_picker",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/parsi_datetime_picker-0.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "path",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/path-1.9.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "pool",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/pool-1.5.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "protobuf",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/protobuf-4.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "pub_semver",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/pub_semver-2.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "pubspec_parse",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/pubspec_parse-1.7.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
+      "name": "retrofit",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/retrofit-4.6.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "retrofit_generator",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/retrofit_generator-9.7.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "shelf",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/shelf-1.4.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "shelf_web_socket",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/shelf_web_socket-3.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "sky_engine",
+      "rootUri": "file:///D:/flutter/bin/cache/pkg/sky_engine",
+      "packageUri": "lib/",
+      "languageVersion": "3.11"
+    },
+    {
+      "name": "source_gen",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/source_gen-2.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "source_helper",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/source_helper-1.3.7",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "source_span",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/source_span-1.10.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
+      "name": "stack_trace",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/stack_trace-1.12.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "stream_channel",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/stream_channel-2.1.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "stream_transform",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/stream_transform-2.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "string_scanner",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/string_scanner-1.4.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
+      "name": "term_glyph",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/term_glyph-1.2.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
+      "name": "test_api",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/test_api-0.7.12",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "timing",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/timing-1.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "typed_data",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/typed_data-1.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "vector_math",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/vector_math-2.4.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "vm_service",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/vm_service-15.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "watcher",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/watcher-1.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "web",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/web-1.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "web_socket",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/web_socket-1.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "web_socket_channel",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/web_socket_channel-3.0.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
+      "name": "yaml",
+      "rootUri": "file:///D:/flutter-cache/.pub-cache/hosted/pub.myket.ir/yaml-3.1.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "boya_shared",
+      "rootUri": "../",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    }
+  ],
+  "generator": "pub",
+  "generatorVersion": "3.13.4",
+  "flutterRoot": "file:///D:/flutter",
+  "flutterVersion": "3.47.5",
+  "pubCache": "file:///D:/flutter-cache/.pub-cache"
+}
