@@ -45,7 +45,7 @@ export const SalonCard: React.FC<SalonCardProps> = ({
   // Filtered lists based on line
   const filteredSpecialists = selectedLineId === 'all'
     ? specialists
-    : specialists.filter(s => s.specialtyLine === selectedLineId || s.role.toLowerCase().includes(selectedLineId));
+    : specialists.filter(s => s.specialtyLine === selectedLineId || (s.role || '').toLowerCase().includes(selectedLineId));
 
   const filteredServices = selectedLineId === 'all'
     ? services
