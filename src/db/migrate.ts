@@ -16,8 +16,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export async function runMigrations() {
   const isProd = process.env.NODE_ENV === 'production';
   console.log('[DB MIGRATE] Running hybrid migrations & self-healing checks...');
-  
-  let pool: Pool;
+
+  // BUGFIX (P0): `createPool()` returns the application's *shared* pool
+  // (global._postgresPool). Closing it would kill every subsequent query
+  // with "Cannot use a pool after calling end on the pool" — exactly the
+  // 500s seen on /api/salons after startup. So we only close a pool that
+  // we created ourselves here (the temporary admin pool).
+  let pool: Pool | null = null;
+  let ownsPool = false;
   try {
     pool = new Pool({
       host: process.env.SQL_HOST || '127.0.0.1',
@@ -28,10 +34,12 @@ export async function runMigrations() {
       connectionTimeoutMillis: 3000,
     });
     await pool.query('SELECT 1');
+    ownsPool = true;
     console.log('[DB MIGRATE] Connected using admin/superuser pool for DDL migrations.');
   } catch {
     console.log('[DB MIGRATE] Admin pool connection failed, falling back to standard app pool...');
-    pool = createPool();
+    pool = createPool(); // shared app pool — must NOT be closed by us
+    ownsPool = false;
   }
 
   try {
@@ -282,7 +290,9 @@ export async function runMigrations() {
       process.exit(1);
     }
   } finally {
-    if (pool) {
+    // BUGFIX (P0): only close a pool we own. The shared app pool
+    // (global._postgresPool) must stay open for the server's queries.
+    if (pool && ownsPool) {
       await pool.end().catch(() => {});
     }
   }
