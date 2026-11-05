@@ -50,8 +50,8 @@ export const AdminSpecialistsView: React.FC = () => {
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      const matchName = item.specialist.name.toLowerCase().includes(q);
-      const matchSalon = item.salon.name.toLowerCase().includes(q);
+      const matchName = (item.specialist.name || '').toLowerCase().includes(q);
+      const matchSalon = (item.salon.name || '').toLowerCase().includes(q);
       const matchPhone = (item.specialist.phone || '').includes(q);
       if (!matchName && !matchSalon && !matchPhone) return false;
     }

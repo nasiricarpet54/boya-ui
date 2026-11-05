@@ -23,7 +23,7 @@ import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
 import { normalizeToIsoDate, normalizeTime, normalizeTimeToLatin, toLatinDigits, toIsoDate, gregorianToJalali, JALALI_MONTHS, STANDARD_HOURLY_SLOTS } from './src/shared/utils/dateIsoConverter.ts';
 import { normalizePhone } from './src/shared/utils/persianUtils.ts';
-import { generateJwtToken, generateRefreshTokenValue, decodeTokenExpiry, REFRESH_TOKEN_EXPIRES_IN_MS } from './src/lib/jwt.ts';
+import { generateJwtToken, verifyJwtToken, generateRefreshTokenValue, decodeTokenExpiry, REFRESH_TOKEN_EXPIRES_IN_MS } from './src/lib/jwt.ts';
 import { seedDatabase } from './src/db/seed.ts';
 import { runMigrations } from './src/db/migrate.ts';
 import { logSecurityAction } from './src/db/audit.ts';
@@ -63,11 +63,22 @@ async function createServer() {
       contentSecurityPolicy: {
         useDefaults: true,
         directives: {
+          "default-src": ["'self'"],
           "img-src": ["'self'", "data:", "blob:", "https:", "https://images.unsplash.com"],
-          "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-          "connect-src": ["'self'", "https:*", "wss:*"]
+          "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:"],
+          "script-src-attr": ["'unsafe-inline'"],
+          "worker-src": ["'self'", "blob:"],
+          "child-src": ["'self'", "blob:"],
+          "style-src": ["'self'", "'unsafe-inline'", "https:"],
+          "style-src-attr": ["'unsafe-inline'"],
+          "font-src": ["'self'", "data:", "https:"],
+          "connect-src": ["'self'", "https:", "wss:", "ws:"],
+          "frame-src": ["'self'", "https:"],
+          "object-src": ["'none'"],
         }
       },
+      crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
     }));
   }
@@ -294,6 +305,43 @@ async function createServer() {
     res.clearCookie('token', { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/' });
     res.clearCookie('refreshToken', { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/' });
     res.json({ success: true });
+  });
+
+  // Clean session verification for guest or logged-in users (returns 200 with { authenticated, user })
+  app.get('/api/auth/session', async (req, res) => {
+    let token: string | undefined = req.cookies?.token;
+    const authHeader = req.headers.authorization;
+    if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split('Bearer ')[1]?.trim();
+    }
+
+    if (!token) {
+      return res.json({ authenticated: false, user: null });
+    }
+
+    try {
+      const isRevoked = await db.select().from(revokedTokens).where(eq(revokedTokens.token, token)).limit(1).then(r => r.length > 0);
+      if (isRevoked) {
+        return res.json({ authenticated: false, user: null });
+      }
+
+      const jwtPayload = verifyJwtToken(token);
+      if (jwtPayload) {
+        let dbUser: any = null;
+        if (jwtPayload.phone) {
+          dbUser = await db.select().from(users).where(eq(users.phone, jwtPayload.phone)).limit(1).then(r => r[0]);
+        }
+        if (!dbUser && jwtPayload.id) {
+          dbUser = await db.select().from(users).where(eq(users.id, jwtPayload.id)).limit(1).then(r => r[0]);
+        }
+        if (dbUser && dbUser.status !== 'suspended') {
+          return res.json({ authenticated: true, user: dbUser });
+        }
+      }
+      return res.json({ authenticated: false, user: null });
+    } catch {
+      return res.json({ authenticated: false, user: null });
+    }
   });
 
   app.get('/api/profile', requireAuth, (req: AuthRequest, res) => res.json(req.dbUser));

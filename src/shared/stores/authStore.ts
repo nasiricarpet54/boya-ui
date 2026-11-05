@@ -66,20 +66,44 @@ export const useAuthStore = create<AuthState>()(
       verifySession: async () => {
         set({ isLoading: true });
         try {
-          const response = await fetch('/api/profile', {
+          const response = await fetch('/api/auth/session', {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
           });
 
-          if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
+          if (response.ok) {
+            const data = await response.json();
+            if (data.authenticated && data.user) {
+              set({
+                user: data.user,
+                isAuthenticated: true,
+                isLoading: false,
+                isSessionVerified: true,
+              });
+              useUIStore.getState().setAppMode(getAppModeForRole(data.user.role));
+              return data.user;
+            } else {
+              get().clearAuth();
+              return null;
+            }
+          }
+
+          // Fallback to /api/profile if /api/auth/session is unavailable
+          const legacyRes = await fetch('/api/profile', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+          });
+
+          if (!legacyRes.ok) {
+            if (legacyRes.status === 401 || legacyRes.status === 403) {
               get().clearAuth();
             }
             return null;
           }
 
-          const verifiedUser: User = await response.json();
+          const verifiedUser: User = await legacyRes.json();
           set({
             user: verifiedUser,
             isAuthenticated: true,

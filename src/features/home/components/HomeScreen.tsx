@@ -63,7 +63,7 @@ export const HomeScreen: React.FC = () => {
           return false;
         }
       }
-      if (selectedCity !== 'همه' && !salon.province.includes(selectedCity) && !salon.city.includes(selectedCity)) {
+      if (selectedCity !== 'همه' && !(salon.province || '').includes(selectedCity) && !(salon.city || '').includes(selectedCity)) {
         return false;
       }
       if (filterMobileOnly && !salon.isMobileServiceActive) {
@@ -71,10 +71,10 @@ export const HomeScreen: React.FC = () => {
       }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchName = salon.name.toLowerCase().includes(q);
-        const matchDistrict = salon.district.toLowerCase().includes(q);
-        const matchService = salon.services.some((s: any) => s.name.toLowerCase().includes(q));
-        const matchSpecialist = salon.specialists.some((sp: any) => sp.name.toLowerCase().includes(q));
+        const matchName = (salon.name || '').toLowerCase().includes(q);
+        const matchDistrict = (salon.district || '').toLowerCase().includes(q);
+        const matchService = (salon.services || []).some((s: any) => (s.name || '').toLowerCase().includes(q));
+        const matchSpecialist = (salon.specialists || []).some((sp: any) => (sp.name || '').toLowerCase().includes(q));
         if (!matchName && !matchDistrict && !matchService && !matchSpecialist) return false;
       }
       return true;

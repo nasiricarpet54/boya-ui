@@ -1,0 +1,2620 @@
+contentscript.js:14974 MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 close listeners added. Use emitter.setMaxListeners() to increase limit
+n @ contentscript.js:14974
+c @ contentscript.js:14974
+a.addListener @ contentscript.js:14974
+K.on @ contentscript.js:15008
+a.once @ contentscript.js:14974
+A.pipe @ contentscript.js:14894
+B @ contentscript.js:15008
+U @ contentscript.js:15008
+P @ contentscript.js:15008
+N @ contentscript.js:14890
+(anonymous) @ contentscript.js:14890
+(anonymous) @ contentscript.js:15051
+call.__webpack_require__._LM_.__webpack_require__.__webpack_require__ @ contentscript.js:15051
+(anonymous) @ contentscript.js:15051
+(anonymous) @ contentscript.js:15051
+contentscript.js:14974 MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 end listeners added. Use emitter.setMaxListeners() to increase limit
+n @ contentscript.js:14974
+c @ contentscript.js:14974
+a.addListener @ contentscript.js:14974
+K.on @ contentscript.js:15008
+N @ contentscript.js:15008
+B @ contentscript.js:15008
+U @ contentscript.js:15008
+P @ contentscript.js:15008
+N @ contentscript.js:14890
+(anonymous) @ contentscript.js:14890
+(anonymous) @ contentscript.js:15051
+call.__webpack_require__._LM_.__webpack_require__.__webpack_require__ @ contentscript.js:15051
+(anonymous) @ contentscript.js:15051
+(anonymous) @ contentscript.js:15051
+contentscript.js:15051 ObjectMultiplex - orphaned data for stream "app-init-liveness"
+warn @ contentscript.js:15051
+_write @ contentscript.js:14894
+R @ contentscript.js:14894
+M @ contentscript.js:14894
+S.write @ contentscript.js:14894
+d @ contentscript.js:15008
+a.emit @ contentscript.js:14974
+J @ contentscript.js:15008
+Z @ contentscript.js:15008
+K.push @ contentscript.js:15008
+(anonymous) @ contentscript.js:14974
+contentscript.js:15051 ObjectMultiplex - orphaned data for stream "app-init-liveness"
+warn @ contentscript.js:15051
+_write @ contentscript.js:14894
+R @ contentscript.js:14894
+M @ contentscript.js:14894
+S.write @ contentscript.js:14894
+d @ contentscript.js:15008
+a.emit @ contentscript.js:14974
+J @ contentscript.js:15008
+Z @ contentscript.js:15008
+K.push @ contentscript.js:15008
+(anonymous) @ contentscript.js:15008
+transform @ contentscript.js:14890
+s._write @ contentscript.js:15008
+O @ contentscript.js:15008
+I @ contentscript.js:15008
+N.write @ contentscript.js:15008
+d @ contentscript.js:15008
+a.emit @ contentscript.js:14974
+J @ contentscript.js:15008
+Z @ contentscript.js:15008
+K.push @ contentscript.js:15008
+(anonymous) @ contentscript.js:14974
+contentscript.js:15051 ObjectMultiplex - orphaned data for stream "background-liveness"
+warn @ contentscript.js:15051
+_write @ contentscript.js:14894
+R @ contentscript.js:14894
+M @ contentscript.js:14894
+S.write @ contentscript.js:14894
+d @ contentscript.js:15008
+a.emit @ contentscript.js:14974
+J @ contentscript.js:15008
+Z @ contentscript.js:15008
+K.push @ contentscript.js:15008
+(anonymous) @ contentscript.js:14974
+contentscript.js:15051 ObjectMultiplex - orphaned data for stream "background-liveness"
+warn @ contentscript.js:15051
+_write @ contentscript.js:14894
+R @ contentscript.js:14894
+M @ contentscript.js:14894
+S.write @ contentscript.js:14894
+d @ contentscript.js:15008
+a.emit @ contentscript.js:14974
+J @ contentscript.js:15008
+Z @ contentscript.js:15008
+K.push @ contentscript.js:15008
+(anonymous) @ contentscript.js:15008
+transform @ contentscript.js:14890
+s._write @ contentscript.js:15008
+O @ contentscript.js:15008
+I @ contentscript.js:15008
+N.write @ contentscript.js:15008
+d @ contentscript.js:15008
+a.emit @ contentscript.js:14974
+J @ contentscript.js:15008
+Z @ contentscript.js:15008
+K.push @ contentscript.js:15008
+(anonymous) @ contentscript.js:14974
+content.bundle.js:3528 Creating a worker from 'blob:https://boya.bcshopir.ir/234202c6-1f91-4a75-840d-91e85a9afaff' violates the following Content Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval'". Note that 'worker-src' was not explicitly set, so 'script-src' is used as a fallback. The action has been blocked.
+m @ content.bundle.js:3528
+M @ content.bundle.js:3578
+e @ content.bundle.js:3606
+7169 @ content.bundle.js:3607
+__webpack_require__ @ content.bundle.js:8162
+2063 @ content.bundle.js:6847
+__webpack_require__ @ content.bundle.js:8162
+8914 @ content.bundle.js:7947
+__webpack_require__ @ content.bundle.js:8162
+7396 @ content.bundle.js:7501
+__webpack_require__ @ content.bundle.js:8162
+9031 @ content.bundle.js:6097
+__webpack_require__ @ content.bundle.js:8162
+872 @ content.bundle.js:6059
+__webpack_require__ @ content.bundle.js:8162
+6681 @ content.bundle.js:6237
+__webpack_require__ @ content.bundle.js:8162
+4334 @ content.bundle.js:6130
+__webpack_require__ @ content.bundle.js:8162
+5543 @ content.bundle.js:6399
+__webpack_require__ @ content.bundle.js:8162
+9989 @ content.bundle.js:7628
+__webpack_require__ @ content.bundle.js:8162
+2314 @ content.bundle.js:8065
+__webpack_require__ @ content.bundle.js:8162
+6094 @ content.bundle.js:7027
+__webpack_require__ @ content.bundle.js:8162
+6203 @ content.bundle.js:5770
+__webpack_require__ @ content.bundle.js:8162
+5455 @ content.bundle.js:6027
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+99Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4989 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+i @ content.bundle.js:4989
+onloadCallback @ content.bundle.js:4992
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4940 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+n.Initialize @ content.bundle.js:4940
+G.FloaterInitialize @ content.bundle.js:4973
+onloadCallback @ content.bundle.js:4995
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4940 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+n.Initialize @ content.bundle.js:4940
+G.FloaterInitialize @ content.bundle.js:4973
+onloadCallback @ content.bundle.js:4995
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4941 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+n.Initialize @ content.bundle.js:4941
+G.FloaterInitialize @ content.bundle.js:4973
+onloadCallback @ content.bundle.js:4995
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4945 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+n.Initialize @ content.bundle.js:4945
+G.FloaterInitialize @ content.bundle.js:4973
+onloadCallback @ content.bundle.js:4995
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4945 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+n.Initialize @ content.bundle.js:4945
+G.FloaterInitialize @ content.bundle.js:4973
+onloadCallback @ content.bundle.js:4995
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4945 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+n.Initialize @ content.bundle.js:4945
+G.FloaterInitialize @ content.bundle.js:4973
+onloadCallback @ content.bundle.js:4995
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+content.bundle.js:4945 Executing inline event handler violates the following Content Security Policy directive 'script-src-attr 'none''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+n.Initialize @ content.bundle.js:4945
+G.FloaterInitialize @ content.bundle.js:4973
+onloadCallback @ content.bundle.js:4995
+loadAllScripts @ content.bundle.js:4984
+fpTranslate @ content.bundle.js:5128
+injectScript @ content.bundle.js:5129
+(anonymous) @ content.bundle.js:5152
+l @ content.bundle.js:912
+c @ content.bundle.js:916
+setTimeout
+(anonymous) @ content.bundle.js:920
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+fire @ content.bundle.js:901
+l @ content.bundle.js:888
+fireWith @ content.bundle.js:900
+ready @ content.bundle.js:946
+setTimeout
+(anonymous) @ content.bundle.js:947
+(anonymous) @ content.bundle.js:469
+9755 @ content.bundle.js:471
+__webpack_require__ @ content.bundle.js:8162
+(anonymous) @ content.bundle.js:8177
+(anonymous) @ content.bundle.js:8195
+(anonymous) @ content.bundle.js:8195
+authStore-tOKAszEd.js:1  GET https://boya.bcshopir.ir/api/profile 401 (Unauthorized)
