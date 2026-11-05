@@ -215,6 +215,17 @@ export async function runMigrations() {
       }
     }
 
+    // Ensure salon_status enum exists
+    try {
+      await pool.query(`DO $$ BEGIN
+        CREATE TYPE "public"."salon_status" AS ENUM('active', 'pending', 'suspended');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;`);
+    } catch (e: any) {
+      console.warn('[DB MIGRATE NOTICE] salon_status enum check notice:', e?.message || e);
+    }
+
     // 2. Pre-migration self-healing check using information_schema.columns
     const columnsToCheck: Array<{ table: string; column: string; definition: string }> = [
       { table: 'specialists', column: 'working_hours', definition: 'TEXT' },
@@ -225,6 +236,7 @@ export async function runMigrations() {
       { table: 'specialists', column: 'is_verified', definition: 'BOOLEAN DEFAULT FALSE NOT NULL' },
       { table: 'specialists', column: 'avatar_url', definition: 'TEXT' },
       { table: 'specialists', column: 'publication_status', definition: "TEXT DEFAULT 'active' NOT NULL" },
+      { table: 'salons', column: 'status', definition: "salon_status DEFAULT 'pending' NOT NULL" },
       { table: 'salons', column: 'is_mobile_service_active', definition: 'BOOLEAN DEFAULT FALSE NOT NULL' },
       { table: 'salons', column: 'is_vip', definition: 'BOOLEAN DEFAULT FALSE NOT NULL' },
       { table: 'salons', column: 'vip_badge_label', definition: 'TEXT' },
