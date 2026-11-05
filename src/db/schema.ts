@@ -3,13 +3,20 @@ import { relations, sql } from 'drizzle-orm';
 
 // Enums
 export const userRoleEnum = pgEnum('user_role', [
-  'customer', 
-  'salon_specialist', 
-  'mobile_specialist', 
-  'line_manager', 
-  'salon_admin', 
+  'customer',
+  'salon_specialist',
+  'mobile_specialist',
+  'line_manager',
+  'salon_admin',
   'super_admin'
 ]);
+
+// F-11: the admin dashboard has been sending { isApproved, status } since the
+// validation pass that added `status` to salonUpdateSchema — but the column
+// was never created, so every approve/reject from AdminDashboardView failed
+// against the real table. Keep it simple: it mirrors isApproved rather than
+// modelling a separate publication workflow.
+export const salonStatusEnum = pgEnum('salon_status', ['active', 'pending', 'suspended']);
 
 export const bookingStatusEnum = pgEnum('booking_status', [
   'pending', 
@@ -66,6 +73,9 @@ export const salons = pgTable('salons', {
   rating: decimal('rating', { precision: 3, scale: 2 }).default('5.00').notNull(),
   reviewsCount: integer('reviews_count').default(0).notNull(),
   isApproved: boolean('is_approved').default(false).notNull(),
+  // F-11: written by the admin approval flow; kept in sync with isApproved by
+  // the PATCH handler so the two fields cannot disagree.
+  status: salonStatusEnum('status').default('pending').notNull(),
   isVip: boolean('is_vip').default(false).notNull(),
   vipBadgeLabel: text('vip_badge_label'),
   isMobileServiceActive: boolean('is_mobile_service_active').default(false).notNull(),

@@ -99,7 +99,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-white p-1 border border-white/20 shadow-md flex items-center justify-center shrink-0">
               <img
-                src="/assets/aistudio/IMG_20261031_121115_770_79cc90aa.png"
+                src="/assets/boya-logo.png"
                 alt="BOYA"
                 className="w-full h-full object-contain"
               />

@@ -8,6 +8,7 @@ import { requireAuth, requireRole, type AuthRequest } from '../middleware/auth.t
 import * as schemas from '../lib/validation.ts';
 import { generateJwtToken, generateRefreshTokenValue, REFRESH_TOKEN_EXPIRES_IN_MS } from '../lib/jwt.ts';
 import { logSecurityAction } from '../db/audit.ts';
+import { otpSet, otpGet, otpDel, otpRateLimited } from '../lib/otp.ts';
 import { normalizePhone } from '../shared/utils/persianUtils.ts';
 import { normalizeToIsoDate, toIsoDate, gregorianToJalali, JALALI_MONTHS, STANDARD_HOURLY_SLOTS, normalizeTimeToLatin, toLatinDigits } from '../shared/utils/dateIsoConverter.ts';
 
@@ -50,9 +51,14 @@ router.post('/auth/otp/send', async (req, res) => {
     const phoneNumber = normalizePhone(req.body.phoneNumber || req.body.phone);
     if (!phoneNumber) return res.status(400).json({ error: 'شماره موبایل نامعتبر است.' });
 
-    // Rate limit by phone number: max 3 requests per 5 minutes.
+    // F-05: the comment below claimed a 3/5min limit that no code enforced.
+    // Every send dispatches a billable SMS, so the limit is applied here now.
+    if (await otpRateLimited(phoneNumber)) {
+      return res.status(429).json({ error: 'تعداد درخواست بیش از حد مجاز. چند دقیقه صبر کنید.' });
+    }
+
     const otpCode = crypto.randomInt(10000, 99999).toString();
-    memOtpStore.set(phoneNumber, { code: otpCode, attempts: 0, expiresAt: Date.now() + 5 * 60 * 1000 });
+    await otpSet(phoneNumber, { code: otpCode, attempts: 0 });
 
     if (process.env.NODE_ENV === 'development') {
       console.log(`[OTP LOG] ${phoneNumber} -> ${otpCode}`);
@@ -78,19 +84,20 @@ router.post('/auth/otp/verify', async (req, res) => {
     const code = String(req.body.code || '').trim();
     if (!phoneNumber || !code) return res.status(400).json({ error: 'اطلاعات ناقص است.' });
 
-    const stored = memOtpStore.get(phoneNumber);
-    if (!stored || stored.expiresAt < Date.now()) {
+    const stored: any = await otpGet(phoneNumber);
+    if (!stored) {
       return res.status(400).json({ error: 'کد منقضی شده یا یافت نشد.' });
     }
     if (stored.code !== code) {
-      stored.attempts++;
+      stored.attempts = (stored.attempts || 0) + 1;
       if (stored.attempts >= 3) {
-        memOtpStore.delete(phoneNumber);
+        await otpDel(phoneNumber);
         return res.status(401).json({ error: 'تعداد تلاش‌ها زیاد شد.' });
       }
+      await otpSet(phoneNumber, stored);
       return res.status(400).json({ error: `کد اشتباه است. (${3 - stored.attempts} تلاش باقی مانده)` });
     }
-    memOtpStore.delete(phoneNumber);
+    await otpDel(phoneNumber);
 
     let dbUser = await db.select().from(users).where(eq(users.phone, phoneNumber)).limit(1).then(r => r[0]);
     if (dbUser?.status === 'suspended') {
@@ -174,12 +181,12 @@ router.post('/auth/login', async (req, res) => {
     const code = String(req.body.code || '').trim();
     if (!phoneNumber || !code) return res.status(400).json({ error: 'اطلاعات ناقص است.' });
 
-    const stored = memOtpStore.get(phoneNumber);
-    if (!stored || stored.expiresAt < Date.now()) {
+    const stored: any = await otpGet(phoneNumber);
+    if (!stored) {
       return res.status(400).json({ error: 'کد منقضی شده یا یافت نشد.' });
     }
     if (stored.code !== code) return res.status(400).json({ error: 'کد اشتباه است.' });
-    memOtpStore.delete(phoneNumber);
+    await otpDel(phoneNumber);
 
     let dbUser = await db.select().from(users).where(eq(users.phone, phoneNumber)).limit(1).then(r => r[0]);
     if (!dbUser) {
@@ -704,6 +711,3 @@ router.get('/auth/forbidden', (_req, res) => {
 });
 
 export default router;
-
-// --- In-memory OTP store (shared with the v1 layer; production should use Redis) ---
-const memOtpStore = new Map<string, { code: string; attempts: number; expiresAt: number }>();

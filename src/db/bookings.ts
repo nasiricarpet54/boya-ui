@@ -215,8 +215,16 @@ export async function getBookingsForUser(user: any) {
 }
 
 export async function updateBookingStatus(bookingId: number, status: any) {
+  // F-09: paymentStatus had no write site anywhere, so /finance reported
+  // "pending payments" equal to every booking ever created. A completed
+  // booking is settled; a cancelled one releases the hold.
+  const paymentStatus = status === 'completed' ? 'fully_paid'
+    : status === 'cancelled' ? 'refunded'
+    : status === 'confirmed' ? 'deposit_paid'
+    : 'unpaid';
+
   const [updated] = await db.update(bookings)
-    .set({ status })
+    .set({ status, paymentStatus })
     .where(eq(bookings.id, bookingId))
     .returning();
 

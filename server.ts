@@ -21,13 +21,13 @@ import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
 import { normalizeToIsoDate, normalizeTime, normalizeTimeToLatin, toLatinDigits, toIsoDate, gregorianToJalali, JALALI_MONTHS, STANDARD_HOURLY_SLOTS } from './src/shared/utils/dateIsoConverter.ts';
 import { normalizePhone } from './src/shared/utils/persianUtils.ts';
-import { generateJwtToken, generateRefreshTokenValue, decodeTokenExpiry, REFRESH_TOKEN_EXPIRES_IN_MS, verifyJwtToken } from './src/lib/jwt.ts';
+import { generateJwtToken, generateRefreshTokenValue, decodeTokenExpiry, REFRESH_TOKEN_EXPIRES_IN_MS } from './src/lib/jwt.ts';
 import { seedDatabase } from './src/db/seed.ts';
-import { getOrCreateUserByPhone } from './src/db/users.ts';
 import { runMigrations } from './src/db/migrate.ts';
 import { logSecurityAction } from './src/db/audit.ts';
 import * as schemas from './src/lib/validation.ts';
 import { redactUserPII, processBookingData } from './src/lib/piiRedactor.ts';
+import { otpSet, otpGet, otpDel, otpRateLimited } from './src/lib/otp.ts';
 
 dotenv.config();
 
@@ -40,32 +40,15 @@ console.log(`[BOOT] isProd: ${isProd}`);
 console.log(`[BOOT] PORT: ${PORT}`);
 
 // --- Redis & OTP Setup ---
+// F-03: OTP storage and rate limiting live in src/lib/otp.ts so the web and
+// mobile entry points share one implementation. Kept imported here for the
+// boot-time log line below.
 const redisClient: Redis | null = process.env.REDIS_URL ? new Redis(process.env.REDIS_URL) : null;
 if (redisClient) {
   redisClient.on('error', (e) => console.error('[REDIS ERROR]', e.message));
   console.log('[REDIS] Connected (durable OTP store).');
 } else {
   console.warn('[REDIS] REDIS_URL not set -- using in-memory OTP.');
-}
-
-const memOtp = new Map<string, string>();
-const memRate = new Map<string, string>();
-
-async function otpSet(k: string, v: any, ttl: number) {
-  if (redisClient) await redisClient.setex(`otp:${k}`, ttl, JSON.stringify(v));
-  else memOtp.set(k, JSON.stringify(v));
-}
-async function otpGet(k: string) {
-  if (redisClient) return JSON.parse(await redisClient.get(`otp:${k}`) || 'null');
-  return JSON.parse(memOtp.get(k) || 'null');
-}
-async function otpDel(k: string) {
-  if (redisClient) await redisClient.del(`otp:${k}`);
-  else memOtp.delete(k);
-}
-async function rateIncr(k: string, ttl: number) {
-  if (redisClient) return await redisClient.incr(`rate:${k}`);
-  let c = (memRate.get(k) as any) || 0; c++; memRate.set(k, c); return c;
 }
 
 async function createServer() {
@@ -161,8 +144,7 @@ async function createServer() {
       const { phone: rawPhone } = req.body;
       const phone = schemas.phoneSchema.parse(normalizePhone(rawPhone));
       
-      const attempts = await rateIncr(phone, 5 * 60);
-      if (attempts > 3) return res.status(429).json({ error: 'تعداد درخواست بیش از حد مجاز. چند دقیقه صبر کنید.' });
+      if (await otpRateLimited(phone)) return res.status(429).json({ error: 'تعداد درخواست بیش از حد مجاز. چند دقیقه صبر کنید.' });
 
       const otpCode = crypto.randomInt(10000, 99999).toString();
       await otpSet(phone, { code: otpCode, attempts: 0 }, 5 * 60);
@@ -539,8 +521,26 @@ async function createServer() {
   });
   app.post('/api/notifications/broadcast', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
     try {
-      const { title, content, targetAudience } = req.body;
+      const { title, content, targetAudience, testPhone } = req.body;
       if (!title || !content) return res.status(400).json({ error: 'عنوان و متن الزامی است.' });
+      let sc = 0;
+
+      if (testPhone) {
+        // F-02: the duplicate registration ahead of this one ignored testPhone
+        // and texted the whole audience; Express runs the first match, so the
+        // "send a test SMS" button was a mass-SMS button.
+        const clean = normalizePhone(testPhone);
+        if (clean) {
+          try {
+            await sendMeliPayamakSms(clean, `${title}\n${content}`);
+            sc++;
+          } catch (e) {
+            console.error('[TEST SMS ERROR]', e);
+          }
+        }
+        return res.status(200).json({ success: true, sentCount: sc, testMessage: true });
+      }
+
       // P3: Filter the audience in SQL, not in memory.
       const audienceRoles = targetAudience === 'customer'
         ? ['customer']
@@ -550,8 +550,14 @@ async function createServer() {
       const tu = audienceRoles
         ? await db.select({ phone: users.phone }).from(users).where(inArray(users.role as any, audienceRoles))
         : await db.select({ phone: users.phone }).from(users);
-      let sc = 0;
-      for (const u of tu) if (u.phone) { try { await sendMeliPayamakSms(u.phone, `${title}\\n${content}`); sc++; } catch {} }
+      for (const u of tu) {
+        if (u.phone) {
+          try {
+            await sendMeliPayamakSms(u.phone, `${title}\n${content}`);
+            sc++;
+          } catch {}
+        }
+      }
       const [n] = await db.insert(notifications).values({ title: String(title).trim(), content: String(content).trim(), type: 'promotional', targetAudience: targetAudience || 'all', channel: 'sms', isActive: true, badgeText: `${sc} پیامک` }).returning();
       res.status(201).json({ success: true, sentCount: sc, notification: n });
     } catch (e: any) { res.status(500).json({ error: e?.message || 'خطا در ارسال پیامک.' }); }
@@ -844,24 +850,25 @@ async function createServer() {
   // ==========================================
   // AUDIT (P0): Notifications CRUD & Campaign Management
   // ==========================================
-  app.get('/api/notifications', async (req, res) => {
+  // F-01: replaced an inline check against a cookie that is never set
+  // (`auth_token`) — which also skipped revocation, suspension and user
+  // existence — with the same middleware every other privileged endpoint
+  // uses. Staff see all rows; anonymous users see active rows only.
+  app.get('/api/notifications', requireAuth, requireRole(['super_admin', 'salon_admin', 'line_manager']), async (_req: AuthRequest, res) => {
     try {
-      let isStaff = false;
-      const authHeader = req.headers.authorization;
-      const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : (req as any).cookies?.auth_token;
-      if (token) {
-        const decoded = verifyJwtToken(token);
-        if (decoded && ['super_admin', 'salon_admin', 'line_manager'].includes(decoded.role)) {
-          isStaff = true;
-        }
-      }
-
-      const list = isStaff
-        ? await db.select().from(notifications).orderBy(desc(notifications.createdAt))
-        : await db.select().from(notifications).where(eq(notifications.isActive, true)).orderBy(desc(notifications.createdAt));
+      const list = await db.select().from(notifications).orderBy(desc(notifications.createdAt));
       res.json(list);
     } catch (err: any) {
       console.error('[GET NOTIFICATIONS ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت اعلانات.' });
+    }
+  });
+  app.get('/api/notifications/public', async (_req, res) => {
+    try {
+      const list = await db.select().from(notifications).where(eq(notifications.isActive, true)).orderBy(desc(notifications.createdAt));
+      res.json(list);
+    } catch (err: any) {
+      console.error('[GET NOTIFICATIONS PUBLIC ERROR]', err);
       res.status(500).json({ error: 'خطا در دریافت اعلانات.' });
     }
   });
@@ -967,47 +974,6 @@ async function createServer() {
       res.json({ success: true });
     } catch {
       res.json({ success: false });
-    }
-  });
-
-  app.post('/api/notifications/broadcast', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
-    try {
-      const { title, content, targetAudience, testPhone } = req.body;
-      if (!title || !content) return res.status(400).json({ error: 'عنوان و متن الزامی است.' });
-      let sc = 0;
-
-      if (testPhone) {
-        const clean = normalizePhone(testPhone);
-        if (clean) {
-          try {
-            await sendMeliPayamakSms(clean, `${title}\n${content}`);
-            sc++;
-          } catch (e) {
-            console.error('[TEST SMS ERROR]', e);
-          }
-        }
-      } else {
-        const audienceRoles = targetAudience === 'customer'
-          ? ['customer']
-          : targetAudience === 'salon'
-          ? ['salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']
-          : null;
-        const tu = audienceRoles
-          ? await db.select({ phone: users.phone }).from(users).where(inArray(users.role as any, audienceRoles))
-          : await db.select({ phone: users.phone }).from(users);
-        for (const u of tu) {
-          if (u.phone) {
-            try {
-              await sendMeliPayamakSms(u.phone, `${title}\n${content}`);
-              sc++;
-            } catch {}
-          }
-        }
-      }
-
-      res.status(200).json({ success: true, sentCount: sc });
-    } catch (e: any) {
-      res.status(500).json({ error: e?.message || 'خطا در ارسال پیامک.' });
     }
   });
 

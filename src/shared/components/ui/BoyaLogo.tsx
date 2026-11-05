@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const BOYA_LOGO_URL = '/assets/aistudio/IMG_20261031_121115_770_79cc90aa.png';
+export const BOYA_LOGO_URL = '/assets/boya-logo.png';
 
 export type BoyaLogoVariant = 'full' | 'symbol' | 'header' | 'badge' | 'animated';
 export type BoyaLogoSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'hero';

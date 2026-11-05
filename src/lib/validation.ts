@@ -96,7 +96,7 @@ export const salonCreateSchema = z.object({
 export const notificationCreateSchema = z.object({
   title: z.string().min(1, 'عنوان اعلان الزامی است'),
   content: z.string().min(1, 'متن اعلان الزامی است'),
-  type: z.string().default('informational'),
+  type: z.string().default('promotional'),
   targetAudience: z.string().default('all'),
   channel: z.string().default('in_app'),
   actionUrl: z.string().optional().nullable(),

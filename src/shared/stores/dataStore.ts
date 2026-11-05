@@ -101,9 +101,14 @@ export const useDataStore = create<DataState>()(
 
           const staffRoles = ['super_admin', 'salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager'];
           const salonsEndpoint = isAuth && authUser && staffRoles.includes(authUser.role) ? '/managed/salons' : '/salons';
+          // F-01: /notifications is staff-only now; anonymous/non-staff users
+          // (the customer banner renderer) read the active-only public feed.
+          const notifsEndpoint = isAuth && authUser && ['super_admin', 'salon_admin', 'line_manager'].includes(authUser.role)
+            ? '/notifications'
+            : '/notifications/public';
           const [salonsRes, notifsRes] = await Promise.all([
             api.get(salonsEndpoint).catch(() => ({ data: [] })),
-            api.get('/notifications').catch(() => ({ data: [] })),
+            api.get(notifsEndpoint).catch(() => ({ data: [] })),
           ]);
 
           let usersData: any[] = [];

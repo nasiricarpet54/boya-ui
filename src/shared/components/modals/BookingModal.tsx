@@ -141,7 +141,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         // services table, so a tampered request cannot book at another price.
       });
 
-      const tracking = response.data?.trackingCode || `BY-${Math.floor(100000 + Math.random() * 900000)}`;
+      // F-08: never fabricate a tracking code. A made-up `BY-<random>` would
+      // collide with the server's unique constraint on retry and show the
+      // customer a confirmation for a booking that does not exist.
+      const tracking = response.data?.trackingCode;
+      if (!tracking) {
+        showToast('خطا در ثبت نوبت: کد رهگیری دریافت نشد. لطفاً دوباره تلاش کنید.');
+        return;
+      }
       setGeneratedTrackingCode(tracking);
       setIsConfirmed(true);
       onConfirmBooking({
