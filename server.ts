@@ -61,11 +61,12 @@ async function createServer() {
   if (isProd) {
     app.use(helmet({
       contentSecurityPolicy: {
-        useDefaults: true,
+        useDefaults: false,
         directives: {
           "default-src": ["'self'"],
-          "img-src": ["'self'", "data:", "blob:", "https:", "https://images.unsplash.com"],
+          "img-src": ["'self'", "data:", "blob:", "https:", "https://images.unsplash.com", "https://*.tile.openstreetmap.org"],
           "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:"],
+          "script-src-elem": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:"],
           "script-src-attr": ["'unsafe-inline'"],
           "worker-src": ["'self'", "blob:"],
           "child-src": ["'self'", "blob:"],
@@ -74,7 +75,10 @@ async function createServer() {
           "font-src": ["'self'", "data:", "https:"],
           "connect-src": ["'self'", "https:", "wss:", "ws:"],
           "frame-src": ["'self'", "https:"],
+          "frame-ancestors": ["'none'"],
           "object-src": ["'none'"],
+          "form-action": ["'self'"],
+          "base-uri": ["'self'"]
         }
       },
       crossOriginEmbedderPolicy: false,

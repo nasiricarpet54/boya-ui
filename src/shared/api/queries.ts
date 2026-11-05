@@ -2,17 +2,24 @@ import { useQuery } from '@tanstack/react-query';
 import api from './apiClient';
 import { useAuthStore } from '../stores/authStore';
 
-const isExplicitlyInactive = (item: any) =>
+const isExplicitlyInactive = (item: any, checkStatus = true) =>
   item?.isActive === false || item?.active === false ||
   (item?.publicationStatus != null && item.publicationStatus !== 'active') ||
-  (item?.status != null && item.status !== 'active');
+  (checkStatus && item?.status != null && item.status !== 'active');
 
 /**
  * Filter customer-facing published salons.
  * Note: Does NOT mutate or overwrite the global admin dataStore.salons.
+ *
+ * F-11: `salons.status` is internal admin business state (`pending` means the
+ * salon is awaiting review). Public visibility is already decided server-side
+ * by `/api/salons`, which filters on `isApproved = true`. Re-gating on
+ * `status !== 'active'` here hid every approved salon whose status defaulted
+ * to `pending` — the marketplace came up empty. Pass `false` so the salon
+ * filter ignores `status` and trusts the server's `isApproved` decision.
  */
 const filterPublishedSalons = (items: any[]) => items
-  .filter((salon) => salon?.isApproved !== false && !isExplicitlyInactive(salon))
+  .filter((salon) => salon?.isApproved !== false && !isExplicitlyInactive(salon, false))
   .map((salon) => ({
     ...salon,
     services: (Array.isArray(salon.services) ? salon.services : []).filter(
