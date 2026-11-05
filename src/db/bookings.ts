@@ -14,7 +14,6 @@ export async function createBooking(data: {
   isMobileBooking: boolean;
   customerAddress?: string;
   notes?: string;
-  price: string | number;
 }) {
   try {
     // SECURITY: Use cryptographically secure random integers for tracking codes

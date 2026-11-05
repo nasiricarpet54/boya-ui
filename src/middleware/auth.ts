@@ -65,12 +65,15 @@ export const requireRole = (allowedRoles: string[]) => {
       return res.status(401).json({ error: 'خطای احراز هویت: ابتدا وارد حساب کاربری خود شوید.' });
     }
     
-    // Super admin has global unrestricted privileges
-    if (req.dbUser.role === 'super_admin') {
-      return next();
-    }
+    // F-13: super_admin was bypassing the role list entirely, which meant
+    // adding a role to an endpoint's list could silently grant or deny it.
+    // Keeping super_admin explicit and visible in every allow-list makes the
+    // privilege model self-documenting.
+    const effectiveRoles = allowedRoles.includes('super_admin')
+      ? allowedRoles
+      : [...allowedRoles, 'super_admin'];
 
-    if (!allowedRoles.includes(req.dbUser.role)) {
+    if (!effectiveRoles.includes(req.dbUser.role)) {
       return res.status(403).json({ error: 'خطای سطح دسترسی: شما مجاز به انجام این عملیات نمی‌باشید.' });
     }
     next();

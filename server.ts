@@ -2,7 +2,9 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
-import { rateLimit } from 'express-rate-limit';
+// F-14: the express-rate-limit import was dead (no app.use(rateLimit(...)))
+// while PRODUCTION_READINESS.md claimed "100 requests/15 minutes". Removed
+// rather than left as a hint, so the doc claim cannot be believed again.
 import { sanitizeRole } from './src/db/users.ts';
 import Redis from 'ioredis';
 import { createServer as createViteServer } from 'vite';
@@ -393,7 +395,28 @@ async function createServer() {
         where: req.dbUser.role === 'super_admin' ? undefined : eq(salons.id, Number(salonId)),
         with: { services: true, specialists: { with: { user: true, portfolio: true } } },
       });
-      res.json(rows);
+      // F-10: flatten the nested specialist rows into the shape the admin and
+      // salon panels expect (name/avatar from the related user row). This fix
+      // previously lived only in the dead src/routes/salons.ts copy.
+      const mapped = rows.map((s: any) => ({
+        ...s,
+        specialists: (s.specialists || []).map((sp: any) => ({
+          id: sp.id,
+          salonId: sp.salonId,
+          name: sp.user?.fullName || '',
+          role: sp.user?.role || 'salon_specialist',
+          phone: sp.user?.phone || '',
+          avatar: sp.avatarUrl || sp.user?.avatar || '',
+          verified: sp.isVerified,
+          isMobileSpecialist: sp.isMobileActive,
+          specialtyLine: sp.specialtyLine,
+          experienceYears: sp.experienceYears,
+          bio: sp.bio || '',
+          rating: Number(sp.user?.rating ?? 4.8),
+          reviewsCount: Number(sp.user?.reviewsCount ?? 0),
+        })),
+      }));
+      res.json(mapped);
     } catch (err) {
       console.error('❌ API SALONS CRITICAL ERROR:', err); res.status(500).json({ error: 'خطا در دریافت لیست.' });
     }
@@ -476,9 +499,11 @@ async function createServer() {
       const serviceRecord = await db.select().from(services).where(eq(services.id, Number(data.serviceId))).limit(1).then(r => r[0]);
       if (!serviceRecord) return res.status(404).json({ error: 'سرویس مورد نظر یافت نشد.' });
 
+      // F-07: createBooking charges the catalog price from the services table
+      // internally; passing a client-visible `price` here would only invite a
+      // future caller to forward user input.
       const booking = await createBooking({
         ...data,
-        price: serviceRecord.price,
         customerId: req.dbUser.id,
       });
       await sendMeliPayamakSms(req.dbUser.phone, `نوبت ثبت شد. کد رهگیری: ${booking?.trackingCode}`).catch(() => {});

@@ -29,6 +29,13 @@
       "when": 1793683440000,
       "tag": "0003_working_hours",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793879737640,
+      "tag": "0004_salon_status",
+      "breakpoints": true
     }
   ]
 }

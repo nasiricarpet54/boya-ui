@@ -405,7 +405,8 @@ router.post('/bookings', requireAuth, async (req: AuthRequest, res) => {
     if (!serviceRow) return res.status(400).json({ error: 'خدمت یافت نشد.' });
 
     const { createBooking } = await import('../db/bookings.ts');
-    const booking = await createBooking({ ...data, customerId: req.dbUser.id, price: String(serviceRow.price) } as any);
+    // F-07: the price is resolved from the service record inside createBooking.
+    const booking = await createBooking({ ...data, customerId: req.dbUser.id } as any);
     res.status(201).json({ data: booking });
   } catch (err: any) {
     console.error('[MOBILE BOOKING ERROR]', err);
