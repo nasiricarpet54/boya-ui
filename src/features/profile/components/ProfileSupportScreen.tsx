@@ -1,15 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Share2, Plus, Send, CheckCircle2, ChevronLeft, Store, ShieldCheck, Camera, Edit3, LogOut, RefreshCw } from 'lucide-react';
+import { MapPin, Share2, Plus, Send, CheckCircle2, ChevronLeft, ShieldCheck, Camera, Edit3, LogOut, RefreshCw } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toPersianDigits } from '../../../shared/utils/persianUtils';
-import { useUIStore } from '../../../shared/stores/uiStore';
 import { useAuthStore } from '../../../shared/stores/authStore';
 import { SEO } from '../../../shared/components/SEO';
 import api from '../../../shared/api/apiClient';
 
 export const ProfileSupportScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { setAppMode, setShowSplashScreen, setSplashAppName } = useUIStore();
   const { logout, user, updateProfile } = useAuthStore();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,13 +106,6 @@ export const ProfileSupportScreen: React.FC = () => {
 
   const referralCode = user?.phone ? `BOYA-${user.phone.slice(-4)}` : 'BOYA-CLUB';
 
-  const handleSwitchToSalonPanel = () => {
-    setSplashAppName('ورود به پنل جامع سالندار و متخصصین بویا');
-    setShowSplashScreen(true);
-    setAppMode('salon_panel');
-    navigate({ to: '/salon-admin' });
-  };
-
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newReplyText.trim() || !selectedTicket) return;
@@ -155,7 +146,6 @@ export const ProfileSupportScreen: React.FC = () => {
 
   const handleLogout = async () => {
     await logout();
-    setAppMode('customer');
     navigate({ to: '/' });
   };
 
@@ -233,18 +223,8 @@ export const ProfileSupportScreen: React.FC = () => {
           <div className="flex items-center gap-2">
 
 
-            {(user?.role === 'salon_admin' || user?.role === 'salon_specialist' || user?.role === 'mobile_specialist' || user?.role === 'line_manager') && (
-              <button 
-                onClick={handleSwitchToSalonPanel} 
-                className="flex flex-col items-center p-2 rounded-2xl bg-[#E8F0EF] text-[#173B3F] hover:bg-[#173B3F] hover:text-white transition-all min-w-[70px]"
-              >
-                <Store className="w-5 h-5 mb-0.5" />
-                <span className="text-[10px] font-bold">پنل سالن/متخصص</span>
-              </button>
-            )}
-            
-            <button 
-              onClick={handleLogout} 
+            <button
+              onClick={handleLogout}
               className="flex flex-col items-center p-2 rounded-2xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all min-w-[70px] border border-red-100"
             >
               <LogOut className="w-5 h-5 mb-0.5" />

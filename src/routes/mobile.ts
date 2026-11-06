@@ -369,16 +369,36 @@ router.get('/salons', async (req, res) => {
   }
 });
 
+// PII GUARD: mirrors /api/salons/:id — strips the raw users row and documents
+// from the embedded specialists, and only serves approved salons.
+const sanitizeSalonForPublic = (s: any) => ({
+  ...s,
+  services: (s.services || []).filter((sv: any) => (sv as any).publicationStatus !== 'pending'),
+  specialists: (s.specialists || []).map((sp: any) => ({
+    id: sp.id,
+    name: sp.user?.fullName || sp.name || '',
+    avatarUrl: sp.avatarUrl || sp.user?.avatar || sp.avatar || '',
+    specialtyLine: sp.specialtyLine,
+    experienceYears: sp.experienceYears,
+    bio: sp.bio || '',
+    isVerified: sp.isVerified,
+    isMobileActive: sp.isMobileActive,
+    rating: Number(sp.user?.rating ?? sp.rating ?? 4.8),
+    reviewsCount: Number(sp.user?.reviewsCount ?? sp.reviewsCount ?? 0),
+    portfolio: Array.isArray(sp.portfolio) ? sp.portfolio : [],
+  })),
+});
+
 router.get('/salons/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ error: 'شناسه نامعتبر است.' });
     const salon = await db.query.salons.findFirst({
-      where: eq(salons.id, id),
+      where: and(eq(salons.id, id), eq(salons.isApproved, true)),
       with: { services: true, specialists: { with: { user: true, portfolio: true } } },
     });
     if (!salon) return res.status(404).json({ error: 'سالن یافت نشد.' });
-    res.json({ data: salon });
+    res.json({ data: sanitizeSalonForPublic(salon) });
   } catch {
     res.status(500).json({ error: 'خطا در دریافت سالن.' });
   }
@@ -552,6 +572,11 @@ router.get('/dashboard', requireAuth, requireRole(['salon_admin', 'super_admin']
 router.get('/finance', requireAuth, requireRole(['salon_admin', 'super_admin']), async (req: AuthRequest, res) => {
   try {
     const salonId = req.dbUser.salonId ? Number(req.dbUser.salonId) : null;
+    // TENANCY: an unbound staff member must not see the whole platform's
+    // revenue — mirror the /dashboard guard instead of returning everything.
+    if (!salonId && req.dbUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'سالن شما مشخص نیست.' });
+    }
     const allBookings = salonId
       ? await db.select().from(bookingsTable).where(eq(bookingsTable.salonId, salonId))
       : await db.select().from(bookingsTable);
@@ -575,6 +600,11 @@ router.get('/finance', requireAuth, requireRole(['salon_admin', 'super_admin']),
 router.get('/bookings/calendar', requireAuth, requireRole(['salon_admin', 'super_admin', 'salon_specialist']), async (req: AuthRequest, res) => {
   try {
     const salonId = req.dbUser.salonId ? Number(req.dbUser.salonId) : null;
+    // TENANCY: without this guard an unbound staff role would read bookings
+    // across ALL salons (customerId / customerAddress / notes included).
+    if (!salonId && req.dbUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'سالن شما مشخص نیست.' });
+    }
     const from = (req.query.from as string) || new Date().toISOString().slice(0, 10);
     const to = (req.query.to as string) || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
@@ -647,14 +677,23 @@ router.post('/specialists/new', requireAuth, requireRole(['salon_admin', 'super_
     const salonId = Number(req.dbUser.salonId);
     if (!Number.isFinite(salonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
 
-    const existing = await db.select().from(specialists).where(eq(specialists.userId, dbUser.id)).limit(1);
-    if (existing.length > 0) return res.status(400).json({ error: 'این کاربر قبلاً متخصص ثبت شده است.' });
+    // PRIVILEGE GUARD: never demote an existing managerial account, and never
+    // rebind a specialist who already belongs to another salon.
+    if (dbUser.role === 'super_admin' || dbUser.role === 'salon_admin' || dbUser.role === 'line_manager') {
+      return res.status(403).json({ error: 'این کاربر دارای نقش مدیریتی است.' });
+    }
+    const existing = await db.select({ id: specialists.id, salonId: specialists.salonId }).from(specialists)
+      .where(eq(specialists.userId, dbUser.id)).limit(1);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: existing[0].salonId !== salonId ? 'این کاربر متخصص سالن دیگری است.' : 'این کاربر قبلاً متخصص ثبت شده است.' });
+    }
 
     const [created] = await db.insert(specialists).values({
       userId: dbUser.id,
       salonId,
       specialtyLine: specialtyLine || 'hair',
       isVerified: false,
+      publicationStatus: 'pending',
     } as any).returning();
     res.status(201).json({ data: created });
   } catch (err) {
@@ -676,14 +715,22 @@ router.post('/specialists/invite', requireAuth, requireRole(['salon_admin', 'sup
     const salonId = Number(req.dbUser.salonId);
     if (!Number.isFinite(salonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
 
-    const existing = await db.select().from(specialists).where(eq(specialists.userId, dbUser.id)).limit(1);
-    if (existing.length > 0) return res.status(400).json({ error: 'این کاربر قبلاً متخصص ثبت شده است.' });
+    // PRIVILEGE GUARD: same protection as /specialists/new.
+    if (dbUser.role === 'super_admin' || dbUser.role === 'salon_admin' || dbUser.role === 'line_manager') {
+      return res.status(403).json({ error: 'این کاربر دارای نقش مدیریتی است.' });
+    }
+    const existing = await db.select({ id: specialists.id, salonId: specialists.salonId }).from(specialists)
+      .where(eq(specialists.userId, dbUser.id)).limit(1);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: existing[0].salonId !== salonId ? 'این کاربر متخصص سالن دیگری است.' : 'این کاربر قبلاً متخصص ثبت شده است.' });
+    }
 
     const [created] = await db.insert(specialists).values({
       userId: dbUser.id,
       salonId,
       specialtyLine: specialtyLine || 'hair',
       isVerified: false,
+      publicationStatus: 'pending',
     } as any).returning();
     res.status(201).json({ data: created });
   } catch (err) {
@@ -720,6 +767,12 @@ router.post('/auth/invite', requireAuth, requireRole(['salon_admin', 'super_admi
     const cleanPhone = normalizePhone(phone);
     if (!cleanPhone) return res.status(400).json({ error: 'شماره موبایل نامعتبر است.' });
     const { getOrCreateUserByPhone } = await import('../db/users.ts');
+    // Only create NEW users here. Réusing getOrCreateUserByPhone would overwrite
+    // the fullName of any existing account the caller merely knows the phone of.
+    const existing = await db.select().from(users).where(eq(users.phone, cleanPhone)).limit(1);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'کاربری با این شماره قبلاً ثبت شده است.' });
+    }
     const dbUser = await getOrCreateUserByPhone(cleanPhone, fullName);
     res.status(201).json({ data: { id: String(dbUser.id), phoneNumber: dbUser.phone, fullName: dbUser.fullName } });
   } catch {

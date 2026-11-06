@@ -38,5 +38,16 @@ export const isStaff = (role?: UserRole | null): boolean =>
 export const isSuperAdmin = (role?: UserRole | null): boolean => 
   role === ROLES.SUPER_ADMIN;
 
-export const canManageUsers = (role?: UserRole | null): boolean => 
+export const canManageUsers = (role?: UserRole | null): boolean =>
   !!role && [ROLES.SUPER_ADMIN, ROLES.SALON_ADMIN, ROLES.LINE_MANAGER].includes(role);
+
+// Route classification for the role-lock: a logged-in staff member must never
+// land on a customer route, and vice versa. Prefix matching covers nested paths.
+export const STAFF_ROUTES = ['/salon-admin', '/salon', '/salon-panel', '/admin'];
+export const CUSTOMER_ROUTES = ['/', '/salons', '/bookings', '/saved', '/profile'];
+
+export const isStaffRoute = (pathname: string): boolean =>
+  STAFF_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`));
+
+export const isCustomerRoute = (pathname: string): boolean =>
+  CUSTOMER_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`));

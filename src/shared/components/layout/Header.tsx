@@ -3,9 +3,7 @@ import { Smartphone, Monitor, MapPin, Search } from 'lucide-react';
 import { BoyaLogo } from '../ui/BoyaLogo';
 import { useUIStore } from '../../stores/uiStore';
 import { useLocationStore } from '../../stores/locationStore';
-import { useAuthStore } from '../../stores/authStore';
 import { useModalStore } from '../../stores/modalStore';
-import { useNavigate } from '@tanstack/react-router';
 import { UserHeader } from './UserHeader';
 
 export const Header: React.FC = () => {
@@ -17,9 +15,7 @@ export const Header: React.FC = () => {
   } = useUIStore();
   
   const { selectedCity, selectedProvince, customerLocation } = useLocationStore();
-  const { user, isAuthenticated } = useAuthStore();
-  const { openAuthModal, openSearchModal } = useModalStore();
-  const navigate = useNavigate();
+  const { openSearchModal } = useModalStore();
 
   const hasGpsActive = !!customerLocation.coords;
 
@@ -34,7 +30,8 @@ export const Header: React.FC = () => {
 
           {/* Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Global Search Button */}
+            {/* Global Search Button — customer storefront only (ROLE LOCK) */}
+            {appMode === 'customer' && (
             <button
               onClick={() => openSearchModal()}
               aria-label="جستجوی سریع سالن، خدمت یا متخصص (Ctrl+K)"
@@ -49,6 +46,7 @@ export const Header: React.FC = () => {
                 ⌘K
               </kbd>
             </button>
+            )}
 
             {/* City & GPS Selector in Customer Mode */}
             {appMode === 'customer' && (

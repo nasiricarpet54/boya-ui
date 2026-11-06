@@ -153,7 +153,7 @@ const ServicePortfolioRow: React.FC<{
 };
 
 export const SalonAdminDashboard: React.FC = () => {
-  const { setAppMode, setShowSplashScreen, setSplashAppName, showToast } = useUIStore();
+  const { showToast } = useUIStore();
   const { user } = useAuthStore();
   const { salons, updateSalon, updateSpecialist, createService, createSpecialist, deleteSpecialist, updateService, deleteService } = useDataStore();
   const queryClient = useQueryClient();
@@ -180,18 +180,10 @@ export const SalonAdminDashboard: React.FC = () => {
     updateBookingMutation.mutate({ id: Number(id), status });
   };
 
-  const onSwitchToCustomerApp = () => {
-    setSplashAppName('ورود به اپلیکیشن هوشمند مشتریان بویا');
-    setShowSplashScreen(true);
-    setAppMode('customer');
-  };
-  
   // ✅ logout اصلاح شده
   const handleLogout = () => {
     const { clearAuth } = useAuthStore.getState(); // ✅ تابع صحیح
-    const { setAppMode } = useUIStore.getState(); // ✅ اضافه شد
     clearAuth();
-    setAppMode('customer'); // ✅ تنظیم مجدد appMode
     showToast('با موفقیت خارج شدید');
     window.location.href = '/';
   };
@@ -1120,14 +1112,6 @@ export const SalonAdminDashboard: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <button
-                onClick={onSwitchToCustomerApp}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D9A2B0] hover:bg-[#E6B5C0] text-[#173B3F] text-xs font-bold transition-all shadow-xs cursor-pointer"
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>مشاهده ویترین مشتری بویا</span>
-              </button>
-              
               {/* Reusable UserHeader Component with dropdown */}
               <UserHeader />
             </div>

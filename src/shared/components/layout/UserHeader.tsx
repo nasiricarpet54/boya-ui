@@ -2,16 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuthStore } from '../../stores/authStore';
-import { useUIStore } from '../../stores/uiStore';
 import { useModalStore } from '../../stores/modalStore';
-import { ROLE_LABELS, UserRole } from '../../constants/roles';
+import { ROLE_LABELS, UserRole, isStaff } from '../../constants/roles';
 
 export const UserHeader: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { setAppMode } = useUIStore();
   const { openAuthModal } = useModalStore();
 
   useEffect(() => {
@@ -40,7 +38,6 @@ export const UserHeader: React.FC = () => {
   const handleLogout = async () => {
     setIsOpen(false);
     await logout();
-    setAppMode('customer');
     navigate({ to: '/' });
   };
 
@@ -80,13 +77,17 @@ export const UserHeader: React.FC = () => {
             <span className="text-[10px] text-[#6C6C6C] block truncate">{user.phone}</span>
           </div>
 
-          <button
-            onClick={handleNavigateProfile}
-            className="w-full px-4 py-2 text-right text-xs font-bold text-[#173B3F] hover:bg-[#FAF7F2] flex items-center gap-2.5 transition-colors cursor-pointer"
-          >
-            <User className="w-4 h-4 text-[#6F9A8D]" />
-            <span>پروفایل من</span>
-          </button>
+          {/* ROLE LOCK: staff manage their profile inside their own panel; the
+              customer profile screen must not be reachable from a staff panel. */}
+          {!isStaff(user.role) && (
+            <button
+              onClick={handleNavigateProfile}
+              className="w-full px-4 py-2 text-right text-xs font-bold text-[#173B3F] hover:bg-[#FAF7F2] flex items-center gap-2.5 transition-colors cursor-pointer"
+            >
+              <User className="w-4 h-4 text-[#6F9A8D]" />
+              <span>پروفایل من</span>
+            </button>
+          )}
 
 
 

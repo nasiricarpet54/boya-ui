@@ -1,5 +1,15 @@
 import { create } from 'zustand';
 import { Salon, SalonService, Specialist } from '../data/marketplaceData';
+import { useAuthStore } from './authStore';
+
+// ROLE LOCK: customer-facing flows (booking, quick view, specialist portfolio,
+// global search) must not open inside a staff panel. Guests may still open
+// them — the booking modal prompts for login on submit.
+const guardCustomerOnly = (): boolean => {
+  const { user, isAuthenticated } = useAuthStore.getState();
+  if (!isAuthenticated || !user) return true;
+  return user.role === 'customer';
+};
 
 interface ModalState {
   bookingData: {
@@ -61,26 +71,38 @@ export const useModalStore = create<ModalState>((set) => ({
 
   isSearchModalOpen: false,
   searchInitialQuery: '',
-  openSearchModal: (initialQuery = '') => set({ isSearchModalOpen: true, searchInitialQuery: initialQuery }),
+  openSearchModal: (initialQuery = '') => {
+    if (!guardCustomerOnly()) return;
+    set({ isSearchModalOpen: true, searchInitialQuery: initialQuery });
+  },
   closeSearchModal: () => set({ isSearchModalOpen: false, searchInitialQuery: '' }),
 
-  openBookingModal: (salon, service, specialist, date, time) => set({
-    bookingData: { salon, service, specialist, date, time },
-    isBookingModalOpen: true,
-  }),
+  openBookingModal: (salon, service, specialist, date, time) => {
+    if (!guardCustomerOnly()) return;
+    set({
+      bookingData: { salon, service, specialist, date, time },
+      isBookingModalOpen: true,
+    });
+  },
   closeBookingModal: () => set({ isBookingModalOpen: false, bookingData: null }),
 
-  openPortfolioModal: (specialist, salon) => set({
-    portfolioSpecialist: specialist,
-    portfolioSalon: salon,
-    isPortfolioModalOpen: true,
-  }),
+  openPortfolioModal: (specialist, salon) => {
+    if (!guardCustomerOnly()) return;
+    set({
+      portfolioSpecialist: specialist,
+      portfolioSalon: salon,
+      isPortfolioModalOpen: true,
+    });
+  },
   closePortfolioModal: () => set({ isPortfolioModalOpen: false, portfolioSpecialist: null, portfolioSalon: null }),
 
-  openQuickViewModal: (salon) => set({
-    quickViewSalon: salon,
-    isQuickViewModalOpen: true,
-  }),
+  openQuickViewModal: (salon) => {
+    if (!guardCustomerOnly()) return;
+    set({
+      quickViewSalon: salon,
+      isQuickViewModalOpen: true,
+    });
+  },
   closeQuickViewModal: () => set({ isQuickViewModalOpen: false, quickViewSalon: null }),
 
   showcaseSalonId: null,

@@ -370,6 +370,35 @@ async function createServer() {
     }
   });
 
+  // PII GUARD: strip the raw `users` row (phone, email, uid, status,
+  // managedLine) and specialist `documents` from any salon payload served to
+  // customers. Without this, GET /api/salons and GET /api/salons/:id embed
+  // `specialists.user` verbatim — an anonymous caller could enumerate every
+  // staff member's phone and email, and download their identity documents via
+  // the public /uploads layer. The flattened field names below are the ones
+  // the customer UI already reads (name/specialtyLine/rating/...).
+  const sanitizeSalonForPublic = (s: any) => ({
+    ...s,
+    services: (s.services || []).filter((sv: any) => (sv as any).publicationStatus !== 'pending'),
+    specialists: (s.specialists || []).map((sp: any) => ({
+      id: sp.id,
+      name: sp.user?.fullName || sp.name || '',
+      role: sp.user?.role || sp.role,
+      avatar: sp.avatarUrl || sp.user?.avatar || sp.avatar || '',
+      avatarUrl: sp.avatarUrl || sp.user?.avatar || sp.avatar || '',
+      specialtyLine: sp.specialtyLine,
+      experienceYears: sp.experienceYears,
+      bio: sp.bio || '',
+      isVerified: sp.isVerified,
+      verified: sp.isVerified,
+      isMobileActive: sp.isMobileActive,
+      isMobileSpecialist: sp.isMobileActive,
+      rating: Number(sp.user?.rating ?? sp.rating ?? 4.8),
+      reviewsCount: Number(sp.user?.reviewsCount ?? sp.reviewsCount ?? 0),
+      portfolio: Array.isArray(sp.portfolio) ? sp.portfolio : [],
+    })),
+  });
+
   app.get('/api/salons', async (req, res) => {
     try {
       // AUDIT (P0): Push location/service-line filters into SQL instead of
@@ -441,7 +470,7 @@ async function createServer() {
         });
       }
 
-      res.json(result);
+      res.json(result.map((s: any) => sanitizeSalonForPublic(s)));
     } catch (err) {
       console.error('❌ API SALONS CRITICAL ERROR:', err); res.status(500).json({ error: 'خطا در دریافت لیست.' });
     }
@@ -568,16 +597,19 @@ async function createServer() {
   });
 
   // AUDIT (P0): Salon detail + create + delete — wired to the frontend.
+  // PII GUARD: this route is anonymous; the raw specialist.user row and
+  // documents must never reach the client. Also only serve approved salons —
+  // previously any id, including pending/suspended ones, was readable.
   app.get('/api/salons/:id', async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ error: 'شناسه سالن نامعتبر است.' });
       const salon = await db.query.salons.findFirst({
-        where: eq(salons.id, id),
+        where: and(eq(salons.id, id), eq(salons.isApproved, true)),
         with: { services: true, specialists: { with: { user: true, portfolio: true } } },
       });
       if (!salon) return res.status(404).json({ error: 'سالن یافت نشد.' });
-      res.json(salon);
+      res.json(sanitizeSalonForPublic(salon));
     } catch (err: any) {
       console.error('[GET SALON BY ID ERROR]', err);
       res.status(500).json({ error: 'خطا در دریافت اطلاعات سالن.' });
@@ -1039,9 +1071,21 @@ async function createServer() {
       const { getOrCreateUserByPhone } = await import('./src/db/users.ts');
       const dbUser = await getOrCreateUserByPhone(cleanPhone, data.fullName);
 
-      const existing = await db.select({ id: specialists.id }).from(specialists)
+      // PRIVILEGE ESCALATION GUARD: a salon admin must not be able to register
+      // an existing privileged account (super_admin, another salon_admin, a
+      // line_manager) as a specialist of their own salon — the role update
+      // below would otherwise demote that account and rebind it.
+      if (dbUser.role === 'super_admin' || dbUser.role === 'salon_admin' || dbUser.role === 'line_manager') {
+        return res.status(403).json({ error: 'این کاربر دارای نقش مدیریتی است و نمی‌تواند به عنوان متخصص ثبت شود.' });
+      }
+      const existing = await db.select({ id: specialists.id, salonId: specialists.salonId }).from(specialists)
         .where(eq(specialists.userId, dbUser.id)).limit(1);
-      if (existing.length > 0) return res.status(400).json({ error: 'این کاربر قبلاً متخصص ثبت شده است.' });
+      if (existing.length > 0) {
+        if (existing[0].salonId !== salonId) {
+          return res.status(400).json({ error: 'این کاربر قبلاً متخصص سالن دیگری است.' });
+        }
+        return res.status(400).json({ error: 'این کاربر قبلاً متخصص ثبت شده است.' });
+      }
 
       // Registered as pending: super_admin must approve the documents before
       // the specialist is published to customers.
@@ -1111,6 +1155,11 @@ async function createServer() {
         return res.status(403).json({ error: 'متخصص مستقل (صندلی اجاره‌داده‌شده) توسط مدیر سالن قابل حذف نیست.' });
       }
       await db.delete(specialists).where(eq(specialists.id, id));
+      // TENANCY HYGIENE: deleting the specialist row must also release the
+      // user's binding, otherwise the ex-staff account keeps role+salonId and
+      // stays privileged after removal from the salon's roster.
+      await db.update(users).set({ role: 'customer', salonId: null })
+        .where(eq(users.id, existing.userId)).catch(() => {});
       res.json({ success: true });
     } catch (err: any) {
       console.error('[DELETE SPECIALIST ERROR]', err);
@@ -1698,7 +1747,7 @@ async function createServer() {
     }
   });
 
-  app.post('/api/notifications/:id/view', async (req, res) => {
+  app.post('/api/notifications/:id/view', requireAuth, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid ID' });
@@ -1709,7 +1758,7 @@ async function createServer() {
     }
   });
 
-  app.post('/api/notifications/:id/click', async (req, res) => {
+  app.post('/api/notifications/:id/click', requireAuth, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid ID' });

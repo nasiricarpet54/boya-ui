@@ -10,8 +10,6 @@ import {
   Settings,
   ArrowRight,
   Sparkles,
-  Store,
-  UserCheck,
   Crown,
   Bell,
   UserCog,
@@ -39,8 +37,6 @@ interface AdminSidebarProps {
   openTicketsCount: number;
   vipSalonsCount?: number;
   activeNotificationsCount?: number;
-  onSwitchToCustomerApp: () => void;
-  onSwitchToSalonApp: () => void;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -50,8 +46,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   openTicketsCount,
   vipSalonsCount = 0,
   activeNotificationsCount = 0,
-  onSwitchToCustomerApp,
-  onSwitchToSalonApp,
 }) => {
   const menuItems: { id: AdminTab; label: string; icon: React.ElementType; badge?: number; badgeColor?: string }[] = [
     { id: 'dashboard', label: 'پیشخوان نظارتی کل', icon: LayoutDashboard },
@@ -149,27 +143,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </nav>
       </div>
 
-      {/* Switch to Apps Footer Shortcuts */}
+      {/* Footer */}
       <div className="p-4 border-t border-[#173B3F] bg-black/25 space-y-2">
-        <span className="text-[10px] text-[#E8F0EF]/70 block font-medium">سوییچ سریع به اپلیکیشن‌ها:</span>
-        <div className="grid grid-cols-2 gap-1.5">
-          <button
-            onClick={onSwitchToCustomerApp}
-            className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] text-[#E8F0EF] transition-colors"
-          >
-            <UserCheck className="w-3.5 h-3.5 text-[#D9A2B0]" />
-            <span>اپ مشتری</span>
-          </button>
-
-          <button
-            onClick={onSwitchToSalonApp}
-            className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] text-[#E8F0EF] transition-colors"
-          >
-            <Store className="w-3.5 h-3.5 text-[#C99558]" />
-            <span>پنل سالندار</span>
-          </button>
-        </div>
-
         <div className="pt-2 text-[10px] text-[#E8F0EF]/60 flex items-center justify-between border-t border-white/5">
           <span>نسخه: 1.2.0-beta</span>
           <span className="flex items-center gap-1 text-[#6F9A8D] font-bold">

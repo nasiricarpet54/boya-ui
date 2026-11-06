@@ -109,9 +109,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const availableSlots = getSlotsForArbitraryDate(selectedDate, salon.availableSlots);
 
   const handleConfirm = async (formData: any) => {
-    // 3. Pre-booking login check: Must be authenticated
+    // 3. Pre-booking login check: Must be authenticated as a CUSTOMER.
+    // ROLE LOCK: staff accounts cannot create customer bookings.
     if (!isAuthenticated || !user) {
       openAuthModal();
+      return;
+    }
+    if (user.role !== 'customer') {
       return;
     }
 

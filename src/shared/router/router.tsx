@@ -8,6 +8,7 @@ import { SpecialistPortfolioModal } from '../components/modals/SpecialistPortfol
 import { LocationSelectorModal } from '../components/modals/LocationSelectorModal';
 import { useUIStore } from '../stores/uiStore';
 import { useAuthStore, getAppModeForRole } from '../stores/authStore';
+import { isStaff, isCustomerRoute } from '../constants/roles';
 import { useModalStore } from '../stores/modalStore';
 import { useLocationStore } from '../stores/locationStore';
 import { useDataStore } from '../stores/dataStore';
@@ -38,6 +39,21 @@ const Root = () => {
       setAppMode(getAppModeForRole(user.role));
     }
   }, [isAuthenticated, user, setAppMode]);
+
+  // ROLE LOCK (server-independent enforcement): a logged-in staff member who
+  // lands on a customer route (by typing the URL, a stale link or a hard
+  // reload at "/") is pushed back to their own panel. Customers are never
+  // redirected away. Runs on every auth change, not just at mount.
+  React.useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    if (!isStaff(user.role)) return;
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    if (!isCustomerRoute(pathname)) return;
+    const target = user.role === 'super_admin' ? '/admin' : '/salon-admin';
+    if (pathname !== target) {
+      router.navigate({ to: target, replace: true });
+    }
+  }, [isAuthenticated, user]);
 
   const { 
     isBookingModalOpen, closeBookingModal, bookingData,

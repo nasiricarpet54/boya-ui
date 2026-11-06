@@ -14,14 +14,12 @@ import { AdminNotificationsView } from './AdminNotificationsView';
 import { AdminProfileView } from './AdminProfileView';
 import { useDataStore } from '../../../shared/stores/dataStore';
 import { useAdminSalons } from '../../../shared/api/queries';
-import { useUIStore } from '../../../shared/stores/uiStore';
 import { SEO } from '../../../shared/components/SEO';
 
 export const AdminPanel: React.FC = () => {
   const { salons, bookings, users, tickets, auditLogs, notifications, updateSalon, updateBookingStatus, fetchServerData } = useDataStore();
   const { data: querySalons } = useAdminSalons();
-  const { setAppMode, setShowSplashScreen, setSplashAppName } = useUIStore();
-  
+
   React.useEffect(() => {
     fetchServerData();
   }, [fetchServerData]);
@@ -34,18 +32,6 @@ export const AdminPanel: React.FC = () => {
   const openTicketsCount = (tickets || []).filter((t: any) => t.status === 'open' || t.status === 'in_progress').length;
   const vipSalonsCount = activeSalons.filter((s: any) => s.isVip).length;
   const activeNotificationsCount = (notifications || []).filter((n) => n.isActive).length;
-
-  const onSwitchToCustomerApp = () => {
-    setSplashAppName('ورود به اپلیکیشن هوشمند مشتریان بویا');
-    setShowSplashScreen(true);
-    setAppMode('customer');
-  };
-
-  const onSwitchToSalonApp = () => {
-    setSplashAppName('ورود به پنل جامع سالندار و متخصصین بویا');
-    setShowSplashScreen(true);
-    setAppMode('salon_panel');
-  };
 
   const getTabTitle = () => {
     switch (activeTab) {
@@ -96,8 +82,6 @@ export const AdminPanel: React.FC = () => {
             openTicketsCount={openTicketsCount}
             vipSalonsCount={vipSalonsCount}
             activeNotificationsCount={activeNotificationsCount}
-            onSwitchToCustomerApp={onSwitchToCustomerApp}
-            onSwitchToSalonApp={onSwitchToSalonApp}
           />
         </div>
         {isSidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}

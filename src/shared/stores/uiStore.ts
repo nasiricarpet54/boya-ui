@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { useAuthStore, getAppModeForRole } from './authStore';
 
 export type NavTab = 'home' | 'salons' | 'bookings' | 'saved' | 'profile';
 
@@ -34,16 +36,37 @@ const markSplashShown = () => {
   }
 };
 
-export const useUIStore = create<UIState>((set) => ({
-  appMode: 'customer',
-  activeTab: 'home',
-  isMobileFrame: true,
-  isLocationModalOpen: false,
-  toastMessage: null,
-  showSplashScreen: !hasShownSplashThisSession,
-  splashAppName: 'ورود به اپلیکیشن هوشمند مشتریان بویا',
+export const useUIStore = create<UIState>()(
+  persist(
+    (set) => ({
+      appMode: 'customer',
+      activeTab: 'home',
+      isMobileFrame: true,
+      isLocationModalOpen: false,
+      toastMessage: null,
+      showSplashScreen: !hasShownSplashThisSession,
+      splashAppName: 'ورود به اپلیکیشن هوشمند مشتریان بویا',
 
-  setAppMode: (appMode) => set({ appMode }),
+      // ROLE LOCK: once a user logs in with a role, they stay in that role's
+      // panel until logout. Any attempt to switch appMode while authenticated
+      // is silently dropped — a salon_admin can never reach the customer
+      // storefront with the same login, and neither can any other staff role.
+      setAppMode: (requestedMode) => {
+        const { user, isAuthenticated } = useAuthStore.getState();
+        if (!isAuthenticated || !user) {
+          // Not logged in: only the customer shell is meaningful.
+          set({ appMode: 'customer' });
+          return;
+        }
+        const lockedMode = getAppModeForRole(user.role);
+        if (requestedMode !== lockedMode) {
+          if (import.meta.env.DEV) {
+            console.warn('[ROLE LOCK] panel switch blocked:', requestedMode, '→', lockedMode);
+          }
+          return; // ignore the switch, keep the current panel
+        }
+        set({ appMode: requestedMode });
+      },
   setActiveTab: (activeTab) => set({ activeTab }),
   setIsMobileFrame: (isMobileFrame) => set({ isMobileFrame }),
   setIsLocationModalOpen: (isLocationModalOpen) => set({ isLocationModalOpen }),
@@ -52,9 +75,24 @@ export const useUIStore = create<UIState>((set) => ({
     setTimeout(() => set({ toastMessage: null }), 2800);
   },
   hideToast: () => set({ toastMessage: null }),
-  setShowSplashScreen: (showSplashScreen) => {
-    if (!showSplashScreen) markSplashShown();
-    set({ showSplashScreen });
-  },
-  setSplashAppName: (splashAppName) => set({ splashAppName }),
-}));
+      setShowSplashScreen: (showSplashScreen) => {
+        if (!showSplashScreen) markSplashShown();
+        set({ showSplashScreen });
+      },
+      setSplashAppName: (splashAppName) => set({ splashAppName }),
+    }),
+    {
+      name: 'boya-ui-storage',
+      partialize: (state) => ({ appMode: state.appMode }),
+      // Re-derive appMode from the real (server-verified) role on hydration so
+      // a hand-edited localStorage value can never smuggle a wrong panel in.
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const { user, isAuthenticated } = useAuthStore.getState();
+        state.appMode = (!isAuthenticated || !user)
+          ? 'customer'
+          : getAppModeForRole(user.role);
+      },
+    },
+  ),
+);

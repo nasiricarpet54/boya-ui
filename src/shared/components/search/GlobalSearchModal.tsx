@@ -14,6 +14,7 @@ import {
 import { useNavigate } from '@tanstack/react-router';
 import { useSalons } from '../../api/queries';
 import { useModalStore } from '../../stores/modalStore';
+import { useAuthStore } from '../../stores/authStore';
 import { SERVICE_LINES, Salon, SalonService, Specialist } from '../../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../../utils/persianUtils';
 import { BeautyActivityIcon } from '../ui/BeautyActivityIcon';
@@ -107,7 +108,12 @@ export const GlobalSearchModal: React.FC = () => {
   }, [isSearchModalOpen, searchInitialQuery]);
 
   // Global keyboard shortcut listener (Cmd+K / Ctrl+K)
+  // ROLE LOCK: customer-only. Staff panels have their own navigation.
   useEffect(() => {
+    const { user, isAuthenticated } = useAuthStore.getState();
+    const allowShortcut = !isAuthenticated || user?.role === 'customer';
+    if (!allowShortcut) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
