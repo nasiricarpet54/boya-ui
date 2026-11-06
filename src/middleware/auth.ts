@@ -79,3 +79,21 @@ export const requireRole = (allowedRoles: string[]) => {
     next();
   };
 };
+
+/**
+ * Multi-tenant guard for salon-scoped records.
+ *
+ * Salon staff (any role bound to a salon) may only touch records whose
+ * `salonId` matches their own; `super_admin` is unrestricted. Returns the
+ * resolved salon id, or null when the caller is not allowed to see it.
+ *
+ * Usage: `const salonId = assertSalonScope(req, record.salonId); if (!salonId) return res.status(403)...`
+ */
+export const assertSalonScope = (req: AuthRequest, recordSalonId: number | string | null | undefined): number | null => {
+  if (!req.dbUser) return null;
+  if (req.dbUser.role === 'super_admin') return Number(recordSalonId) || Number(req.dbUser.salonId);
+  const mine = Number(req.dbUser.salonId);
+  if (!Number.isFinite(mine)) return null;
+  if (recordSalonId == null) return mine;            // creation: caller's own salon
+  return Number(recordSalonId) === mine ? mine : null;
+};

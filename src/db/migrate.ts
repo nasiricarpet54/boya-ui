@@ -204,6 +204,41 @@ export async function runMigrations() {
         clicks_count INTEGER DEFAULT 0 NOT NULL,
         expires_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW() NOT NULL
+      )`,
+      // Salon-admin feature pack (0005)
+      `CREATE TABLE IF NOT EXISTS specialist_service_commissions (
+        id SERIAL PRIMARY KEY,
+        specialist_id INTEGER NOT NULL REFERENCES specialists(id) ON DELETE CASCADE,
+        service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+        commission_percent INTEGER NOT NULL,
+        UNIQUE (specialist_id, service_id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS salon_weekly_schedule (
+        id SERIAL PRIMARY KEY,
+        salon_id INTEGER NOT NULL REFERENCES salons(id) ON DELETE CASCADE,
+        day_of_week INTEGER NOT NULL,
+        open_time TEXT NOT NULL,
+        close_time TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE NOT NULL,
+        UNIQUE (salon_id, day_of_week)
+      )`,
+      // Independent/mobile specialist feature pack (0006)
+      `CREATE TABLE IF NOT EXISTS specialist_weekly_schedule (
+        id SERIAL PRIMARY KEY,
+        specialist_id INTEGER NOT NULL REFERENCES specialists(id) ON DELETE CASCADE,
+        day_of_week INTEGER NOT NULL,
+        open_time TEXT NOT NULL,
+        close_time TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT TRUE NOT NULL,
+        UNIQUE (specialist_id, day_of_week)
+      )`,
+      // Salon-admin per-service portfolio images (0007)
+      `CREATE TABLE IF NOT EXISTS service_portfolio_items (
+        id SERIAL PRIMARY KEY,
+        service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+        image_url TEXT NOT NULL,
+        title TEXT,
+        created_at TIMESTAMP DEFAULT NOW() NOT NULL
       )`
     ];
 
@@ -228,6 +263,9 @@ export async function runMigrations() {
 
     // 2. Pre-migration self-healing check using information_schema.columns
     const columnsToCheck: Array<{ table: string; column: string; definition: string }> = [
+      { table: 'specialists', column: 'is_rented_chair', definition: 'BOOLEAN DEFAULT FALSE NOT NULL' },
+      { table: 'specialists', column: 'commission_percent', definition: 'INTEGER' },
+      { table: 'specialists', column: 'documents', definition: 'TEXT' },
       { table: 'specialists', column: 'working_hours', definition: 'TEXT' },
       { table: 'specialists', column: 'working_days', definition: 'TEXT' },
       { table: 'specialists', column: 'is_mobile_active', definition: 'BOOLEAN DEFAULT FALSE NOT NULL' },
@@ -258,6 +296,8 @@ export async function runMigrations() {
       { table: 'services', column: 'description', definition: 'TEXT' },
       { table: 'services', column: 'is_mobile_available', definition: 'BOOLEAN DEFAULT FALSE NOT NULL' },
       { table: 'services', column: 'image_url', definition: 'TEXT' },
+      // 0006: independent specialists own services without a salon.
+      { table: 'services', column: 'owner_id', definition: 'INTEGER' },
       { table: 'services', column: 'publication_status', definition: "TEXT DEFAULT 'active' NOT NULL" },
       { table: 'bookings', column: 'is_mobile_booking', definition: 'BOOLEAN DEFAULT FALSE NOT NULL' },
       { table: 'bookings', column: 'customer_address', definition: 'TEXT' },

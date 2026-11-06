@@ -122,7 +122,9 @@ export const adminProfileUpdateSchema = z.object({
 });
 
 export const serviceCreateSchema = z.object({
-  salonId: z.union([z.number(), z.string()]),
+  // salonId is optional: an independent/mobile specialist owns the service
+  // (ownerId resolved server-side) instead of attaching it to a salon.
+  salonId: z.union([z.number(), z.string()]).optional(),
   serviceLineId: z.string().default('hair'),
   name: z.string().min(1, 'نام خدمت الزامی است'),
   description: z.string().optional().nullable(),
@@ -140,14 +142,98 @@ export const serviceCreateSchema = z.object({
 
 export const serviceUpdateSchema = serviceCreateSchema.partial();
 
+/**
+ * Independent specialist's own service create/edit. No salonId at all — the
+ * owner is resolved from the authenticated user. Price + duration back the
+ * "هزینه خدمات" requirement; the rest mirrors serviceCreateSchema.
+ */
+export const myServiceSchema = z.object({
+  name: z.string().min(1, 'نام خدمت الزامی است'),
+  description: z.string().optional().nullable(),
+  price: z.union([
+    z.number().positive('قیمت خدمت باید بزرگتر از صفر باشد'),
+    z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0, 'قیمت خدمت باید بزرگتر از صفر باشد'),
+  ]),
+  durationMinutes: z.union([
+    z.number().int().positive('مدت زمان خدمت باید حداقل ۱ دقیقه باشد'),
+    z.string().refine(val => !isNaN(Number(val)) && Number(val) > 0, 'مدت زمان خدمت باید حداقل ۱ دقیقه باشد'),
+  ]).transform(val => Number(val)),
+  isMobileAvailable: z.boolean().default(false),
+  imageUrl: z.string().optional().nullable(),
+  serviceLineId: z.string().optional(),
+});
+
+export const myServiceUpdateSchema = myServiceSchema.partial();
+
+/** Independent specialist portfolio item — no specialistId from the client. */
+export const myPortfolioSchema = z.object({
+  title: z.string().min(1, 'عنوان نمونه‌کار الزامی است'),
+  imageUrl: z.string().min(1, 'تصویر نمونه‌کار الزامی است'),
+  category: z.string().default('general'),
+});
+
+/**
+ * Salon-admin service portfolio image ("نمونه‌کار خدمات"). The service is
+ * named in the path; the body only carries the image plus an optional title.
+ */
+export const servicePortfolioCreateSchema = z.object({
+  imageUrl: z.string().min(1, 'تصویر نمونه‌کار الزامی است'),
+  title: z.string().max(120).optional().nullable(),
+});
+
+export const servicePortfolioUpdateSchema = z.object({
+  imageUrl: z.string().min(1).optional(),
+  title: z.string().max(120).optional().nullable(),
+});
+
+/**
+ * Salon-admin specialist creation. The salon manager only supplies a phone
+ * number (and optional profile fields); the user record is resolved server-side
+ * via getOrCreateUserByPhone, so nothing client-controlled can pick a userId.
+ */
 export const specialistCreateSchema = z.object({
-  userId: z.union([z.number(), z.string()]),
+  phone: z.string().min(1, 'شماره همراه متخصص الزامی است.'),
+  fullName: z.string().optional(),
   salonId: z.union([z.number(), z.string()]),
   specialtyLine: z.string().default('hair'),
   bio: z.string().optional().nullable(),
-  experienceYears: z.number().int().min(0).default(1),
+  experienceYears: z.union([z.number().int().min(0), z.string()]).optional(),
   isMobileActive: z.boolean().default(false),
+  isRentedChair: z.boolean().default(false),
   avatarUrl: z.string().optional().nullable(),
+  // Document URLs backing the super-admin approval step.
+  documents: z.array(z.string()).optional(),
 });
 
-export const specialistUpdateSchema = specialistCreateSchema.partial();
+export const specialistUpdateSchema = z.object({
+  fullName: z.string().optional(),
+  specialtyLine: z.string().optional(),
+  bio: z.string().optional().nullable(),
+  experienceYears: z.union([z.number().int().min(0), z.string()]).optional(),
+  isMobileActive: z.boolean().optional(),
+  isRentedChair: z.boolean().optional(),
+  avatarUrl: z.string().optional().nullable(),
+  workingHours: z.string().optional().nullable(),
+  workingDays: z.array(z.string()).optional().nullable(),
+  commissionPercent: z.number().int().min(0).max(100).nullable().optional(),
+  documents: z.array(z.string()).optional(),
+});
+
+/**
+ * Per-service commission override body: [{ serviceId, commissionPercent }].
+ * PUT replaces the specialist's whole override set.
+ */
+export const commissionOverridesSchema = z.array(z.object({
+  serviceId: z.union([z.number(), z.string()]),
+  commissionPercent: z.number().int().min(0).max(100),
+}));
+
+export const salonScheduleSchema = z.object({
+  dayOfWeek: z.number().int().min(0).max(6),
+  openTime: z.string().min(1),
+  closeTime: z.string().min(1),
+  isActive: z.boolean().default(true),
+}).refine((v) => v.openTime !== v.closeTime, {
+  message: 'ساعت شروع و پایان نمی‌تواند یکسان باشد.',
+  path: ['closeTime'],
+});

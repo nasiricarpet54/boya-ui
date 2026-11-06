@@ -30,6 +30,17 @@
     
     --color-error: #B35D67;              /* Error Wine */
     --color-error-subtle: #F8ECEE;
+
+    /* BOYA Motion Tokens — feedback, not exhibition.
+       Press durations sit just above perceptible lag; hover gives the
+       finger/pointer time to arrive. Exit is always faster than entrance. */
+    --duration-press: 110ms;
+    --duration-hover: 180ms;
+    --ease-press: cubic-bezier(0.3, 0, 0.3, 1);      /* symmetric, instant sink */
+    --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);    /* confident deceleration */
+    --scale-press-primary: 0.97;
+    --scale-press-secondary: 0.95;
+    --scale-press-tile: 0.98;
   }
 
   body {
@@ -78,6 +89,75 @@
 *:focus-visible {
   outline: 2px solid #173B3F;
   outline-offset: 2px;
+}
+
+/* Selection and caret carry the brand, not the UA default */
+::selection {
+  background: #D9A2B0;
+  color: #173B3F;
+}
+:where(input, textarea, [contenteditable="true"]):focus {
+  caret-color: #173B3F;
+}
+
+/*
+ * BOYA tactile feedback.
+ * Press = scale 0.97 + shadow settle, runs at --duration-press so it reads as
+ * physical give rather than lag. Hover lifts opacity/shadow only — no scale,
+ * because a hovering pointer has not committed and the page should not flinch.
+ * Buttons opt in with .btn-press (primary) / .btn-press-soft (secondary),
+ * tiles with .tile-press.
+ */
+@layer components {
+  .btn-press,
+  .btn-press-soft,
+  .tile-press {
+    transition:
+      transform var(--duration-press) var(--ease-press),
+      box-shadow var(--duration-hover) var(--ease-arrive),
+      background-color var(--duration-hover) var(--ease-arrive),
+      border-color var(--duration-hover) var(--ease-arrive),
+      color var(--duration-hover) var(--ease-arrive);
+    will-change: transform;
+  }
+
+  .btn-press:active {
+    transform: scale(var(--scale-press-primary));
+  }
+  .btn-press-soft:active {
+    transform: scale(var(--scale-press-secondary));
+  }
+  .tile-press:active {
+    transform: scale(var(--scale-press-tile));
+  }
+
+  /* Hover: shadow + bg/border shift only (no geometry change). */
+  .btn-press:hover,
+  .btn-press-soft:hover,
+  .tile-press:hover {
+    box-shadow:
+      0 10px 24px -10px rgba(23, 59, 63, 0.35),
+      0 4px 10px -6px rgba(23, 59, 63, 0.2);
+  }
+}
+
+/* Reduced motion: keep the colour/shadow feedback (it carries meaning),
+   drop the spatial compression. */
+@media (prefers-reduced-motion: reduce) {
+  .btn-press,
+  .btn-press-soft,
+  .tile-press {
+    transition:
+      background-color var(--duration-hover) var(--ease-arrive),
+      border-color var(--duration-hover) var(--ease-arrive),
+      color var(--duration-hover) var(--ease-arrive);
+    will-change: auto;
+  }
+  .btn-press:active,
+  .btn-press-soft:active,
+  .tile-press:active {
+    transform: none;
+  }
 }
 
 /* Luxury card soft ambient glow */

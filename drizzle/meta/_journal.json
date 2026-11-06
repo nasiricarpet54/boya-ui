@@ -36,6 +36,27 @@
       "when": 1793879737640,
       "tag": "0004_salon_status",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793912349984,
+      "tag": "0005_salon_admin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793939334982,
+      "tag": "0006_independent_specialist",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793945976546,
+      "tag": "0007_service_portfolio",
+      "breakpoints": true
     }
   ]
 }

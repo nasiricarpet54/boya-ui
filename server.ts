@@ -13,11 +13,11 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
-import { ZodError } from 'zod';
+import { ZodError, z } from 'zod';
 
-import { requireAuth, requireRole, type AuthRequest } from './src/middleware/auth.ts';
+import { requireAuth, requireRole, assertSalonScope, type AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
-import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems, auditLogs, supportTickets, ticketMessages, refreshTokens } from './src/db/schema.ts';
+import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems, auditLogs, supportTickets, ticketMessages, refreshTokens, specialistServiceCommissions, salonWeeklySchedule, specialistWeeklySchedule, servicePortfolioItems } from './src/db/schema.ts';
 import { eq, desc, and, inArray, asc, ne, sql } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
@@ -765,6 +765,12 @@ async function createServer() {
   app.get('/api/services', requireAuth, async (req: AuthRequest, res) => {
     try {
       const salonIdParam = req.query.salonId;
+      // Multi-tenant: salon staff cannot read another salon's services by
+      // passing ?salonId=<other salon> — the param must match their own.
+      if (salonIdParam && req.dbUser.role !== 'super_admin') {
+        const allowed = assertSalonScope(req, Number(salonIdParam));
+        if (allowed === null) return res.status(403).json({ error: 'شما فقط به خدمات سالن خود دسترسی دارید.' });
+      }
       const targetSalonId = salonIdParam ? Number(salonIdParam) : Number(req.dbUser.salonId);
       if (!Number.isFinite(targetSalonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
 
@@ -779,12 +785,53 @@ async function createServer() {
     }
   });
 
+  // Independent (owner-rooted, no salon) services — used by the super-admin
+  // approvals queue. Pending salon services still arrive embedded under
+  // salons; these have salonId = null and would otherwise be invisible.
+  app.get('/api/services/independent', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const rows = await db.select().from(services)
+        .where(sql`${services.ownerId} IS NOT NULL`)
+        .orderBy(desc(services.createdAt));
+      // Join owner names for the approvals panel.
+      const ownerIds = rows.map((r: any) => r.ownerId).filter(Boolean);
+      const owners = ownerIds.length
+        ? await db.select().from(users).where(inArray(users.id, ownerIds))
+        : [];
+      const ownerById = new Map(owners.map((u: any) => [u.id, u]));
+      res.json(rows.map((r: any) => ({
+        ...r,
+        ownerName: ownerById.get(r.ownerId)?.fullName || null,
+        ownerPhone: ownerById.get(r.ownerId)?.phone || null,
+      })));
+    } catch (err: any) {
+      console.error('[GET INDEPENDENT SERVICES ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت خدمات مستقل.' });
+    }
+  });
+
+  // Super-admin approval of an independent specialist's service.
+  app.patch('/api/services/:id/approve', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const [updated] = await db.update(services)
+        .set({ publicationStatus: 'active' }).where(eq(services.id, id)).returning();
+      if (!updated) return res.status(404).json({ error: 'خدمت یافت نشد.' });
+      await logSecurityAction({ actorId: req.dbUser.id, action: 'USER_UPDATE', targetId: String(id), details: { serviceApproved: true }, ipAddress: req.ip });
+      res.json({ success: true, service: updated });
+    } catch (err: any) {
+      console.error('[APPROVE SERVICE ERROR]', err);
+      res.status(500).json({ error: 'خطا در تایید خدمت.' });
+    }
+  });
+
   app.post('/api/services', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
       const data = schemas.serviceCreateSchema.parse(req.body);
       const salonId = Number(data.salonId) || Number(req.dbUser.salonId);
       if (!Number.isFinite(salonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
-      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== salonId) {
+      const allowed = assertSalonScope(req, salonId);
+      if (allowed === null) {
         return res.status(403).json({ error: 'شما فقط می‌توانید به سالن خود خدمت اضافه کنید.' });
       }
       const [created] = await db.insert(services).values({
@@ -808,6 +855,12 @@ async function createServer() {
     try {
       const id = Number(req.params.id);
       const data = schemas.serviceUpdateSchema.parse(req.body);
+      const [existing] = await db.select({ salonId: services.salonId }).from(services).where(eq(services.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'خدمت یافت نشد.' });
+      const allowed = assertSalonScope(req, existing.salonId);
+      if (allowed === null) {
+        return res.status(403).json({ error: 'شما فقط می‌توانید خدمات سالن خود را ویرایش کنید.' });
+      }
       const [updated] = await db.update(services).set(data as any).where(eq(services.id, id)).returning();
       if (!updated) return res.status(404).json({ error: 'خدمت یافت نشد.' });
       res.json({ success: true, service: updated });
@@ -820,6 +873,12 @@ async function createServer() {
   app.delete('/api/services/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
       const id = Number(req.params.id);
+      const [existing] = await db.select({ salonId: services.salonId }).from(services).where(eq(services.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'خدمت یافت نشد.' });
+      const allowed = assertSalonScope(req, existing.salonId);
+      if (allowed === null) {
+        return res.status(403).json({ error: 'شما فقط می‌توانید خدمات سالن خود را حذف کنید.' });
+      }
       await db.delete(services).where(eq(services.id, id));
       res.json({ success: true });
     } catch (err: any) {
@@ -834,6 +893,11 @@ async function createServer() {
   app.get('/api/specialists', requireAuth, async (req: AuthRequest, res) => {
     try {
       const salonIdParam = req.query.salonId;
+      // Multi-tenant: ?salonId= must match the caller's own salon.
+      if (salonIdParam && req.dbUser.role !== 'super_admin') {
+        const allowed = assertSalonScope(req, Number(salonIdParam));
+        if (allowed === null) return res.status(403).json({ error: 'شما فقط به متخصصین سالن خود دسترسی دارید.' });
+      }
       const targetSalonId = salonIdParam ? Number(salonIdParam) : Number(req.dbUser.salonId);
 
       if (!salonIdParam && req.dbUser.role === 'super_admin') {
@@ -853,18 +917,40 @@ async function createServer() {
       const data = schemas.specialistCreateSchema.parse(req.body);
       const salonId = Number(data.salonId) || Number(req.dbUser.salonId);
       if (!Number.isFinite(salonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
-      if (req.dbUser.role === 'salon_admin' && Number(req.dbUser.salonId) !== salonId) {
+      const allowed = assertSalonScope(req, salonId);
+      if (allowed === null) {
         return res.status(403).json({ error: 'شما فقط می‌توانید به سالن خود متخصص اضافه کنید.' });
       }
+
+      // Resolve the user by phone (server-side) so the client cannot pick an
+      // arbitrary userId, then bind them to this salon as a salon_specialist.
+      const cleanPhone = normalizePhone(String(data.phone));
+      if (!cleanPhone) return res.status(400).json({ error: 'شماره همراه متخصص معتبر نیست.' });
+      const { getOrCreateUserByPhone } = await import('./src/db/users.ts');
+      const dbUser = await getOrCreateUserByPhone(cleanPhone, data.fullName);
+
+      const existing = await db.select({ id: specialists.id }).from(specialists)
+        .where(eq(specialists.userId, dbUser.id)).limit(1);
+      if (existing.length > 0) return res.status(400).json({ error: 'این کاربر قبلاً متخصص ثبت شده است.' });
+
+      // Registered as pending: super_admin must approve the documents before
+      // the specialist is published to customers.
       const [created] = await db.insert(specialists).values({
-        userId: Number(data.userId),
+        userId: dbUser.id,
         salonId,
         specialtyLine: data.specialtyLine,
         bio: data.bio ?? null,
         experienceYears: Number(data.experienceYears ?? 1),
         isMobileActive: Boolean(data.isMobileActive),
+        isRentedChair: Boolean(data.isRentedChair),
         avatarUrl: data.avatarUrl ?? null,
+        documents: Array.isArray(data.documents) && data.documents.length > 0 ? JSON.stringify(data.documents) : null,
+        publicationStatus: 'pending',
       } as any).returning();
+
+      // Promote to salon_specialist only after the specialist row exists, so a
+      // failed insert cannot leave an orphaned user bound to this salon.
+      await db.update(users).set({ role: 'salon_specialist', salonId }).where(eq(users.id, dbUser.id));
       res.status(201).json(created);
     } catch (err) {
       console.error('[POST SPECIALISTS ERROR]', err);
@@ -876,7 +962,24 @@ async function createServer() {
     try {
       const id = Number(req.params.id);
       const data = schemas.specialistUpdateSchema.parse(req.body);
-      const [updated] = await db.update(specialists).set(data as any).where(eq(specialists.id, id)).returning();
+      const [existing] = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+      const allowed = assertSalonScope(req, existing.salonId);
+      if (allowed === null) {
+        return res.status(403).json({ error: 'شما فقط می‌توانید متخصصین سالن خود را ویرایش کنید.' });
+      }
+      // A rented-chair (independent) specialist manages their own schedule;
+      // the salon manager may not edit them.
+      if (existing.isRentedChair && req.dbUser.role !== 'super_admin') {
+        return res.status(403).json({ error: 'متخصص مستقل (صندلی اجاره‌داده‌شده) توسط مدیر سالن قابل ویرایش نیست.' });
+      }
+      const patch: Record<string, any> = { ...data };
+      if (Array.isArray(patch.documents)) patch.documents = JSON.stringify(patch.documents);
+      if (typeof data.fullName === 'string') {
+        await db.update(users).set({ fullName: data.fullName }).where(eq(users.id, existing.userId));
+        delete patch.fullName;
+      }
+      const [updated] = await db.update(specialists).set(patch as any).where(eq(specialists.id, id)).returning();
       if (!updated) return res.status(404).json({ error: 'متخصص یافت نشد.' });
       res.json({ success: true, specialist: updated });
     } catch (err) {
@@ -888,6 +991,15 @@ async function createServer() {
   app.delete('/api/specialists/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
       const id = Number(req.params.id);
+      const [existing] = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+      const allowed = assertSalonScope(req, existing.salonId);
+      if (allowed === null) {
+        return res.status(403).json({ error: 'شما فقط می‌توانید متخصصین سالن خود را حذف کنید.' });
+      }
+      if (existing.isRentedChair && req.dbUser.role !== 'super_admin') {
+        return res.status(403).json({ error: 'متخصص مستقل (صندلی اجاره‌داده‌شده) توسط مدیر سالن قابل حذف نیست.' });
+      }
       await db.delete(specialists).where(eq(specialists.id, id));
       res.json({ success: true });
     } catch (err: any) {
@@ -896,10 +1008,52 @@ async function createServer() {
     }
   });
 
-  app.post('/api/specialists/portfolio', requireAuth, requireRole(['super_admin', 'salon_admin', 'salon_specialist']), async (req: AuthRequest, res) => {
+  // Super-admin approval of a salon-registered specialist (documents reviewed).
+  app.patch('/api/specialists/:id/approve', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const [updated] = await db.update(specialists)
+        .set({ publicationStatus: 'active', isVerified: true })
+        .where(eq(specialists.id, id)).returning();
+      if (!updated) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+      await logSecurityAction({ actorId: req.dbUser.id, action: 'USER_UPDATE', targetId: String(id), details: { approved: true }, ipAddress: req.ip });
+      res.json({ success: true, specialist: updated });
+    } catch (err: any) {
+      console.error('[APPROVE SPECIALIST ERROR]', err);
+      res.status(500).json({ error: 'خطا در تایید متخصص.' });
+    }
+  });
+
+  app.patch('/api/specialists/:id/reject', requireAuth, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      // Rejection removes the pending specialist row; the underlying user stays.
+      const [existing] = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+      await db.delete(specialists).where(eq(specialists.id, id));
+      await logSecurityAction({ actorId: req.dbUser.id, action: 'USER_UPDATE', targetId: String(id), details: { rejected: true }, ipAddress: req.ip });
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('[REJECT SPECIALIST ERROR]', err);
+      res.status(500).json({ error: 'خطا در رد متخصص.' });
+    }
+  });
+
+  app.post('/api/specialists/portfolio', requireAuth, requireRole(['super_admin', 'salon_admin', 'salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
     try {
       const { specialistId, title, imageUrl, category } = req.body;
       if (!specialistId || !imageUrl) return res.status(400).json({ error: 'شناسه متخصص و تصویر الزامی است.' });
+      // SECURITY: the caller must actually manage this specialist — a specialist
+      // may only attach portfolio items to their own row, a salon_admin only to
+      // a specialist in their own salon.
+      const [target] = await db.select().from(specialists).where(eq(specialists.id, Number(specialistId))).limit(1);
+      if (!target) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+      if (req.dbUser.role === 'salon_specialist' || req.dbUser.role === 'mobile_specialist') {
+        if (target.userId !== req.dbUser.id) return res.status(403).json({ error: 'شما فقط به پروفایل خود دسترسی دارید.' });
+      } else if (req.dbUser.role === 'salon_admin') {
+        const allowed = assertSalonScope(req, target.salonId);
+        if (allowed === null) return res.status(403).json({ error: 'دسترسی غیرمجاز.' });
+      }
       const [created] = await db.insert(portfolioItems).values({
         specialistId: Number(specialistId),
         title: String(title || 'نمونه کار'),
@@ -913,14 +1067,416 @@ async function createServer() {
     }
   });
 
-  app.delete('/api/specialists/portfolio/:id', requireAuth, requireRole(['super_admin', 'salon_admin', 'salon_specialist']), async (req: AuthRequest, res) => {
+  app.delete('/api/specialists/portfolio/:id', requireAuth, requireRole(['super_admin', 'salon_admin', 'salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
     try {
       const id = Number(req.params.id);
+      // SECURITY: resolve the portfolio row and verify the caller owns it.
+      const [item] = await db.select().from(portfolioItems).where(eq(portfolioItems.id, id)).limit(1);
+      if (!item) return res.status(404).json({ error: 'نمونه‌کار یافت نشد.' });
+      const [owner] = await db.select().from(specialists).where(eq(specialists.id, item.specialistId)).limit(1);
+      if (!owner) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+      if (req.dbUser.role === 'salon_specialist' || req.dbUser.role === 'mobile_specialist') {
+        if (owner.userId !== req.dbUser.id) return res.status(403).json({ error: 'شما فقط می‌توانید نمونه‌کارهای خود را حذف کنید.' });
+      } else if (req.dbUser.role === 'salon_admin') {
+        const allowed = assertSalonScope(req, owner.salonId);
+        if (allowed === null) return res.status(403).json({ error: 'دسترسی غیرمجاز.' });
+      }
       await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
       res.json({ success: true });
     } catch (err: any) {
       console.error('[DELETE PORTFOLIO ERROR]', err);
       res.status(500).json({ error: 'خطا در حذف نمونه کار.' });
+    }
+  });
+
+  // ==========================================
+  // Independent specialist self-service (/api/me/*)
+  // Rented-chair (isRentedChair) and mobile specialists manage their own
+  // services, weekly schedule and portfolio here — ownership is resolved
+  // from the authenticated user, never from a client-supplied id.
+  // ==========================================
+
+  // Resolve the specialist row of the *calling* user, regardless of salon.
+  const resolveMySpecialist = async (req: AuthRequest) => {
+    const [sp] = await db.select().from(specialists)
+      .where(eq(specialists.userId, req.dbUser.id)).limit(1);
+    return sp || null;
+  };
+
+  // GET /api/me/specialist — own profile + services + portfolio, db-backed.
+  app.get('/api/me/specialist', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
+    try {
+      const sp = await resolveMySpecialist(req);
+      if (!sp) return res.status(404).json({ error: 'پروفایل متخصص شما یافت نشد.' });
+      const [myServices, myPortfolio, mySchedule] = await Promise.all([
+        db.select().from(services).where(eq(services.ownerId, req.dbUser.id)),
+        db.select().from(portfolioItems).where(eq(portfolioItems.specialistId, sp.id)),
+        db.select().from(specialistWeeklySchedule).where(eq(specialistWeeklySchedule.specialistId, sp.id)),
+      ]);
+      const [userRow] = await db.select().from(users).where(eq(users.id, req.dbUser.id)).limit(1);
+      res.json({
+        ...sp,
+        user: userRow ? { id: userRow.id, fullName: userRow.fullName, phone: userRow.phone, avatar: userRow.avatar, role: userRow.role } : null,
+        services: myServices,
+        portfolio: myPortfolio,
+        weeklySchedule: mySchedule,
+      });
+    } catch (err: any) {
+      console.error('[GET ME SPECIALIST ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت پروفایل متخصص.' });
+    }
+  });
+
+  // GET /api/me/services — list own services (owner-resolved, no salonId).
+  app.get('/api/me/services', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
+    try {
+      const list = await db.select().from(services).where(eq(services.ownerId, req.dbUser.id));
+      res.json(list);
+    } catch (err: any) {
+      console.error('[GET ME SERVICES ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت خدمات.' });
+    }
+  });
+
+  // POST /api/me/services — create own service (pending until super_admin approves).
+  app.post('/api/me/services', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
+    try {
+      const sp = await resolveMySpecialist(req);
+      if (!sp) return res.status(404).json({ error: 'پروفایل متخصص شما یافت نشد.' });
+      const data = schemas.myServiceSchema.parse(req.body);
+      const [created] = await db.insert(services).values({
+        ownerId: req.dbUser.id,
+        salonId: null,
+        serviceLineId: data.serviceLineId || sp.specialtyLine,
+        name: data.name,
+        description: data.description ?? null,
+        price: String(data.price),
+        durationMinutes: Number(data.durationMinutes),
+        isMobileAvailable: Boolean(data.isMobileAvailable),
+        imageUrl: data.imageUrl ?? null,
+        publicationStatus: 'pending',
+      } as any).returning();
+      res.status(201).json(created);
+    } catch (err) {
+      console.error('[POST ME SERVICES ERROR]', err);
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ایجاد خدمت.' });
+    }
+  });
+
+  // PATCH /api/me/services/:id — edit own service (price/duration = cost of service).
+  app.patch('/api/me/services/:id', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const data = schemas.myServiceUpdateSchema.parse(req.body);
+      const [existing] = await db.select().from(services).where(eq(services.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'خدمت یافت نشد.' });
+      if (existing.ownerId !== req.dbUser.id) {
+        return res.status(403).json({ error: 'شما فقط می‌توانید خدمات خود را ویرایش کنید.' });
+      }
+      const patch: Record<string, any> = { ...data };
+      if (patch.price != null) patch.price = String(patch.price);
+      const [updated] = await db.update(services).set(patch as any).where(eq(services.id, id)).returning();
+      if (!updated) return res.status(404).json({ error: 'خدمت یافت نشد.' });
+      res.json({ success: true, service: updated });
+    } catch (err) {
+      console.error('[PATCH ME SERVICES ERROR]', err);
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ویرایش خدمت.' });
+    }
+  });
+
+  // DELETE /api/me/services/:id — delete own service.
+  app.delete('/api/me/services/:id', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const [existing] = await db.select().from(services).where(eq(services.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'خدمت یافت نشد.' });
+      if (existing.ownerId !== req.dbUser.id) {
+        return res.status(403).json({ error: 'شما فقط می‌توانید خدمات خود را حذف کنید.' });
+      }
+      await db.delete(services).where(eq(services.id, id));
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('[DELETE ME SERVICES ERROR]', err);
+      res.status(500).json({ error: 'خطا در حذف خدمت.' });
+    }
+  });
+
+  // GET/PUT /api/me/schedule — own weekly day/hour grid.
+  app.get('/api/me/schedule', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
+    try {
+      const sp = await resolveMySpecialist(req);
+      if (!sp) return res.status(404).json({ error: 'پروفایل متخصص شما یافت نشد.' });
+      const rows = await db.select().from(specialistWeeklySchedule)
+        .where(eq(specialistWeeklySchedule.specialistId, sp.id));
+      res.json(rows);
+    } catch (err: any) {
+      console.error('[GET ME SCHEDULE ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت زمان‌بندی.' });
+    }
+  });
+
+  app.put('/api/me/schedule', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
+    try {
+      const sp = await resolveMySpecialist(req);
+      if (!sp) return res.status(404).json({ error: 'پروفایل متخصص شما یافت نشد.' });
+      const rows = z.array(schemas.salonScheduleSchema).parse(req.body);
+      // Replace the whole week in one go, mirroring the salon schedule PUT.
+      await db.delete(specialistWeeklySchedule).where(eq(specialistWeeklySchedule.specialistId, sp.id));
+      if (rows.length > 0) {
+        await db.insert(specialistWeeklySchedule).values(
+          rows.map((r) => ({
+            specialistId: sp.id,
+            dayOfWeek: r.dayOfWeek,
+            openTime: r.openTime,
+            closeTime: r.closeTime,
+            isActive: r.isActive,
+          })),
+        );
+      }
+      res.json({ success: true, schedule: rows });
+    } catch (err) {
+      console.error('[PUT ME SCHEDULE ERROR]', err);
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ذخیره زمان‌بندی.' });
+    }
+  });
+
+  // POST /api/me/portfolio — add portfolio item (specialistId resolved server-side).
+  app.post('/api/me/portfolio', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
+    try {
+      const sp = await resolveMySpecialist(req);
+      if (!sp) return res.status(404).json({ error: 'پروفایل متخصص شما یافت نشد.' });
+      const data = schemas.myPortfolioSchema.parse(req.body);
+      const [created] = await db.insert(portfolioItems).values({
+        specialistId: sp.id,
+        title: data.title,
+        imageUrl: data.imageUrl,
+        category: data.category,
+      }).returning();
+      res.status(201).json(created);
+    } catch (err) {
+      console.error('[POST ME PORTFOLIO ERROR]', err);
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ثبت نمونه‌کار.' });
+    }
+  });
+
+  // DELETE /api/me/portfolio/:id — delete own portfolio item.
+  app.delete('/api/me/portfolio/:id', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const sp = await resolveMySpecialist(req);
+      if (!sp) return res.status(404).json({ error: 'پروفایل متخصص شما یافت نشد.' });
+      const [existing] = await db.select().from(portfolioItems).where(eq(portfolioItems.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'نمونه‌کار یافت نشد.' });
+      if (existing.specialistId !== sp.id) {
+        return res.status(403).json({ error: 'شما فقط می‌توانید نمونه‌کارهای خود را حذف کنید.' });
+      }
+      await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('[DELETE ME PORTFOLIO ERROR]', err);
+      res.status(500).json({ error: 'خطا در حذف نمونه‌کار.' });
+    }
+  });
+
+  // ==========================================
+  // Salon-admin service portfolio ("نمونه‌کار خدمات")
+  // The salon manager curates sample-work images per service across every
+  // line — EXCEPT rented-chair (independent) specialists' services, which
+  // belong to the specialist, not the salon. Tenancy is read off
+  // services.salon_id (NULL on owner-rooted services) so the lock is
+  // structural, not a flag someone can flip.
+  // ==========================================
+
+  // Guard: fetch the service and require it to be a *salon* service the
+  // caller manages. Returns the service row or a response-ready error.
+  const requireSalonServiceForPortfolio = async (
+    req: AuthRequest,
+    serviceId: number,
+  ): Promise<{ status: number; error: string } | { svc: typeof services.$inferSelect }> => {
+    const [svc] = await db.select().from(services).where(eq(services.id, serviceId)).limit(1);
+    if (!svc) return { status: 404, error: 'خدمت یافت نشد.' };
+    if (svc.ownerId != null) {
+      // Owner-rooted service (independent/rented-chair or mobile specialist).
+      return {
+        status: 403,
+        error: 'این خدمت متعلق به متخصص مستقل (صندلی اجاره‌داده‌شده) است و مدیر سالن نمی‌تواند نمونه‌کار آن را ویرایش کند.',
+      };
+    }
+    const allowed = assertSalonScope(req, svc.salonId);
+    if (allowed === null) return { status: 403, error: 'شما فقط به خدمات سالن خود دسترسی دارید.' };
+    return { svc };
+  };
+
+  // GET /api/services/:id/portfolio — list a service's sample-work images.
+  app.get('/api/services/:id/portfolio', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const serviceId = Number(req.params.id);
+      if (!Number.isFinite(serviceId)) return res.status(400).json({ error: 'شناسه خدمت نامعتبر است.' });
+      // Any authenticated staff member of the owning salon may view; a null
+      // salonId (owner-rooted) is public read for simplicity of the customer view.
+      const rows = await db.select().from(servicePortfolioItems)
+        .where(eq(servicePortfolioItems.serviceId, serviceId))
+        .orderBy(desc(servicePortfolioItems.createdAt));
+      res.json(rows);
+    } catch (err: any) {
+      console.error('[GET SERVICE PORTFOLIO ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت نمونه‌کار خدمت.' });
+    }
+  });
+
+  // POST /api/services/:id/portfolio — add a sample-work image.
+  app.post('/api/services/:id/portfolio', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const serviceId = Number(req.params.id);
+      if (!Number.isFinite(serviceId)) return res.status(400).json({ error: 'شناسه خدمت نامعتبر است.' });
+      const guard = await requireSalonServiceForPortfolio(req, serviceId);
+      if ('error' in guard) return res.status(guard.status).json({ error: guard.error });
+      const data = schemas.servicePortfolioCreateSchema.parse(req.body);
+      const [created] = await db.insert(servicePortfolioItems).values({
+        serviceId,
+        imageUrl: data.imageUrl,
+        title: data.title ?? null,
+      }).returning();
+      res.status(201).json(created);
+    } catch (err) {
+      console.error('[POST SERVICE PORTFOLIO ERROR]', err);
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ثبت نمونه‌کار خدمت.' });
+    }
+  });
+
+  // PATCH /api/services/:id/portfolio/:itemId — edit an image (url/title).
+  app.patch('/api/services/:id/portfolio/:itemId', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const serviceId = Number(req.params.id);
+      const itemId = Number(req.params.itemId);
+      if (!Number.isFinite(serviceId) || !Number.isFinite(itemId)) {
+        return res.status(400).json({ error: 'شناسه‌ها نامعتبر است.' });
+      }
+      const guard = await requireSalonServiceForPortfolio(req, serviceId);
+      if ('error' in guard) return res.status(guard.status).json({ error: guard.error });
+      const data = schemas.servicePortfolioUpdateSchema.parse(req.body);
+      const [existing] = await db.select().from(servicePortfolioItems)
+        .where(eq(servicePortfolioItems.id, itemId)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'نمونه‌کار یافت نشد.' });
+      if (existing.serviceId !== serviceId) {
+        return res.status(403).json({ error: 'این نمونه‌کار به خدمت دیگری تعلق دارد.' });
+      }
+      const [updated] = await db.update(servicePortfolioItems)
+        .set(data as any)
+        .where(eq(servicePortfolioItems.id, itemId)).returning();
+      if (!updated) return res.status(404).json({ error: 'نمونه‌کار یافت نشد.' });
+      res.json({ success: true, item: updated });
+    } catch (err) {
+      console.error('[PATCH SERVICE PORTFOLIO ERROR]', err);
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ویرایش نمونه‌کار خدمت.' });
+    }
+  });
+
+  // DELETE /api/services/:id/portfolio/:itemId — remove an image.
+  app.delete('/api/services/:id/portfolio/:itemId', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const serviceId = Number(req.params.id);
+      const itemId = Number(req.params.itemId);
+      if (!Number.isFinite(serviceId) || !Number.isFinite(itemId)) {
+        return res.status(400).json({ error: 'شناسه‌ها نامعتبر است.' });
+      }
+      const guard = await requireSalonServiceForPortfolio(req, serviceId);
+      if ('error' in guard) return res.status(guard.status).json({ error: guard.error });
+      const [existing] = await db.select().from(servicePortfolioItems)
+        .where(eq(servicePortfolioItems.id, itemId)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'نمونه‌کار یافت نشد.' });
+      if (existing.serviceId !== serviceId) {
+        return res.status(403).json({ error: 'این نمونه‌کار به خدمت دیگری تعلق دارد.' });
+      }
+      await db.delete(servicePortfolioItems).where(eq(servicePortfolioItems.id, itemId));
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('[DELETE SERVICE PORTFOLIO ERROR]', err);
+      res.status(500).json({ error: 'خطا در حذف نمونه‌کار خدمت.' });
+    }
+  });
+
+  // ==========================================
+  // Commissions: per-specialist default + per-service overrides
+  // ==========================================
+  app.get('/api/specialists/:id/commissions', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const [existing] = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+      const allowed = assertSalonScope(req, existing.salonId);
+      if (allowed === null) return res.status(403).json({ error: 'دسترسی غیرمجاز.' });
+      const overrides = await db.select().from(specialistServiceCommissions)
+        .where(eq(specialistServiceCommissions.specialistId, id));
+      res.json({ commissionPercent: existing.commissionPercent, overrides });
+    } catch (err: any) {
+      console.error('[GET COMMISSIONS ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت پورسانت.' });
+    }
+  });
+
+  app.put('/api/specialists/:id/commissions', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const overrides = schemas.commissionOverridesSchema.parse(req.body);
+      const [existing] = await db.select().from(specialists).where(eq(specialists.id, id)).limit(1);
+      if (!existing) return res.status(404).json({ error: 'متخصص یافت نشد.' });
+      const allowed = assertSalonScope(req, existing.salonId);
+      if (allowed === null) return res.status(403).json({ error: 'دسترسی غیرمجاز.' });
+
+      // Replace the whole override set in one transaction.
+      await db.delete(specialistServiceCommissions).where(eq(specialistServiceCommissions.specialistId, id));
+      if (overrides.length > 0) {
+        await db.insert(specialistServiceCommissions).values(
+          overrides.map((o) => ({
+            specialistId: id,
+            serviceId: Number(o.serviceId),
+            commissionPercent: Number(o.commissionPercent),
+          })),
+        );
+      }
+      res.json({ success: true, overrides });
+    } catch (err) {
+      console.error('[PUT COMMISSIONS ERROR]', err);
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ذخیره پورسانت.' });
+    }
+  });
+
+  // ==========================================
+  // Salon weekly schedule (day/hour grid)
+  // ==========================================
+  app.get('/api/salons/:id/schedule', requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ error: 'شناسه سالن نامعتبر است.' });
+      const allowed = assertSalonScope(req, id);
+      if (allowed === null) return res.status(403).json({ error: 'شما فقط به زمان‌بندی سالن خود دسترسی دارید.' });
+      const rows = await db.select().from(salonWeeklySchedule).where(eq(salonWeeklySchedule.salonId, id));
+      res.json(rows);
+    } catch (err: any) {
+      console.error('[GET SCHEDULE ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت زمان‌بندی.' });
+    }
+  });
+
+  app.put('/api/salons/:id/schedule', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ error: 'شناسه سالن نامعتبر است.' });
+      const allowed = assertSalonScope(req, id);
+      if (allowed === null) return res.status(403).json({ error: 'شما فقط می‌توانید زمان‌بندی سالن خود را ویرایش کنید.' });
+      const rows = z.array(schemas.salonScheduleSchema).parse(req.body);
+
+      await db.delete(salonWeeklySchedule).where(eq(salonWeeklySchedule.salonId, id));
+      if (rows.length > 0) {
+        await db.insert(salonWeeklySchedule).values(
+          rows.map((r) => ({ salonId: id, dayOfWeek: r.dayOfWeek, openTime: r.openTime, closeTime: r.closeTime, isActive: r.isActive })),
+        );
+      }
+      res.json({ success: true, schedule: rows });
+    } catch (err) {
+      console.error('[PUT SCHEDULE ERROR]', err);
+      res.status(err instanceof ZodError ? 400 : 500).json({ error: 'خطا در ذخیره زمان‌بندی.' });
     }
   });
 

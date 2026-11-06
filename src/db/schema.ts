@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean, pgEnum, decimal, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, timestamp, boolean, pgEnum, decimal, uniqueIndex, check } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
 // Enums
@@ -89,7 +89,10 @@ export const salons = pgTable('salons', {
 
 export const services = pgTable('services', {
   id: serial('id').primaryKey(),
-  salonId: integer('salon_id').references(() => salons.id, { onDelete: 'cascade' }).notNull(),
+  // Independent/mobile specialists own services without a salon (salonId IS NULL,
+  // ownerId set); salon services keep salonId set and ownerId NULL.
+  salonId: integer('salon_id').references(() => salons.id, { onDelete: 'cascade' }),
+  ownerId: integer('owner_id').references(() => users.id, { onDelete: 'cascade' }),
   serviceLineId: text('service_line_id').notNull(), // e.g. 'hair', 'nail'
   name: text('name').notNull(),
   description: text('description'),
@@ -99,7 +102,10 @@ export const services = pgTable('services', {
   imageUrl: text('image_url'),
   publicationStatus: publicationStatusEnum('publication_status').default('active').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  // A service must belong to exactly one of: a salon or an independent specialist.
+  salonOrOwner: check('services_salon_or_owner_chk', sql`(${t.salonId} IS NOT NULL) OR (${t.ownerId} IS NOT NULL)`),
+}));
 
 export const specialists = pgTable('specialists', {
   id: serial('id').primaryKey(),
@@ -114,6 +120,12 @@ export const specialists = pgTable('specialists', {
   workingHours: text('working_hours'),
   workingDays: text('working_days'),
   publicationStatus: publicationStatusEnum('publication_status').default('active').notNull(),
+  // Salon-admin feature: an independently-rented-chair specialist (صندلی اجاره‌داده‌شده)
+  // is excluded from salon-manager schedule edits; commission + documents back
+  // the new salon-admin workflow.
+  isRentedChair: boolean('is_rented_chair').default(false).notNull(),
+  commissionPercent: integer('commission_percent'),
+  documents: text('documents'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -160,6 +172,56 @@ export const portfolioItems = pgTable('portfolio_items', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Salon-admin feature: per-service commission overrides.
+// A row here beats the specialist's default commissionPercent.
+export const specialistServiceCommissions = pgTable('specialist_service_commissions', {
+  id: serial('id').primaryKey(),
+  specialistId: integer('specialist_id').references(() => specialists.id, { onDelete: 'cascade' }).notNull(),
+  serviceId: integer('service_id').references(() => services.id, { onDelete: 'cascade' }).notNull(),
+  commissionPercent: integer('commission_percent').notNull(),
+}, (t) => ({
+  uniq: uniqueIndex('sp_svc_commission_uniq').on(t.specialistId, t.serviceId),
+}));
+
+// Salon-admin feature: weekly salon schedule (day/hour grid).
+// dayOfWeek is 0=شنبه ... 6=جمعه, matching WEEKDAYS_FA in persianUtils.ts.
+export const salonWeeklySchedule = pgTable('salon_weekly_schedule', {
+  id: serial('id').primaryKey(),
+  salonId: integer('salon_id').references(() => salons.id, { onDelete: 'cascade' }).notNull(),
+  dayOfWeek: integer('day_of_week').notNull(),
+  openTime: text('open_time').notNull(),   // HH:MM
+  closeTime: text('close_time').notNull(), // HH:MM
+  isActive: boolean('is_active').default(true).notNull(),
+}, (t) => ({
+  uniq: uniqueIndex('salon_day_uniq').on(t.salonId, t.dayOfWeek),
+}));
+
+// Independent/mobile specialist weekly schedule (day/hour grid).
+// Mirrors salon_weekly_schedule but rooted at the specialist, so rented-chair
+// and mobile specialists manage their own availability without a salon.
+export const specialistWeeklySchedule = pgTable('specialist_weekly_schedule', {
+  id: serial('id').primaryKey(),
+  specialistId: integer('specialist_id').references(() => specialists.id, { onDelete: 'cascade' }).notNull(),
+  dayOfWeek: integer('day_of_week').notNull(),   // 0=شنبه ... 6=جمعه
+  openTime: text('open_time').notNull(),         // HH:MM
+  closeTime: text('close_time').notNull(),       // HH:MM
+  isActive: boolean('is_active').default(true).notNull(),
+}, (t) => ({
+  uniq: uniqueIndex('spec_day_uniq').on(t.specialistId, t.dayOfWeek),
+}));
+
+// Salon-admin feature: per-service portfolio images ("نمونه‌کار خدمات").
+// Rows are rooted at the service; services.salon_id carries tenancy, so a
+// rented-chair specialist's own services can never be edited by the salon
+// manager (their salon_id is NULL and owner_id points at the specialist).
+export const servicePortfolioItems = pgTable('service_portfolio_items', {
+  id: serial('id').primaryKey(),
+  serviceId: integer('service_id').references(() => services.id, { onDelete: 'cascade' }).notNull(),
+  imageUrl: text('image_url').notNull(),
+  title: text('title'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   salon: one(salons, {
@@ -177,6 +239,7 @@ export const salonsRelations = relations(salons, ({ many }) => ({
   services: many(services),
   specialists: many(specialists),
   bookings: many(bookings),
+  weeklySchedule: many(salonWeeklySchedule),
 }));
 
 export const specialistsRelations = relations(specialists, ({ one, many }) => ({
@@ -190,6 +253,33 @@ export const specialistsRelations = relations(specialists, ({ one, many }) => ({
   }),
   bookings: many(bookings),
   portfolio: many(portfolioItems),
+  serviceCommissions: many(specialistServiceCommissions),
+  weeklySchedule: many(specialistWeeklySchedule),
+}));
+
+export const specialistServiceCommissionsRelations = relations(specialistServiceCommissions, ({ one }) => ({
+  specialist: one(specialists, {
+    fields: [specialistServiceCommissions.specialistId],
+    references: [specialists.id],
+  }),
+  service: one(services, {
+    fields: [specialistServiceCommissions.serviceId],
+    references: [services.id],
+  }),
+}));
+
+export const salonWeeklyScheduleRelations = relations(salonWeeklySchedule, ({ one }) => ({
+  salon: one(salons, {
+    fields: [salonWeeklySchedule.salonId],
+    references: [salons.id],
+  }),
+}));
+
+export const specialistWeeklyScheduleRelations = relations(specialistWeeklySchedule, ({ one }) => ({
+  specialist: one(specialists, {
+    fields: [specialistWeeklySchedule.specialistId],
+    references: [specialists.id],
+  }),
 }));
 
 export const portfolioItemsRelations = relations(portfolioItems, ({ one }) => ({
@@ -225,6 +315,14 @@ export const servicesRelations = relations(services, ({ many, one }) => ({
     references: [salons.id],
   }),
   bookings: many(bookings),
+  portfolioItems: many(servicePortfolioItems),
+}));
+
+export const servicePortfolioItemsRelations = relations(servicePortfolioItems, ({ one }) => ({
+  service: one(services, {
+    fields: [servicePortfolioItems.serviceId],
+    references: [services.id],
+  }),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({

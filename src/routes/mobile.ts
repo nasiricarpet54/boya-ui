@@ -627,20 +627,28 @@ router.get('/specialists', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// Legacy alias of /specialists/invite kept for older app builds: the create
+// form is phone-driven, so we resolve the user from `phone` exactly like the
+// invite route instead of trusting a client-supplied userId.
 router.post('/specialists/new', requireAuth, requireRole(['salon_admin', 'super_admin']), async (req: AuthRequest, res) => {
   try {
-    const data = schemas.specialistCreateSchema.parse(req.body);
-    const salonId = Number(data.salonId) || Number(req.dbUser.salonId);
+    const { phone, fullName, specialtyLine } = req.body;
+    const cleanPhone = normalizePhone(phone);
+    if (!cleanPhone) return res.status(400).json({ error: 'شماره موبایل الزامی است.' });
+
+    const { getOrCreateUserByPhone } = await import('../db/users.ts');
+    const dbUser = await getOrCreateUserByPhone(cleanPhone, fullName);
+    const salonId = Number(req.dbUser.salonId);
     if (!Number.isFinite(salonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
 
+    const existing = await db.select().from(specialists).where(eq(specialists.userId, dbUser.id)).limit(1);
+    if (existing.length > 0) return res.status(400).json({ error: 'این کاربر قبلاً متخصص ثبت شده است.' });
+
     const [created] = await db.insert(specialists).values({
-      userId: Number(data.userId),
+      userId: dbUser.id,
       salonId,
-      specialtyLine: data.specialtyLine,
-      bio: data.bio ?? null,
-      experienceYears: Number(data.experienceYears ?? 1),
-      isMobileActive: Boolean(data.isMobileActive),
-      avatarUrl: data.avatarUrl ?? null,
+      specialtyLine: specialtyLine || 'hair',
+      isVerified: false,
     } as any).returning();
     res.status(201).json({ data: created });
   } catch (err) {

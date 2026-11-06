@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Specialist, Booking } from '../../data/marketplaceData';
 import { formatPrice, toPersianDigits } from '../../utils/persianUtils';
+import { resolveCommissionPercent } from '../../../lib/commission';
 
 interface SpecialistFinancialsViewProps {
   specialist: any;
@@ -169,8 +170,10 @@ export const SpecialistFinancialsView: React.FC<SpecialistFinancialsViewProps> =
       ? Math.round(((currentMonthPoint.totalRevenue - previousMonthPoint.totalRevenue) / previousMonthPoint.totalRevenue) * 100)
       : 8;
 
-  // Payout calculation (e.g. 85% specialist share after salon platform fee)
-  const specialistCommissionSharePercent = 85;
+  // Payout: the specialist's configured commission (per-service override →
+  // specialist default) replaces the old hardcoded 85%.
+  const resolvedCommission = resolveCommissionPercent(specialist);
+  const specialistCommissionSharePercent = resolvedCommission ?? 0;
   const netSpecialistShare = Math.round((currentMonthPoint.totalRevenue * specialistCommissionSharePercent) / 100);
 
   return (

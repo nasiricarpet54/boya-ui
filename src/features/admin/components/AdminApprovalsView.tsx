@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, ShieldCheck, FileText, Upload, X, Building2, Eye, AlertCircle } from 'lucide-react';
+import api from '../../../shared/api/apiClient';
 import { useAuthStore } from '../../../shared/stores/authStore';
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useDataStore } from '../../../shared/stores/dataStore';
@@ -40,6 +41,55 @@ export const AdminApprovalsView: React.FC = () => {
 
   const onRejectTenant = async (id: string) => {
     setBusy(true); setError(''); try { await updateSalon(id, { isApproved: false }); showToast('درخواست رد شد.'); setSelectedSalon(null); setDocumentUrl(''); } catch (e: any) { setError(e?.response?.data?.error || e?.message || 'خطا در رد درخواست.'); } finally { setBusy(false); }
+  };
+
+  // Salon-admin feature: pending specialists awaiting document approval.
+  const [pendingSpecialists, setPendingSpecialists] = useState<any[]>([]);
+  const [specBusyId, setSpecBusyId] = useState<number | null>(null);
+  const loadPendingSpecialists = async () => {
+    try {
+      const { data } = await api.get('/specialists');
+      const all = Array.isArray(data) ? data : [];
+      setPendingSpecialists(all.filter((sp: any) => sp.publicationStatus === 'pending'));
+    } catch { setPendingSpecialists([]); }
+  };
+
+  // Independent/mobile specialist services pending approval (owner-rooted, so
+  // they never appear embedded under any salon and need their own fetch).
+  const [pendingMyServices, setPendingMyServices] = useState<any[]>([]);
+  const loadPendingIndependentServices = async () => {
+    try {
+      const { data } = await api.get('/services/independent');
+      setPendingMyServices(Array.isArray(data) ? data : []);
+    } catch { setPendingMyServices([]); }
+  };
+  React.useEffect(() => { loadPendingSpecialists(); loadPendingIndependentServices(); }, []);
+  const onApproveSpecialist = async (id: number) => {
+    setSpecBusyId(id); setError('');
+    try { await api.patch(`/specialists/${id}/approve`); showToast('متخصص تایید و منتشر شد.'); loadPendingSpecialists(); }
+    catch (e: any) { setError(e?.response?.data?.error || e?.message || 'خطا در تایید متخصص.'); }
+    finally { setSpecBusyId(null); }
+  };
+  const onRejectSpecialist = async (id: number) => {
+    setSpecBusyId(id); setError('');
+    try { await api.patch(`/specialists/${id}/reject`); showToast('درخواست متخصص رد شد.'); loadPendingSpecialists(); }
+    catch (e: any) { setError(e?.response?.data?.error || e?.message || 'خطا در رد متخصص.'); }
+    finally { setSpecBusyId(null); }
+  };
+
+  // `documents` is stored as a JSON string; a malformed value must not crash the panel.
+  const parseDocs = (raw: unknown): string[] => {
+    if (typeof raw !== 'string') return [];
+    try { const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed.filter((u) => typeof u === 'string') : []; }
+    catch { return []; }
+  };
+
+  // Approve an independent specialist's pending service.
+  const onApproveIndependentService = async (id: number) => {
+    setServiceBusyId(id); setError('');
+    try { await api.patch(`/services/${id}/approve`); showToast('خدمت مستقل تایید و منتشر شد.'); loadPendingIndependentServices(); }
+    catch (e: any) { setError(e?.response?.data?.error || e?.message || 'خطا در تایید خدمت.'); }
+    finally { setServiceBusyId(null); }
   };
 
   return (
@@ -158,6 +208,71 @@ export const AdminApprovalsView: React.FC = () => {
             <div><strong className="text-sm">{service.name}</strong><div className="text-xs text-[#6C6C6C]">{service.salonName} · {toPersianDigits(service.durationMinutes)} دقیقه · {toPersianDigits(service.price)} تومان</div></div>
             <button disabled={serviceBusyId === service.id} onClick={() => publishService(service)} className="px-3 py-2 rounded-lg bg-[#173B3F] text-white text-xs font-bold disabled:opacity-50">تأیید و انتشار</button>
           </div>)}
+        </div>}
+      </section>
+
+      {/* Pending specialists — documents awaiting review */}
+      <section className="bg-white p-5 rounded-3xl border border-[#E7E2DA] space-y-3 shadow-xs">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-[#173B3F]">بررسی مدارک متخصصین</h3>
+            <p className="text-xs text-[#6C6C6C] mt-1">متخصصینی که مدیر سالن ثبت کرده و منتظر تایید مدارک شما هستند.</p>
+          </div>
+          <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">{toPersianDigits(pendingSpecialists.length)} متخصص در انتظار</span>
+        </div>
+        {pendingSpecialists.length === 0 ? <p className="text-sm text-[#6C6C6C]">متخصص در انتظار تایید وجود ندارد.</p> : <div className="space-y-2">
+          {pendingSpecialists.map((sp) => {
+            const docs: string[] = Array.isArray(sp.documents) ? sp.documents : parseDocs(sp.documents);
+            return (
+              <div key={sp.id} className="flex flex-wrap items-center justify-between gap-3 border rounded-xl p-3">
+                <div className="space-y-1">
+                  <strong className="text-sm">متخصص جدید (لاین: {toPersianDigits(sp.specialtyLine || '-')})</strong>
+                  <div className="text-xs text-[#6C6C6C]">سالن: {toPersianDigits(sp.salonId)}</div>
+                  {docs.length > 0 && (
+                    <div className="flex gap-1.5 flex-wrap mt-1">
+                      {docs.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="inline-block">
+                          <img src={url} alt={`document-${i}`} className="w-14 h-14 rounded-lg object-cover border border-[#E7E2DA] hover:border-[#173B3F]" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button disabled={specBusyId === sp.id} onClick={() => onApproveSpecialist(sp.id)} className="px-3 py-2 rounded-lg bg-[#173B3F] text-white text-xs font-bold disabled:opacity-50">تایید و انتشار</button>
+                  <button disabled={specBusyId === sp.id} onClick={() => onRejectSpecialist(sp.id)} className="px-3 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-bold disabled:opacity-50">رد درخواست</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>}
+      </section>
+
+      {/* Independent specialist services awaiting approval */}
+      <section className="bg-white p-5 rounded-3xl border border-[#E7E2DA] space-y-3 shadow-xs">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-[#173B3F]">خدمات متخصصین مستقل</h3>
+            <p className="text-xs text-[#6C6C6C] mt-1">خدماتی که متخصصین مستقل یا سیار ثبت کرده‌اند و منتظر تایید شما هستند.</p>
+          </div>
+          <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">{toPersianDigits(pendingMyServices.length)} خدمت در انتظار</span>
+        </div>
+        {pendingMyServices.length === 0 ? <p className="text-sm text-[#6C6C6C]">خدمت مستلط در انتظار تایید وجود ندارد.</p> : <div className="space-y-2">
+          {pendingMyServices.map((svc) => (
+            <div key={svc.id} className="flex flex-wrap items-center justify-between gap-3 border rounded-xl p-3">
+              <div>
+                <strong className="text-sm">{svc.name}</strong>
+                <div className="text-xs text-[#6C6C6C]">
+                  {svc.ownerName || 'متخصص مستقل'}{svc.ownerPhone ? ` · ${toPersianDigits(svc.ownerPhone)}` : ''} · {toPersianDigits(svc.durationMinutes)} دقیقه · {toPersianDigits(Number(svc.price))} تومان
+                </div>
+              </div>
+              <button
+                disabled={serviceBusyId === svc.id}
+                onClick={() => onApproveIndependentService(svc.id)}
+                className="px-3 py-2 rounded-lg bg-[#173B3F] text-white text-xs font-bold disabled:opacity-50"
+              >تایید و انتشار</button>
+            </div>
+          ))}
         </div>}
       </section>
 

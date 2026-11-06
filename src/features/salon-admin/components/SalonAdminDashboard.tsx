@@ -52,7 +52,7 @@ import {
   SpecialistPortfolio,
   SERVICE_LINES,
 } from '../../../shared/data/marketplaceData';
-import { formatPrice, toPersianDigits } from '../../../shared/utils/persianUtils';
+import { formatPrice, toPersianDigits, normalizePhone, WEEKDAYS_FA } from '../../../shared/utils/persianUtils';
 import { normalizeToIsoDate, normalizeTime } from '../../../shared/utils/dateIsoConverter';
 import { BeautyActivityIcon } from '../../../shared/components/ui/BeautyActivityIcon';
 import { SpecialistFinancialsView } from '../../../shared/components/ui/SpecialistFinancialsView';
@@ -78,10 +78,83 @@ const PRESET_SERVICE_PHOTOS = [
 
 const DAYS_OF_WEEK = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
 
+/**
+ * Sample-work images for one service (salon-admin gallery tab).
+ * Add via URL, delete per image. Editing the title happens in place.
+ */
+const ServicePortfolioRow: React.FC<{
+  items: any[];
+  onAdd: (imageUrl: string, title?: string) => Promise<boolean>;
+  onDelete: (itemId: number) => void;
+}> = ({ items, onAdd, onDelete }) => {
+  const [newUrl, setNewUrl] = useState('');
+  const [newTitle, setNewTitle] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUrl.trim()) return;
+    setAdding(true);
+    const ok = await onAdd(newUrl, newTitle);
+    if (ok) { setNewUrl(''); setNewTitle(''); }
+    setAdding(false);
+  };
+
+  return (
+    <div className="space-y-2">
+      {items.length === 0 ? (
+        <p className="text-[11px] text-[#6C6C6C]">برای این خدمت هنوز نمونه‌کاری ثبت نشده است.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {items.map((item) => (
+            <div key={item.id} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E7E2DA] group">
+              <img src={item.imageUrl} alt={item.title || 'نمونه‌کار'} className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => onDelete(Number(item.id))}
+                className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center shadow"
+                title="حذف تصویر"
+              >×</button>
+              {item.title && (
+                <span className="absolute bottom-0 inset-x-0 bg-black/55 text-white text-[9px] px-1 py-0.5 truncate">
+                  {item.title}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <form onSubmit={submit} className="flex flex-wrap gap-1.5 items-center">
+        <input
+          type="text"
+          value={newUrl}
+          onChange={(e) => setNewUrl(e.target.value)}
+          placeholder="آدرس تصویر نمونه‌کار (لینک)"
+          className="flex-1 min-w-[150px] h-8 px-2.5 rounded-lg border border-[#E7E2DA] text-[11px] focus:border-[#173B3F] outline-none"
+        />
+        <input
+          type="text"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="عنوان (اختیاری)"
+          className="w-32 h-8 px-2.5 rounded-lg border border-[#E7E2DA] text-[11px] focus:border-[#173B3F] outline-none"
+        />
+        <button
+          type="submit"
+          disabled={adding || !newUrl.trim()}
+          className="px-3 h-8 rounded-lg bg-[#173B3F] text-white text-[11px] font-bold disabled:opacity-50"
+        >
+          {adding ? '…' : 'افزودن'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
 export const SalonAdminDashboard: React.FC = () => {
   const { setAppMode, setShowSplashScreen, setSplashAppName, showToast } = useUIStore();
   const { user } = useAuthStore();
-  const { salons, updateSalon, updateSpecialist, createService } = useDataStore();
+  const { salons, updateSalon, updateSpecialist, createService, createSpecialist, deleteSpecialist, updateService, deleteService } = useDataStore();
   const queryClient = useQueryClient();
 
   // Fetch real data
@@ -152,7 +225,7 @@ export const SalonAdminDashboard: React.FC = () => {
   };
 
   // Salon Manager tab navigation
-  const [salonTab, setSalonTab] = useState<'overview' | 'schedule' | 'gallery' | 'services' | 'specialists' | 'blocks'>('overview');
+  const [salonTab, setSalonTab] = useState<'overview' | 'schedule' | 'gallery' | 'services' | 'specialists' | 'blocks' | 'commissions' | 'weekly_schedule'>('overview');
 
   // Dedicated Specialist View mode
   const [activeSpecialistView, setActiveSpecialistView] = useState<any>(null);
@@ -169,6 +242,51 @@ export const SalonAdminDashboard: React.FC = () => {
   const [newGalleryImageUrl, setNewGalleryImageUrl] = useState('');
   const [newGalleryImageTitle, setNewGalleryImageTitle] = useState('');
 
+  // Salon-admin service portfolio ("نمونه‌کار خدمات"): sample-work images per
+  // service. Loaded when opening the gallery tab; independent (rented-chair)
+  // services are excluded by the server, so they never enter servicePortfolio.
+  const [servicePortfolio, setServicePortfolio] = useState<Record<number, any[]>>({});
+  const [portfolioBusyServiceId, setPortfolioBusyServiceId] = useState<number | null>(null);
+
+  const handleLoadServicePortfolio = async (serviceId: number) => {
+    setPortfolioBusyServiceId(serviceId);
+    try {
+      const { data } = await api.get(`/services/${serviceId}/portfolio`);
+      setServicePortfolio((prev) => ({ ...prev, [serviceId]: Array.isArray(data) ? data : [] }));
+    } catch {
+      setServicePortfolio((prev) => ({ ...prev, [serviceId]: [] }));
+    } finally {
+      setPortfolioBusyServiceId(null);
+    }
+  };
+
+  const handleAddServicePortfolio = async (serviceId: number, imageUrl: string, title?: string): Promise<boolean> => {
+    if (!imageUrl.trim()) { showToast('تصویر نمونه‌کار الزامی است.'); return false; }
+    try {
+      const { data } = await api.post(`/services/${serviceId}/portfolio`, {
+        imageUrl: imageUrl.trim(),
+        title: title?.trim() || null,
+      });
+      setServicePortfolio((prev) => ({ ...prev, [serviceId]: [data, ...(prev[serviceId] || [])] }));
+      showToast('نمونه‌کار به این خدمت اضافه شد.');
+      return true;
+    } catch (err: any) {
+      showToast(err?.response?.data?.error || err?.message || 'خطا در ثبت نمونه‌کار.');
+      return false;
+    }
+  };
+
+  const handleDeleteServicePortfolio = async (serviceId: number, itemId: number) => {
+    if (!window.confirm('حذف این تصویر نمونه‌کار؟')) return;
+    try {
+      await api.delete(`/services/${serviceId}/portfolio/${itemId}`);
+      setServicePortfolio((prev) => ({ ...prev, [serviceId]: (prev[serviceId] || []).filter((i) => i.id !== itemId) }));
+      showToast('تصویر نمونه‌کار حذف شد.');
+    } catch (err: any) {
+      showToast(err?.response?.data?.error || err?.message || 'خطا در حذف نمونه‌کار.');
+    }
+  };
+
   // Local state for services
   const [salonServices, setSalonServices] = useState<any[]>([]);
   const [isAddingService, setIsAddingService] = useState(false);
@@ -181,6 +299,21 @@ export const SalonAdminDashboard: React.FC = () => {
 
   // Local state for specialists in this salon
   const [specialistsList, setSpecialistsList] = useState<any[]>([]);
+
+  // Specialist CRUD (salon-admin feature: create/edit/delete + documents → approval)
+  const [showSpecialistForm, setShowSpecialistForm] = useState(false);
+  const [editingSpecialistId, setEditingSpecialistId] = useState<number | null>(null);
+  const [newSpecialistPhone, setNewSpecialistPhone] = useState('');
+  const [newSpecialistName, setNewSpecialistName] = useState('');
+  const [newSpecialistLine, setNewSpecialistLine] = useState('hair');
+  const [newSpecialistRented, setNewSpecialistRented] = useState(false);
+  const [newSpecialistDocs, setNewSpecialistDocs] = useState<string[]>([]);
+  const [specialistBusy, setSpecialistBusy] = useState(false);
+
+  // Commissions + weekly schedule (salon-admin feature pack)
+  const [commissionRows, setCommissionRows] = useState<Array<{ specialistId: number; percent: number | null }>>([]);
+  const [weeklySchedule, setWeeklySchedule] = useState<Array<{ dayOfWeek: number; openTime: string; closeTime: string; isActive: boolean }>>([]);
+  const [scheduleBusy, setScheduleBusy] = useState(false);
 
   // Avatar & Cover upload refs
   const specialistAvatarInputRef = React.useRef<HTMLInputElement>(null);
@@ -242,24 +375,35 @@ export const SalonAdminDashboard: React.FC = () => {
   useEffect(() => {
     if (isSpecialistRole) {
       if (user?.role === ROLES.MOBILE_SPECIALIST) {
-        // Independent Mobile Specialist: Completely standalone, NO salon affiliation
-        const mobileSpecObj = {
-          id: user.id || 'mobile-spec',
-          user: user,
-          name: user.fullName || 'متخصص سیار',
-          avatarUrl: user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-          specialtyLine: user.managedLine || 'hair',
-          bio: 'متخصص سیار و مستقل در پلتفرم بویا — ارائه خدمات زیبایی در محل مشتری',
-          experienceYears: 4,
-          isVerified: true,
-          isMobileSpecialist: true,
-          isMobileActive: true,
-          rating: 5,
-          reviewsCount: 1,
-          portfolio: [],
-        };
-        if (!activeSpecialistView || activeSpecialistView.id !== mobileSpecObj.id) {
-          setActiveSpecialistView(mobileSpecObj);
+        // Independent Mobile Specialist: db-backed profile via /api/me/specialist
+        // (replaces the old client-side mock that had no real services/portfolio).
+        if (!activeSpecialistView || activeSpecialistView.id !== user.id) {
+          api.get('/me/specialist')
+            .then(({ data }) => {
+              setActiveSpecialistView({
+                ...data,
+                id: data.id ?? user.id,
+                name: data.user?.fullName || user.fullName || 'متخصص سیار',
+                avatar: data.avatarUrl || data.user?.avatar || '',
+                isMobileSpecialist: true,
+                isMobileActive: true,
+                portfolio: Array.isArray(data.portfolio) ? data.portfolio : [],
+                services: Array.isArray(data.services) ? data.services : [],
+              });
+            })
+            .catch(() => {
+              // Fall back to a minimal shell so the panel still renders.
+              setActiveSpecialistView({
+                id: user.id || 'mobile-spec',
+                user,
+                name: user.fullName || 'متخصص سیار',
+                specialtyLine: user.managedLine || 'hair',
+                isMobileSpecialist: true,
+                isMobileActive: true,
+                portfolio: [],
+                services: [],
+              });
+            });
         }
       } else if (specialistsList.length > 0) {
         const mySpec = specialistsList.find(
@@ -334,12 +478,33 @@ export const SalonAdminDashboard: React.FC = () => {
       )
     : [];
 
+  // --- Independent specialist mode ---
+  // Rented-chair (independent) and mobile specialists manage their OWN services
+  // and schedule (owner_id / specialist_weekly_schedule), not the salon's.
+  const isIndependentSpecialist = Boolean(
+    activeSpecialistView?.isRentedChair || activeSpecialistView?.isMobileSpecialist
+  ) && isSpecialistRole;
+
+  const [myServices, setMyServices] = useState<any[]>([]);
+  const [myWeeklySchedule, setMyWeeklySchedule] = useState<Array<{ dayOfWeek: number; openTime: string; closeTime: string; isActive: boolean }>>([]);
+  const [myScheduleBusy, setMyScheduleBusy] = useState(false);
+
+  // Load own services + schedule when entering independent mode.
+  useEffect(() => {
+    if (!isIndependentSpecialist) return;
+    api.get('/me/services').then(({ data }) => setMyServices(Array.isArray(data) ? data : [])).catch(() => setMyServices([]));
+    api.get('/me/schedule').then(({ data }) => setMyWeeklySchedule(Array.isArray(data) ? data : [])).catch(() => setMyWeeklySchedule([]));
+  }, [isIndependentSpecialist]);
+
   // --- Filter Services for Active Specialist (STRICT REQUIREMENT #2) ---
-  const specialistServices = activeSpecialistView
-    ? (salonServices.length > 0
-        ? salonServices.filter((s) => s.serviceLineId === activeSpecialistView.specialtyLine)
-        : (currentSalon?.services || []).filter((s: any) => s.serviceLineId === activeSpecialistView.specialtyLine || s.isMobileAvailable))
-    : [];
+  // Independent specialists see only their own owner-rooted services.
+  const specialistServices = isIndependentSpecialist
+    ? myServices
+    : activeSpecialistView
+      ? (salonServices.length > 0
+          ? salonServices.filter((s) => s.serviceLineId === activeSpecialistView.specialtyLine)
+          : (currentSalon?.services || []).filter((s: any) => s.serviceLineId === activeSpecialistView.specialtyLine || s.isMobileAvailable))
+      : [];
 
   // --- Filter Schedule Blocks for Active Specialist (STRICT REQUIREMENT #3) ---
   const specialistBlocks = activeSpecialistView
@@ -373,6 +538,22 @@ export const SalonAdminDashboard: React.FC = () => {
     setServiceError('');
     try {
       const lineId = activeSpecialistView ? activeSpecialistView.specialtyLine : newServiceLineId;
+      if (isIndependentSpecialist) {
+        // Independent/mobile specialist: owner-rooted service, pending approval.
+        const { data: created } = await api.post('/me/services', {
+          name: newServiceName.trim(),
+          serviceLineId: lineId,
+          durationMinutes: durationNum,
+          price: priceNum,
+          isMobileAvailable: newServiceMobile,
+          imageUrl: newServiceImage,
+        });
+        setMyServices((prev) => [created, ...prev]);
+        setIsAddingService(false);
+        setNewServiceName('');
+        showToast('خدمت ثبت شد — پس از تایید ادمین کل منتشر می‌شود.');
+        return;
+      }
       const created = await createService({
         salonId: Number(currentSalon.id),
         serviceLineId: lineId,
@@ -395,18 +576,73 @@ export const SalonAdminDashboard: React.FC = () => {
     }
   };
 
+  // Salon-admin feature: edit price/duration of an existing service.
+  const handleEditService = (serv: any) => {
+    const priceStr = window.prompt('قیمت جدید خدمت (تومان):', String(serv.price ?? ''));
+    if (priceStr === null) return;
+    const durationStr = window.prompt('مدت زمان جدید (دقیقه):', String(serv.durationMinutes ?? 60));
+    if (durationStr === null) return;
+    const price = Number(priceStr);
+    const durationMinutes = Number(durationStr);
+    if (!Number.isFinite(price) || price <= 0) { showToast('قیمت نامعتبر است.'); return; }
+    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) { showToast('مدت زمان نامعتبر است.'); return; }
+    if (isIndependentSpecialist) {
+      api.patch(`/me/services/${serv.id}`, { price, durationMinutes })
+        .then(({ data }) => {
+          const updated = data?.service ?? data;
+          if (updated) setMyServices((prev) => prev.map((s) => (s.id === serv.id ? updated : s)));
+          showToast('خدمت ویرایش شد.');
+        })
+        .catch((err: any) => showToast(err?.response?.data?.error || err?.message || 'خطا در ویرایش خدمت.'));
+      return;
+    }
+    updateService(serv.id, { price, durationMinutes })
+      .then(({ service }) => {
+        if (service) setSalonServices((prev) => prev.map((s) => (s.id === serv.id ? service : s)));
+        showToast('خدمت ویرایش شد.');
+        queryClient.invalidateQueries({ queryKey: ['salons'] });
+      })
+      .catch((err: any) => showToast(err?.response?.data?.error || err?.message || 'خطا در ویرایش خدمت.'));
+  };
+
+  const handleDeleteService = async (serv: any) => {
+    if (!window.confirm(`حذف خدمت «${serv.name}»؟`)) return;
+    try {
+      if (isIndependentSpecialist) {
+        await api.delete(`/me/services/${serv.id}`);
+        setMyServices((prev) => prev.filter((s) => s.id !== serv.id));
+        showToast('خدمت حذف شد.');
+        return;
+      }
+      await deleteService(serv.id);
+      setSalonServices((prev) => prev.filter((s) => s.id !== serv.id));
+      showToast('خدمت حذف شد.');
+      queryClient.invalidateQueries({ queryKey: ['salons'] });
+    } catch (err: any) {
+      showToast(err?.response?.data?.error || err?.message || 'خطا در حذف خدمت.');
+    }
+  };
+
   // Handler: Add Portfolio Item (Saved permanently in PostgreSQL portfolio_items table)
   const handleAddPortfolioItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeSpecialistView || !newPortfolioTitle.trim() || !newPortfolioUrl.trim()) return;
 
     try {
-      const res = await api.post('/specialists/portfolio', {
-        title: newPortfolioTitle.trim(),
-        imageUrl: newPortfolioUrl.trim(),
-        category: newPortfolioCategory,
-        specialistId: activeSpecialistView.id,
-      });
+      // Independent specialists use the owner-resolved endpoint; salon flow
+      // keeps the explicit specialistId (now ownership-checked server-side).
+      const res = isIndependentSpecialist
+        ? await api.post('/me/portfolio', {
+            title: newPortfolioTitle.trim(),
+            imageUrl: newPortfolioUrl.trim(),
+            category: newPortfolioCategory,
+          })
+        : await api.post('/specialists/portfolio', {
+            title: newPortfolioTitle.trim(),
+            imageUrl: newPortfolioUrl.trim(),
+            category: newPortfolioCategory,
+            specialistId: activeSpecialistView.id,
+          });
 
       const newItem: SpecialistPortfolio = {
         id: String(res.data?.id || `port-${Date.now()}`),
@@ -449,7 +685,8 @@ export const SalonAdminDashboard: React.FC = () => {
     try {
       const numId = Number(portfolioId);
       if (!isNaN(numId)) {
-        await api.delete(`/specialists/portfolio/${numId}`).catch(() => {});
+        const endpoint = isIndependentSpecialist ? `/me/portfolio/${numId}` : `/specialists/portfolio/${numId}`;
+        await api.delete(endpoint).catch(() => {});
       }
 
       const updatedPortfolio = (activeSpecialistView.portfolio || []).filter((p: any) => String(p.id) !== String(portfolioId));
@@ -584,6 +821,19 @@ export const SalonAdminDashboard: React.FC = () => {
     }
   };
 
+  // Independent specialist: persist the 7-day week grid to /api/me/schedule.
+  const handleSaveMySchedule = async () => {
+    setMyScheduleBusy(true);
+    try {
+      await api.put('/me/schedule', myWeeklySchedule);
+      showToast('زمان‌بندی هفتگی شما ذخیره شد.');
+    } catch (err: any) {
+      showToast(err?.response?.data?.error || err?.message || 'خطا در ذخیره زمان‌بندی.');
+    } finally {
+      setMyScheduleBusy(false);
+    }
+  };
+
   const handleAddGalleryImage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGalleryImageUrl.trim()) return;
@@ -604,6 +854,131 @@ export const SalonAdminDashboard: React.FC = () => {
     if (currentSalon?.id) {
       await updateSalon(currentSalon.id, { gallery: updatedGallery });
       showToast('تصویر از گالری سالن حذف شد.');
+    }
+  };
+
+  // =====================================================
+  // Specialist CRUD (salon-admin feature: registered pending super-admin approval)
+  // =====================================================
+
+  // `documents` travels as a JSON string; never let a malformed value crash the panel.
+  const parseSpecialistDocuments = (raw: unknown): string[] => {
+    if (Array.isArray(raw)) return raw.filter((u) => typeof u === 'string');
+    if (typeof raw !== 'string') return [];
+    try { const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed.filter((u) => typeof u === 'string') : []; }
+    catch { return []; }
+  };
+
+  const resetSpecialistForm = () => {
+    setShowSpecialistForm(false);
+    setEditingSpecialistId(null);
+    setNewSpecialistPhone('');
+    setNewSpecialistName('');
+    setNewSpecialistLine('hair');
+    setNewSpecialistRented(false);
+    setNewSpecialistDocs([]);
+  };
+
+  const handleSaveSpecialist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanPhone = normalizePhone(newSpecialistPhone);
+    if (!cleanPhone) { showToast('شماره همراه متخصص معتبر نیست.'); return; }
+    setSpecialistBusy(true);
+    try {
+      const payload: any = {
+        phone: cleanPhone,
+        fullName: newSpecialistName.trim() || undefined,
+        salonId: currentSalon?.id,
+        specialtyLine: newSpecialistLine,
+        isRentedChair: newSpecialistRented,
+        documents: newSpecialistDocs,
+      };
+      if (editingSpecialistId != null) {
+        await updateSpecialist(editingSpecialistId, {
+          specialtyLine: newSpecialistLine,
+          isRentedChair: newSpecialistRented,
+          documents: newSpecialistDocs,
+          ...(newSpecialistName.trim() ? { fullName: newSpecialistName.trim() } : {}),
+        });
+        showToast('اطلاعات متخصص ویرایش شد.');
+      } else {
+        await createSpecialist(payload);
+        showToast('متخصص ثبت شد — پس از تایید مدارک توسط ادمین کل منتشر می‌شود.');
+      }
+      resetSpecialistForm();
+      if (currentSalon?.id) {
+        const { data } = await api.get(`/specialists?salonId=${currentSalon.id}`);
+        setSpecialistsList(Array.isArray(data) ? data : []);
+      }
+    } catch (err: any) {
+      showToast(err?.response?.data?.error || err?.message || 'خطا در ثبت متخصص.');
+    } finally {
+      setSpecialistBusy(false);
+    }
+  };
+
+  const handleEditSpecialist = (spec: any) => {
+    setEditingSpecialistId(Number(spec.id));
+    setNewSpecialistPhone(spec.user?.phone || '');
+    setNewSpecialistName(spec.user?.fullName || spec.name || '');
+    setNewSpecialistLine(spec.specialtyLine || 'hair');
+    setNewSpecialistRented(Boolean(spec.isRentedChair));
+    setNewSpecialistDocs(parseSpecialistDocuments(spec.documents));
+    setShowSpecialistForm(true);
+  };
+
+  const handleDeleteSpecialist = async (spec: any) => {
+    if (!window.confirm(`حذف متخصص «${spec.user?.fullName || spec.name}» از سالن؟`)) return;
+    try {
+      await deleteSpecialist(spec.id);
+      setSpecialistsList((prev) => prev.filter((s) => s.id !== spec.id));
+      showToast('متخصص از سالن حذف شد.');
+    } catch (err: any) {
+      showToast(err?.response?.data?.error || err?.message || 'خطا در حذف متخصص.');
+    }
+  };
+
+  // =====================================================
+  // Commissions + weekly schedule
+  // =====================================================
+  const handleLoadCommissions = async () => {
+    const rows = await Promise.all(specialistsList.filter((s) => !s.isRentedChair).map(async (spec) => {
+      try {
+        const { data } = await api.get(`/specialists/${spec.id}/commissions`);
+        return { specialistId: Number(spec.id), percent: data?.commissionPercent ?? null };
+      } catch { return { specialistId: Number(spec.id), percent: spec.commissionPercent ?? null }; }
+    }));
+    setCommissionRows(rows);
+  };
+
+  const handleSaveCommission = async (specialistId: number, percent: number | null) => {
+    try {
+      await updateSpecialist(specialistId, { commissionPercent: percent });
+      setCommissionRows((prev) => prev.map((r) => (r.specialistId === specialistId ? { ...r, percent } : r)));
+      showToast('پورسانت پیش‌فرض متخصص ذخیره شد.');
+    } catch (err: any) {
+      showToast(err?.response?.data?.error || err?.message || 'خطا در ذخیره پورسانت.');
+    }
+  };
+
+  const handleLoadSchedule = async () => {
+    if (!currentSalon?.id) return;
+    try {
+      const { data } = await api.get(`/salons/${currentSalon.id}/schedule`);
+      setWeeklySchedule(Array.isArray(data) ? data : []);
+    } catch { setWeeklySchedule([]); }
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!currentSalon?.id) return;
+    setScheduleBusy(true);
+    try {
+      await api.put(`/salons/${currentSalon.id}/schedule`, weeklySchedule);
+      showToast('زمان‌بندی هفتگی سالن ذخیره شد.');
+    } catch (err: any) {
+      showToast(err?.response?.data?.error || err?.message || 'خطا در ذخیره زمان‌بندی.');
+    } finally {
+      setScheduleBusy(false);
     }
   };
 
@@ -1002,7 +1377,7 @@ export const SalonAdminDashboard: React.FC = () => {
               }`}
             >
               <Camera className="w-3.5 h-3.5" />
-              <span>نمونه‌کارهای من ({toPersianDigits(activeSpecialistView.portfolio.length)})</span>
+              <span>نمونه‌کارهای من ({toPersianDigits((activeSpecialistView.portfolio || []).length)})</span>
             </button>
             {user?.role === 'line_manager' && (
               <button
@@ -1362,12 +1737,38 @@ export const SalonAdminDashboard: React.FC = () => {
                       </div>
 
                       <div className="flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-[#E7E2DA]">
-                        <span className="text-xs font-bold text-[#173B3F] block">
-                          {formatPrice(serv.price)}
-                        </span>
-                        <span className="text-[10px] text-[#2E5E52] font-semibold bg-[#EAF2EF] px-2 py-0.5 rounded-full mt-0.5">
-                          فعال برای نوبت‌دهی
-                        </span>
+                        <div className="flex sm:flex-col items-center gap-2 sm:items-end">
+                          <span className="text-xs font-bold text-[#173B3F] block">
+                            {formatPrice(serv.price)}
+                          </span>
+                          {serv.publicationStatus === 'pending' ? (
+                            <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
+                              در انتظار تایید مدیریت
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-[#2E5E52] font-semibold bg-[#EAF2EF] px-2 py-0.5 rounded-full mt-0.5">
+                              فعال برای نوبت‌دهی
+                            </span>
+                          )}
+                        </div>
+                        {isIndependentSpecialist && (
+                          <div className="flex gap-1.5 mt-2 sm:mt-0">
+                            <button
+                              type="button"
+                              onClick={() => handleEditService(serv)}
+                              className="px-2.5 py-1 text-[10px] font-bold text-[#173B3F] border border-[#E7E2DA] rounded-lg hover:border-[#173B3F]"
+                            >
+                              ویرایش هزینه/مدت
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteService(serv)}
+                              className="px-2.5 py-1 text-[10px] font-bold text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50"
+                            >
+                              حذف
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))
@@ -1382,6 +1783,82 @@ export const SalonAdminDashboard: React.FC = () => {
           ---------------------------------------------------- */}
           {specialistTab === 'schedule' && (
             <div className="space-y-4">
+              {isIndependentSpecialist ? (
+                /* Independent/mobile specialist: 7-day grid rooted at the
+                   specialist (specialist_weekly_schedule). */
+                <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#173B3F] flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-[#D9A2B0]" />
+                        <span>زمان‌بندی هفتگی شما</span>
+                      </h3>
+                      <p className="text-xs text-[#6C6C6C] mt-0.5">
+                        ساعات ارائه‌ی خدمات در هر روز هفته. این برنامه برای تمامی خدمات شما اعمال می‌شود.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleSaveMySchedule}
+                      disabled={myScheduleBusy}
+                      className="px-4 py-2 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white text-xs font-bold disabled:opacity-50 shrink-0"
+                    >
+                      {myScheduleBusy ? 'در حال ذخیره…' : 'ذخیره زمان‌بندی'}
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {WEEKDAYS_FA.map((day, idx) => {
+                      const row = myWeeklySchedule.find((r) => r.dayOfWeek === idx);
+                      const isActive = row ? row.isActive : true;
+                      return (
+                        <div key={day.id} className="flex flex-wrap items-center gap-3 p-3 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA]">
+                          <label className="flex items-center gap-2 w-28 shrink-0 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isActive}
+                              onChange={(e) => {
+                                const open = row?.openTime || '09:00';
+                                const close = row?.closeTime || '18:00';
+                                setMyWeeklySchedule((prev) => {
+                                  const rest = prev.filter((r) => r.dayOfWeek !== idx);
+                                  return [...rest, { dayOfWeek: idx, openTime: open, closeTime: close, isActive: e.target.checked }];
+                                });
+                              }}
+                              className="accent-[#173B3F]"
+                            />
+                            <span className="text-sm font-bold text-[#1C1C1C]">{day.name}</span>
+                          </label>
+                          <input
+                            type="time"
+                            defaultValue={row?.openTime || '09:00'}
+                            disabled={!isActive}
+                            onBlur={(e) => {
+                              setMyWeeklySchedule((prev) => {
+                                const rest = prev.filter((r) => r.dayOfWeek !== idx);
+                                return [...rest, { dayOfWeek: idx, openTime: e.target.value, closeTime: row?.closeTime || '18:00', isActive }];
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-xl border border-[#E7E2DA] text-sm focus:border-[#173B3F] outline-none disabled:opacity-40"
+                          />
+                          <span className="text-xs text-[#6C6C6C]">تا</span>
+                          <input
+                            type="time"
+                            defaultValue={row?.closeTime || '18:00'}
+                            disabled={!isActive}
+                            onBlur={(e) => {
+                              setMyWeeklySchedule((prev) => {
+                                const rest = prev.filter((r) => r.dayOfWeek !== idx);
+                                return [...rest, { dayOfWeek: idx, openTime: row?.openTime || '09:00', closeTime: e.target.value, isActive }];
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-xl border border-[#E7E2DA] text-sm focus:border-[#173B3F] outline-none disabled:opacity-40"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+              <>
               {/* Working Hours Card */}
               <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] space-y-4 shadow-xs">
                 <div>
@@ -1528,6 +2005,8 @@ export const SalonAdminDashboard: React.FC = () => {
                   )}
                 </div>
               </div>
+              </>
+              )}
             </div>
           )}
 
@@ -1541,7 +2020,7 @@ export const SalonAdminDashboard: React.FC = () => {
                 <div>
                   <h3 className="text-sm font-bold text-[#173B3F] flex items-center gap-2">
                     <Camera className="w-4 h-4 text-[#D9A2B0]" />
-                    <span>آلبوم نمونه‌کارهای ژورنالی اختصاصی شما ({toPersianDigits(activeSpecialistView.portfolio.length)} اثر)</span>
+                    <span>آلبوم نمونه‌کارهای ژورنالی اختصاصی شما ({toPersianDigits((activeSpecialistView.portfolio || []).length)} اثر)</span>
                   </h3>
                   <p className="text-xs text-[#6C6C6C] mt-0.5">
                     این نمونه‌کارها در پروفایل عمومی شما در اپ مشتریان بویا نمایش داده می‌شود و مشتریان برای رزرو روی آن‌ها کلیک می‌کنند.
@@ -2131,6 +2610,26 @@ export const SalonAdminDashboard: React.FC = () => {
             >
               مسدودسازی سانس
             </button>
+            <button
+              onClick={() => { setSalonTab('commissions'); handleLoadCommissions(); }}
+              className={`flex-1 min-w-[110px] py-2 text-xs font-bold rounded-xl transition-all ${
+                salonTab === 'commissions'
+                  ? 'bg-[#173B3F] text-white shadow-xs'
+                  : 'text-[#6C6C6C] hover:text-[#173B3F]'
+              }`}
+            >
+              پورسانت متخصصین
+            </button>
+            <button
+              onClick={() => { setSalonTab('weekly_schedule'); handleLoadSchedule(); }}
+              className={`flex-1 min-w-[110px] py-2 text-xs font-bold rounded-xl transition-all ${
+                salonTab === 'weekly_schedule'
+                  ? 'bg-[#173B3F] text-white shadow-xs'
+                  : 'text-[#6C6C6C] hover:text-[#173B3F]'
+              }`}
+            >
+              زمان‌بندی سالن
+            </button>
           </div>
 
           {/* TAB 0: OVERVIEW (Salon Manager Overview) */}
@@ -2433,6 +2932,66 @@ export const SalonAdminDashboard: React.FC = () => {
           {/* TAB 2: Gallery Manager */}
           {salonTab === 'gallery' && (
             <div className="space-y-4">
+              {/* نمونه‌کار خدمات — per-service sample-work images, all lines
+                   except rented-chair (independent) specialists' services,
+                   which the server refuses (403) because they belong to the
+                   specialist, not the salon. */}
+              <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] space-y-4 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#173B3F] flex items-center gap-1.5">
+                      <Scissors className="w-4 h-4 text-[#173B3F]" />
+                      <span>نمونه‌کار خدمات سالن ({toPersianDigits(salonServices.length)} خدمت)</span>
+                    </h3>
+                    <p className="text-xs text-[#6C6C6C] mt-0.5">
+                      برای هر خدمت، تصاویر نمونه‌کار را در همه لاین‌ها مدیریت کنید. خدمات متخصصین مستقل (صندلی اجاره‌داده‌شده) در این لیست نیست چون نمونه‌کارهای آن لاین را خود متخصص مدیریت می‌کند.
+                    </p>
+                  </div>
+                </div>
+
+                {salonServices.length === 0 ? (
+                  <p className="text-xs text-[#6C6C6C] py-3 text-center">هنوز خدمتی در این سالن تعریف نشده است.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {salonServices.map((serv: any) => {
+                      const items = servicePortfolio[serv.id] || [];
+                      const isBusy = portfolioBusyServiceId === serv.id;
+                      return (
+                        <div key={serv.id} className="p-3 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA]">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <BeautyActivityIcon activityId={serv.serviceLineId} size="sm" />
+                              <span className="text-sm font-bold text-[#1C1C1C]">{serv.name}</span>
+                              <span className="text-[10px] text-[#6C6C6C] bg-white border border-[#E7E2DA] px-2 py-0.5 rounded-full">
+                                {toPersianDigits(items.length)} تصویر
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleLoadServicePortfolio(serv.id)}
+                              disabled={isBusy}
+                              className="px-3 py-1 text-[11px] font-bold text-[#173B3F] border border-[#E7E2DA] rounded-lg hover:border-[#173B3F] disabled:opacity-50"
+                            >
+                              {isBusy ? 'در حال بارگذاری…' : (items.length > 0 ? 'بازخوانی نمونه‌کارها' : 'مشاهده/افزودن نمونه‌کار')}
+                            </button>
+                          </div>
+
+                          {(serv.id in servicePortfolio) && (
+                            <div className="mt-2.5 pt-2.5 border-t border-[#E7E2DA] space-y-2">
+                              <ServicePortfolioRow
+                                items={items}
+                                onAdd={(imageUrl, title) => handleAddServicePortfolio(serv.id, imageUrl, title)}
+                                onDelete={(itemId) => handleDeleteServicePortfolio(serv.id, itemId)}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* گالری فضای سالن — unchanged salon-space gallery. */}
               <div className="flex items-center justify-between px-1">
                 <div>
                   <h3 className="text-sm font-bold text-[#173B3F]">
@@ -2693,13 +3252,27 @@ export const SalonAdminDashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-[#E7E2DA]">
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#E7E2DA]">
                       <span className="text-xs font-bold text-[#173B3F] block">
                         {formatPrice(serv.price)}
                       </span>
                       <span className="text-[10px] text-[#2E5E52] font-semibold bg-[#EAF2EF] px-2 py-0.5 rounded-full mt-0.5">
-                        فعال در ویترین
+                        {serv.publicationStatus === 'pending' ? 'در انتظار تایید' : 'فعال در ویترین'}
                       </span>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => handleEditService(serv)}
+                          className="px-2.5 py-1 rounded-full border border-[#E7E2DA] hover:border-[#173B3F] text-[#173B3F] text-[10px] font-bold transition-all"
+                        >
+                          ویرایش
+                        </button>
+                        <button
+                          onClick={() => handleDeleteService(serv)}
+                          className="px-2.5 py-1 rounded-full border border-red-200 hover:border-red-400 text-red-600 text-[10px] font-bold transition-all"
+                        >
+                          حذف
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -2719,7 +3292,93 @@ export const SalonAdminDashboard: React.FC = () => {
                     نمونه‌کارهای ژورنالی، آلبوم مشتریان و امکان ورود به پنل اختصاصی بیوتیشن
                   </p>
                 </div>
+                <button
+                  onClick={() => { resetSpecialistForm(); setShowSpecialistForm(true); }}
+                  className="px-4 py-2 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0"
+                >
+                  <span>+ افزودن متخصص جدید</span>
+                </button>
               </div>
+
+              {showSpecialistForm && (
+                <form onSubmit={handleSaveSpecialist} className="bg-white rounded-3xl p-5 border border-[#173B3F] space-y-3 shadow-sm">
+                  <h4 className="text-sm font-bold text-[#173B3F]">
+                    {editingSpecialistId != null ? 'ویرایش متخصص' : 'ثبت متخصص جدید برای سالن'}
+                  </h4>
+                  <p className="text-[11px] text-[#6C6C6C]">
+                    متخصص پس از ثبت، در حالت «در انتظار تایید» قرار می‌گیرد و پس از بررسی مدارک توسط ادمین کل در اپ مشتری منتشر می‌شود.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input
+                      value={newSpecialistPhone}
+                      onChange={(e) => setNewSpecialistPhone(e.target.value)}
+                      placeholder="شماره همراه متخصص (۰۹۱۲…)"
+                      disabled={editingSpecialistId != null}
+                      className="px-4 py-2.5 rounded-2xl border border-[#E7E2DA] text-sm focus:border-[#173B3F] outline-none disabled:bg-gray-100"
+                    />
+                    <input
+                      value={newSpecialistName}
+                      onChange={(e) => setNewSpecialistName(e.target.value)}
+                      placeholder="نام و نام خانوادگی"
+                      className="px-4 py-2.5 rounded-2xl border border-[#E7E2DA] text-sm focus:border-[#173B3F] outline-none"
+                    />
+                    <select
+                      value={newSpecialistLine}
+                      onChange={(e) => setNewSpecialistLine(e.target.value)}
+                      className="px-4 py-2.5 rounded-2xl border border-[#E7E2DA] text-sm focus:border-[#173B3F] outline-none"
+                    >
+                      {SERVICE_LINES.filter((l) => l.id !== 'all').map((l) => (
+                        <option key={l.id} value={l.id}>{l.name}</option>
+                      ))}
+                    </select>
+                    <label className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-[#E7E2DA] text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newSpecialistRented}
+                        onChange={(e) => setNewSpecialistRented(e.target.checked)}
+                        className="accent-[#173B3F]"
+                      />
+                      <span>متخصص مستقل (صندلی اجاره‌داده‌شده)</span>
+                    </label>
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-[#173B3F] block mb-1.5">مدارک متخصص (لینک تصویر)
+                      <span className="text-[10px] font-normal text-[#6C6C6C] mr-1">برای تایید ادمین کل الزامی است</span>
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {newSpecialistDocs.map((url, i) => (
+                        <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E7E2DA]">
+                          <img src={url} alt={`document-${i}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setNewSpecialistDocs((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"
+                          >×</button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setNewSpecialistDocs((prev) => [...prev, PRESET_SERVICE_PHOTOS[0].url])}
+                        className="w-20 h-20 rounded-xl border-2 border-dashed border-[#D5CEC4] text-[#6C6C6C] text-xs flex items-center justify-center hover:border-[#173B3F]"
+                      >+ افزودن</button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={specialistBusy}
+                      className="px-5 py-2 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white text-xs font-bold disabled:opacity-50"
+                    >
+                      {specialistBusy ? 'در حال ذخیره…' : (editingSpecialistId != null ? 'ذخیره ویرایش' : 'ثبت متخصص')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetSpecialistForm}
+                      className="px-5 py-2 rounded-full border border-[#E7E2DA] text-xs font-bold text-[#6C6C6C]"
+                    >انصراف</button>
+                  </div>
+                </form>
+              )}
 
               <div className="space-y-4">
                 {specialistsList.map((spec) => {
@@ -2745,13 +3404,23 @@ export const SalonAdminDashboard: React.FC = () => {
                           </div>
 
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <h4 className="text-sm font-bold text-[#1C1C1C]">
                                 {spec.name}
                               </h4>
                               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${badge.color}`}>
                                 {badge.label}
                               </span>
+                              {(spec.publicationStatus === 'pending' || spec.publicationStatus === 'approved') && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700 border border-amber-200">
+                                  در انتظار تایید مدیریت
+                                </span>
+                              )}
+                              {spec.isRentedChair && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                  صندلی اجاره‌داده‌شده
+                                </span>
+                              )}
                             </div>
 
                             <p className="text-xs text-[#6C6C6C] mt-0.5 max-w-lg line-clamp-1">
@@ -2771,13 +3440,27 @@ export const SalonAdminDashboard: React.FC = () => {
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => setActiveSpecialistView(spec)}
-                          className="px-4 py-2 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0 self-end sm:self-auto"
-                        >
-                          <UserCheck className="w-3.5 h-3.5 text-[#D9A2B0]" />
-                          <span>ورود به پنل اختصاصی متخصص</span>
-                        </button>
+                        <div className="flex flex-wrap gap-2 self-end sm:self-auto">
+                          <button
+                            onClick={() => setActiveSpecialistView(spec)}
+                            className="px-4 py-2 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0"
+                          >
+                            <UserCheck className="w-3.5 h-3.5 text-[#D9A2B0]" />
+                            <span>پنل اختصاصی</span>
+                          </button>
+                          <button
+                            onClick={() => handleEditSpecialist(spec)}
+                            className="px-3 py-2 rounded-full border border-[#E7E2DA] hover:border-[#173B3F] text-[#173B3F] text-xs font-bold transition-all"
+                          >
+                            ویرایش
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSpecialist(spec)}
+                            className="px-3 py-2 rounded-full border border-red-200 hover:border-red-400 text-red-600 text-xs font-bold transition-all"
+                          >
+                            حذف
+                          </button>
+                        </div>
                       </div>
 
                       {/* Interactive Portfolio Previews with High-Res Lightbox */}
@@ -2896,6 +3579,131 @@ export const SalonAdminDashboard: React.FC = () => {
                     </button>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: Commissions — default percent per specialist */}
+          {salonTab === 'commissions' && (
+            <div className="space-y-4">
+              <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] space-y-3 shadow-sm">
+                <h3 className="text-sm font-bold text-[#173B3F]">پورسانت متخصصین سالن</h3>
+                <p className="text-[11px] text-[#6C6C6C]">
+                  درصد سهم متخصص از هر خدمت. متخصصین مستقل (صندلی اجاره‌داده‌شده) مدیریت پورسانت خود را بر عهده دارند و در این لیست قرار نمی‌گیرند.
+                </p>
+                {commissionRows.length === 0 ? (
+                  <p className="text-xs text-[#6C6C6C] py-4 text-center">متخصصی برای تنظیم پورسانت وجود ندارد.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {commissionRows.map((row) => {
+                      const spec = specialistsList.find((s) => Number(s.id) === row.specialistId);
+                      return (
+                        <div key={row.specialistId} className="flex items-center justify-between gap-3 p-3 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA]">
+                          <div className="flex items-center gap-2.5">
+                            <img src={spec?.avatar} alt="" className="w-9 h-9 rounded-xl object-cover border border-[#E7E2DA]" />
+                            <div>
+                              <span className="text-sm font-bold text-[#1C1C1C] block">{spec?.user?.fullName || spec?.name || 'متخصص'}</span>
+                              <span className="text-[10px] text-[#6C6C6C]">{spec?.specialtyLine}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              defaultValue={row.percent ?? ''}
+                              placeholder="مثلاً ۶۰"
+                              onBlur={(e) => {
+                                const raw = e.target.value.trim();
+                                const parsed = raw === '' ? null : Number(raw);
+                                // Ignore non-numeric input instead of sending NaN to the API.
+                                const pct = parsed == null ? null : (Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : null);
+                                if (pct !== row.percent) handleSaveCommission(row.specialistId, pct);
+                              }}
+                              className="w-24 px-3 py-1.5 rounded-xl border border-[#E7E2DA] text-sm text-center focus:border-[#173B3F] outline-none"
+                            />
+                            <span className="text-xs text-[#6C6C6C]">٪</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: Weekly salon schedule — day/hour grid */}
+          {salonTab === 'weekly_schedule' && (
+            <div className="space-y-4">
+              <div className="bg-white rounded-3xl p-5 border border-[#E7E2DA] space-y-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#173B3F]">زمان‌بندی هفتگی سالن</h3>
+                    <p className="text-[11px] text-[#6C6C6C]">
+                      ساعات ارائه‌ی خدمات در هر روز هفته. این برنامه برای همه لاین‌های سالن اعمال می‌شود.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleSaveSchedule}
+                    disabled={scheduleBusy}
+                    className="px-4 py-2 rounded-full bg-[#173B3F] hover:bg-[#0F3232] text-white text-xs font-bold disabled:opacity-50 shrink-0"
+                  >
+                    {scheduleBusy ? 'در حال ذخیره…' : 'ذخیره زمان‌بندی'}
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {WEEKDAYS_FA.map((day, idx) => {
+                    const row = weeklySchedule.find((r) => r.dayOfWeek === idx);
+                    const isActive = row ? row.isActive : true;
+                    return (
+                      <div key={day.id} className="flex items-center gap-3 p-3 bg-[#FAF7F2] rounded-2xl border border-[#E7E2DA]">
+                        <label className="flex items-center gap-2 w-28 shrink-0 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isActive}
+                            onChange={(e) => {
+                              const open = row?.openTime || '09:00';
+                              const close = row?.closeTime || '18:00';
+                              setWeeklySchedule((prev) => {
+                                const rest = prev.filter((r) => r.dayOfWeek !== idx);
+                                return [...rest, { dayOfWeek: idx, openTime: open, closeTime: close, isActive: e.target.checked }];
+                              });
+                            }}
+                            className="accent-[#173B3F]"
+                          />
+                          <span className="text-sm font-bold text-[#1C1C1C]">{day.name}</span>
+                        </label>
+                        <input
+                          type="time"
+                          defaultValue={row?.openTime || '09:00'}
+                          disabled={!isActive}
+                          onBlur={(e) => {
+                            setWeeklySchedule((prev) => {
+                              const rest = prev.filter((r) => r.dayOfWeek !== idx);
+                              return [...rest, { dayOfWeek: idx, openTime: e.target.value, closeTime: row?.closeTime || '18:00', isActive }];
+                            });
+                          }}
+                          className="px-3 py-1.5 rounded-xl border border-[#E7E2DA] text-sm focus:border-[#173B3F] outline-none disabled:opacity-40"
+                        />
+                        <span className="text-xs text-[#6C6C6C]">تا</span>
+                        <input
+                          type="time"
+                          defaultValue={row?.closeTime || '18:00'}
+                          disabled={!isActive}
+                          onBlur={(e) => {
+                            setWeeklySchedule((prev) => {
+                              const rest = prev.filter((r) => r.dayOfWeek !== idx);
+                              return [...rest, { dayOfWeek: idx, openTime: row?.openTime || '09:00', closeTime: e.target.value, isActive }];
+                            });
+                          }}
+                          className="px-3 py-1.5 rounded-xl border border-[#E7E2DA] text-sm focus:border-[#173B3F] outline-none disabled:opacity-40"
+                        />
+                        {!isActive && <span className="text-[10px] text-red-500 font-bold">تعطیل</span>}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
