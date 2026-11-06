@@ -61,3 +61,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </HelmetProvider>
   </React.StrictMode>
 );
+
+// PWA: register the service worker so both the customer and salon panels are
+// installable ("Install app" on Android, "Add to Home Screen" on iOS) and the
+// app shell still loads offline. Dev mode is excluded — Vite HMR and the SW
+// cache would otherwise fight each other on every reload.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('[PWA] service worker registration failed:', err);
+    });
+  });
+}

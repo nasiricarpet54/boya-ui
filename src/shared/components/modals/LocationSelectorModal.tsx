@@ -35,6 +35,9 @@ interface LocationSelectorModalProps {
   onSelectMaxDistance: (km: number | null) => void;
   sortByDistance: boolean;
   onToggleSortByDistance: (enabled: boolean) => void;
+  // CITY PRIORITY: the customer's saved cities, newest-first. Index 0 is their
+  // default city; tapping a chip re-applies it (and promotes it again).
+  cityPriority?: string[];
 }
 
 export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
@@ -52,6 +55,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
   onSelectMaxDistance,
   sortByDistance,
   onToggleSortByDistance,
+  cityPriority = [],
 }) => {
   const [activeTab, setActiveTab] = useState<'gps' | 'cascading'>('gps');
   const [isLocating, setIsLocating] = useState<boolean>(false);
@@ -349,6 +353,47 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
                 <p className="text-xs text-[#6C6C6C]">
                   پوشش سراسری کلیه ۳۱ استان کشور و شهرستان‌های تابع. برای دسترسی دقیق‌تر منطقه یا محله موردنظر را نیز انتخاب نمایید.
                 </p>
+
+                {/* 0. شهرهای من — شهر پیش‌فرض اول است، بقیه به ترتیب انتخاب */}
+                {cityPriority.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-[#173B3F] flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#D9A2B0]" />
+                      شهرهای انتخابی من (ابتدا = شهر پیش‌فرض):
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {cityPriority.map((city, idx) => (
+                        <button
+                          key={city}
+                          type="button"
+                          onClick={() => {
+                            onSelectCity(city);
+                            onSelectDistrict('همه');
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5 ${
+                            selectedCity === city
+                              ? 'bg-[#173B3F] text-white border-[#173B3F] shadow-xs'
+                              : 'bg-[#FAF7F2] text-[#173B3F] border-[#E7E2DA] hover:border-[#173B3F]'
+                          }`}
+                        >
+                          {idx === 0 && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+                              selectedCity === city ? 'bg-[#D9A2B0] text-[#173B3F]' : 'bg-[#E8F0EF] text-[#2E5E52]'
+                            }`}>
+                              پیش‌فرض
+                            </span>
+                          )}
+                          <span>{city}</span>
+                          {idx > 0 && (
+                            <span className="text-[9px] text-[#6C6C6C] font-normal">
+                              اولویت {toPersianDigits(idx + 1)}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* 1. استان (31 استان) */}
                 <div className="space-y-1.5">

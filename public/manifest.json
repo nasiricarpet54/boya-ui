@@ -1,0 +1,18 @@
+{
+  "name": "بویا — پلتفرم خدمات زیبایی",
+  "short_name": "بویا",
+  "description": "رزرو آنلاین سالن‌های زیبایی، متخصصین مستقل و خدمات در محل بویا",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F0E8",
+  "theme_color": "#173B3F",
+  "categories": ["beauty", "lifestyle", "business"],
+  "icons": [
+    { "src": "/assets/boya-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/boya-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

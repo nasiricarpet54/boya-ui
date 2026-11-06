@@ -1845,6 +1845,13 @@ async function createServer() {
   let vite: any = null;
   if (isProd) {
     app.use(express.static(path.resolve(__dirname, 'dist')));
+
+    // PWA: the service worker must never be served from a stale cache, or new
+    // releases would keep running the previous version for up to 24h.
+    app.get('/sw.js', (_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.sendFile(path.resolve(__dirname, 'dist/sw.js'));
+    });
   } else {
     vite = await createViteServer({
       server: { middlewareMode: true },

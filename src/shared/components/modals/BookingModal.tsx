@@ -106,6 +106,26 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   if (!isOpen || !bookingData) return null;
 
   const { salon, service, specialist } = bookingData;
+  // CRASH FIX: sanitised public salon payloads drop pending services, so a
+  // salon can legitimately have no service or specialist to book. Render a
+  // clear message instead of crashing on service.imageUrl / specialist.avatar.
+  if (!service || !specialist || !salon) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65" dir="rtl">
+        <div className="bg-white rounded-3xl p-6 max-w-sm w-full text-center space-y-3 shadow-2xl">
+          <h3 className="text-sm font-bold text-[#173B3F]">رزرو ممکن نیست</h3>
+          <p className="text-xs text-[#6C6C6C]">این سالن در حال حاضر خدمت یا متخصص فعالی برای رزرو ندارد.</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2 rounded-full bg-[#173B3F] text-white text-xs font-bold"
+          >
+            بستن
+          </button>
+        </div>
+      </div>
+    );
+  }
   const availableSlots = getSlotsForArbitraryDate(selectedDate, salon.availableSlots);
 
   const handleConfirm = async (formData: any) => {

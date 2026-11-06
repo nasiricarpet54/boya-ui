@@ -125,16 +125,33 @@ const Root = () => {
       {/* Global Modals rendered unconditionally to maintain stable hook execution */}
       <BookingModal isOpen={isBookingModalOpen} onClose={closeBookingModal} bookingData={bookingData} onConfirmBooking={handleConfirmBooking} />
       <SpecialistPortfolioModal isOpen={isPortfolioModalOpen} onClose={closePortfolioModal} specialist={portfolioSpecialist} salon={portfolioSalon} onBookWithSpecialist={(spec, sal, service) => {
+          // CRASH FIX: a salon whose services are all pending (or that has none)
+          // returns an empty services array, so sal.services[0] is undefined and
+          // BookingModal then crashes reading service.imageUrl. Guard the whole
+          // chain before opening the booking modal.
           const serv = service || sal.services.find(s => s.serviceLineId === spec.specialtyLine) || sal.services[0];
-          const date = sal.availableSlots?.[0]?.date || 'شنبه ۵ آبان';
-          const time = sal.availableSlots?.[0]?.slots.find(s => !s.booked)?.time || '۱۱:۰۰';
+          if (!serv) {
+            useUIStore.getState().showToast('این سالن در حال حاضر خدمت فعالی برای رزرو ندارد.');
+            return;
+          }
+          const firstDay = (sal.availableSlots || [])[0];
+          const date = firstDay?.date || 'شنبه ۵ آبان';
+          const time = firstDay?.slots.find(s => !s.booked)?.time || '۱۱:۰۰';
           openBookingModal(sal, serv, spec, date, time);
       }} />
-      <LocationSelectorModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} locationState={locationState.customerLocation} onUpdateLocation={locationState.setCustomerLocation} selectedProvince={locationState.selectedProvince} onSelectProvince={locationState.setSelectedProvince} selectedCity={locationState.selectedCity} onSelectCity={locationState.setSelectedCity} selectedDistrict={locationState.selectedDistrict} onSelectDistrict={locationState.setSelectedDistrict} maxDistanceKm={locationState.maxDistanceKm} onSelectMaxDistance={locationState.setMaxDistanceKm} sortByDistance={locationState.sortByDistance} onToggleSortByDistance={locationState.setSortByDistance} />
+      <LocationSelectorModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} locationState={locationState.customerLocation} onUpdateLocation={locationState.setCustomerLocation} selectedProvince={locationState.selectedProvince} onSelectProvince={locationState.setSelectedProvince} selectedCity={locationState.selectedCity} onSelectCity={locationState.setSelectedCity} selectedDistrict={locationState.selectedDistrict} onSelectDistrict={locationState.setSelectedDistrict} maxDistanceKm={locationState.maxDistanceKm} onSelectMaxDistance={locationState.setMaxDistanceKm} sortByDistance={locationState.sortByDistance} onToggleSortByDistance={locationState.setSortByDistance} cityPriority={locationState.cityPriority} />
       <QuickServicesModal isOpen={isQuickViewModalOpen} onClose={closeQuickViewModal} salon={quickViewSalon} onSelectService={(service) => {
           if (quickViewSalon) {
             closeQuickViewModal();
-            openBookingModal(quickViewSalon, service, quickViewSalon.specialists[0], quickViewSalon.availableSlots[0].date, quickViewSalon.availableSlots[0].slots.find(s => !s.booked)?.time || '۱۱:۰۰');
+            // CRASH FIX: specialists/availableSlots were indexed without a guard —
+            // an empty array made the modal crash reading .date/.slots of undefined.
+            const spec = quickViewSalon.specialists[0];
+            const firstDay = (quickViewSalon.availableSlots || [])[0];
+            if (!spec || !service) {
+              useUIStore.getState().showToast('امکان رزرو برای این سالن در حال حاضر وجود ندارد.');
+              return;
+            }
+            openBookingModal(quickViewSalon, service, spec, firstDay?.date || 'شنبه ۵ آبان', firstDay?.slots.find(s => !s.booked)?.time || '۱۱:۰۰');
           }
       }} />
       <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
