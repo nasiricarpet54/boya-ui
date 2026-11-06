@@ -14,6 +14,7 @@ import {
   Sparkles,
   Megaphone,
   ChevronLeft,
+  Layers,
 } from 'lucide-react';
 import { useSearch, useNavigate } from '@tanstack/react-router';
 import { SERVICE_LINES, Salon } from '../../../shared/data/marketplaceData';
@@ -50,7 +51,7 @@ export const SalonsScreen: React.FC = () => {
   } = useLocationStore();
   
   const { notifications, trackNotificationClick } = useDataStore();
-  const { openBookingModal, openPortfolioModal } = useModalStore();
+  const { openBookingModal, openPortfolioModal, openShowcaseModal } = useModalStore();
   const { isLocationModalOpen, setIsLocationModalOpen, showToast } = useUIStore();
 
   const [selectedServiceLine, setSelectedServiceLine] = useState<string>(initialServiceLine);
@@ -275,6 +276,13 @@ export const SalonsScreen: React.FC = () => {
               }`}
             >
               سانس آزاد
+            </button>
+            <button
+              onClick={() => openShowcaseModal(null)}
+              className="flex-shrink-0 px-3 h-9 rounded-full text-[11px] font-bold border bg-[#D9A2B0]/30 border-[#D9A2B0] text-[#173B3F] hover:bg-[#D9A2B0]/50 transition-all flex items-center gap-1"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              نمایشگاه نمونه‌کارها
             </button>
           </div>
         </div>

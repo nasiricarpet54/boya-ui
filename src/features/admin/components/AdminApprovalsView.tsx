@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, ShieldCheck, FileText, Upload, X, Building2, Eye, AlertCircle } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../../../shared/api/apiClient';
 import { useAuthStore } from '../../../shared/stores/authStore';
 import { useUIStore } from '../../../shared/stores/uiStore';
@@ -11,6 +12,7 @@ import { Salon, SalonService } from '../../../shared/data/marketplaceData';
 
 export const AdminApprovalsView: React.FC = () => {
   const { salons, updateSalon, updateService } = useDataStore();
+  const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { showToast } = useUIStore();
   const [error, setError] = useState('');
@@ -66,13 +68,24 @@ export const AdminApprovalsView: React.FC = () => {
   React.useEffect(() => { loadPendingSpecialists(); loadPendingIndependentServices(); }, []);
   const onApproveSpecialist = async (id: number) => {
     setSpecBusyId(id); setError('');
-    try { await api.patch(`/specialists/${id}/approve`); showToast('متخصص تایید و منتشر شد.'); loadPendingSpecialists(); }
+    try {
+      await api.patch(`/specialists/${id}/approve`);
+      showToast('متخصص تایید و منتشر شد.');
+      loadPendingSpecialists();
+      // The salon panel only sees this specialist once its salons query refetches.
+      await queryClient.invalidateQueries({ queryKey: ['admin-salons'] });
+    }
     catch (e: any) { setError(e?.response?.data?.error || e?.message || 'خطا در تایید متخصص.'); }
     finally { setSpecBusyId(null); }
   };
   const onRejectSpecialist = async (id: number) => {
     setSpecBusyId(id); setError('');
-    try { await api.patch(`/specialists/${id}/reject`); showToast('درخواست متخصص رد شد.'); loadPendingSpecialists(); }
+    try {
+      await api.patch(`/specialists/${id}/reject`);
+      showToast('درخواست متخصص رد شد.');
+      loadPendingSpecialists();
+      await queryClient.invalidateQueries({ queryKey: ['admin-salons'] });
+    }
     catch (e: any) { setError(e?.response?.data?.error || e?.message || 'خطا در رد متخصص.'); }
     finally { setSpecBusyId(null); }
   };

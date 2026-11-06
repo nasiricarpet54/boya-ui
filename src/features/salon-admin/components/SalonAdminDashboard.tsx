@@ -39,12 +39,11 @@ import {
   BarChart3,
   LogOut
 } from 'lucide-react';
-import { useSalons, useBookings, useStaff } from '../../../shared/api/queries';
+import { useAdminSalons, useBookings, useStaff } from '../../../shared/api/queries';
 import { useAuthStore } from '../../../shared/stores/authStore';
 import api from '../../../shared/api/apiClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  SALONS,
   Salon,
   SalonService,
   Specialist,
@@ -53,7 +52,9 @@ import {
   SERVICE_LINES,
 } from '../../../shared/data/marketplaceData';
 import { formatPrice, toPersianDigits, normalizePhone, WEEKDAYS_FA } from '../../../shared/utils/persianUtils';
+import { parseGallery } from '../../../shared/utils/gallery';
 import { normalizeToIsoDate, normalizeTime } from '../../../shared/utils/dateIsoConverter';
+import { JalaliDatePicker } from '../../../shared/components/ui/JalaliDatePicker';
 import { BeautyActivityIcon } from '../../../shared/components/ui/BeautyActivityIcon';
 import { SpecialistFinancialsView } from '../../../shared/components/ui/SpecialistFinancialsView';
 import { SafeHtml } from '../../../shared/components/ui/SafeHtml';
@@ -157,8 +158,11 @@ export const SalonAdminDashboard: React.FC = () => {
   const { salons, updateSalon, updateSpecialist, createService, createSpecialist, deleteSpecialist, updateService, deleteService } = useDataStore();
   const queryClient = useQueryClient();
 
-  // Fetch real data
-  const { data: salonsData = [], isLoading: isLoadingSalons } = useSalons();
+  // Fetch real data. The salon panel needs the STAFF view (unfiltered:
+  // pending specialists/services must be visible to the manager), so it uses
+  // the admin hook. The public useSalons hook drops pending rows via
+  // filterPublishedSalons, which hid newly registered specialists.
+  const { data: salonsData = [], isLoading: isLoadingSalons } = useAdminSalons();
   const { data: bookingsData = [], isLoading: isLoadingBookings } = useBookings();
   const { data: staffData = [] } = useStaff();
 
@@ -194,35 +198,28 @@ export const SalonAdminDashboard: React.FC = () => {
 
   // Active test salon selection
   const [selectedSalonId, setSelectedSalonId] = useState<string>('');
-  
-  // Initialize selected salon based on user role or first salon
+
+  // Initialize selected salon based on user role. Only super_admin may browse
+  // salons freely; scoped roles are pinned to their own salon, and — unlike the
+  // old fallback — never default to another tenant's salon (salonsData[0]).
   useEffect(() => {
-    if (salonsData.length > 0) {
-      if (user?.salonId) {
-        setSelectedSalonId(user.salonId.toString());
-      } else if (!selectedSalonId) {
+    if (user?.role === ROLES.SUPER_ADMIN) {
+      if (!selectedSalonId && salonsData.length > 0) {
         setSelectedSalonId(salonsData[0].id.toString());
       }
+      return;
     }
-  }, [salonsData, user]);
+    if (user?.salonId) {
+      const mine = salonsData.find((s: any) => String(s.id) === String(user.salonId));
+      if (mine && selectedSalonId !== String(mine.id)) {
+        setSelectedSalonId(String(mine.id));
+      }
+    }
+  }, [salonsData, user, selectedSalonId]);
 
-  const currentSalon = salonsData.find((s: any) => s.id.toString() === selectedSalonId) || salonsData[0] || {
-    id: 1,
-    name: 'سالن زیبایی',
-    address: 'تهران',
-    province: 'تهران',
-    city: 'تهران',
-    district: 'مرکز',
-    tenantId: 'tenant-1',
-    rating: 5,
-    reviewsCount: 0,
-    coverImage: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80',
-    gallery: [],
-    services: [],
-    specialists: [],
-    isApproved: true,
-    isVip: false,
-  };
+  // currentSalon may be null for a scoped role with no salon record — callers
+  // must handle that empty state instead of writing against a fake salon.
+  const currentSalon: any = salonsData.find((s: any) => s.id.toString() === selectedSalonId) || null;
 
   // Salon Manager tab navigation
   const [salonTab, setSalonTab] = useState<'overview' | 'schedule' | 'gallery' | 'services' | 'specialists' | 'blocks' | 'commissions' | 'weekly_schedule'>('overview');
@@ -349,7 +346,9 @@ export const SalonAdminDashboard: React.FC = () => {
     { id: 'blk-2', specialistId: 'spec-2', date: 'یکشنبه ۶ آبان', time: '۱۴:۰۰ الی ۱۵:۰۰', reason: 'جلسه هماهنگی کادر تخصصی' },
     { id: 'blk-3', specialistId: 'spec-nail-1', date: 'دوشنبه ۷ آبان', time: '۱۳:۰۰ الی ۱۴:۰۰', reason: 'وقت ناهار و استراحت' },
   ]);
-  const [newBlockDate, setNewBlockDate] = useState('دوشنبه ۷ آبان');
+  // Schedule-block date is picked from the calendar (JalaliDatePicker), never
+  // typed by hand. Stored as a Jalali string the server can normalize.
+  const [newBlockDate, setNewBlockDate] = useState('');
   const [newBlockTime, setNewBlockTime] = useState('۱۳:۰۰ الی ۱۴:۰۰');
   const [newBlockReason, setNewBlockReason] = useState('استراحت / نوبت تلفنی');
 
@@ -358,7 +357,7 @@ export const SalonAdminDashboard: React.FC = () => {
     if (currentSalon) {
       setEditableSalonName(currentSalon.name || '');
       setEditableSalonAddress(currentSalon.address || '');
-      setSalonGallery(currentSalon.gallery || (currentSalon.coverImage ? [currentSalon.coverImage] : []));
+      setSalonGallery(parseGallery(currentSalon.gallery));
       setSalonServices(currentSalon.services || []);
       setSpecialistsList(currentSalon.specialists || []);
     }
@@ -406,15 +405,17 @@ export const SalonAdminDashboard: React.FC = () => {
             });
         }
       } else if (specialistsList.length > 0) {
+        // Match ONLY on the caller's own identity — the old
+        // `specialtyLine === managedLine` and `specialistsList[0]` fallbacks
+        // would pick a colleague's row and show their bookings/portfolio.
         const mySpec = specialistsList.find(
           (s: any) =>
             s.user?.id === user?.id ||
             s.user?.phone === user?.phone ||
-            s.id === user?.uid ||
-            s.specialtyLine === user?.managedLine
-        ) || specialistsList[0];
+            String(s.userId) === String(user?.id)
+        );
 
-        if (!activeSpecialistView || activeSpecialistView.id !== mySpec.id) {
+        if (mySpec && (!activeSpecialistView || activeSpecialistView.id !== mySpec.id)) {
           setActiveSpecialistView(mySpec);
         }
       }
@@ -432,7 +433,7 @@ export const SalonAdminDashboard: React.FC = () => {
     setSelectedSalonId(salonId);
     const found = salonsData.find((s: any) => s.id.toString() === salonId);
     if (found) {
-      setSalonGallery(found.gallery || [found.coverImage]);
+      setSalonGallery(parseGallery(found.gallery));
       setSalonServices(found.services || []);
       setSpecialistsList(found.specialists || []);
       setActiveSpecialistView(null);
@@ -715,24 +716,28 @@ export const SalonAdminDashboard: React.FC = () => {
   // Handler: Add Schedule Block (STRICT REQUIREMENT #3: Specialist blocks own slots)
   const handleAddBlock = (e: React.FormEvent) => {
     e.preventDefault();
-    let normalizedDate = newBlockDate;
-    let normalizedTime = newBlockTime;
-    try {
-      const d = normalizeToIsoDate(newBlockDate);
-      const t = normalizeTime(newBlockTime);
-      if (d && t) { normalizedDate = d; normalizedTime = t; }
-    } catch {
-      // Keep original format if custom or freeform string
+    // Date must come from the calendar picker. Empty/unnormalizable input is
+    // rejected instead of silently creating a block with a bogus date.
+    const d = newBlockDate ? normalizeToIsoDate(newBlockDate) : null;
+    if (!d) {
+      showToast('روز را از روی تقویم انتخاب کنید.');
+      return;
+    }
+    const t = newBlockTime ? normalizeTime(newBlockTime) : null;
+    if (!t) {
+      showToast('بازه زمانی معتبر وارد کنید (مثال: ۱۳:۰۰).');
+      return;
     }
 
     const newBlock = {
       id: `blk-${Date.now()}`,
       specialistId: activeSpecialistView ? activeSpecialistView.id : 'general',
-      date: normalizedDate,
-      time: normalizedTime,
-      reason: newBlockReason,
+      date: d,
+      time: t,
+      reason: newBlockReason.trim() || 'استراحت',
     };
     setScheduleBlocks([...scheduleBlocks, newBlock]);
+    setNewBlockDate('');
     setNewBlockReason('استراحت / وقت پر شده');
   };
 
@@ -906,10 +911,10 @@ export const SalonAdminDashboard: React.FC = () => {
         showToast('متخصص ثبت شد — پس از تایید مدارک توسط ادمین کل منتشر می‌شود.');
       }
       resetSpecialistForm();
-      if (currentSalon?.id) {
-        const { data } = await api.get(`/specialists?salonId=${currentSalon.id}`);
-        setSpecialistsList(Array.isArray(data) ? data : []);
-      }
+      // Refresh the staff view (admin-salons) so the pending specialist shows
+      // up immediately and survives later refetches. The old direct
+      // /specialists fetch was overwritten by the next useSalons refetch.
+      await queryClient.invalidateQueries({ queryKey: ['admin-salons'] });
     } catch (err: any) {
       showToast(err?.response?.data?.error || err?.message || 'خطا در ثبت متخصص.');
     } finally {
@@ -954,10 +959,19 @@ export const SalonAdminDashboard: React.FC = () => {
   const handleSaveCommission = async (specialistId: number, percent: number | null) => {
     try {
       await updateSpecialist(specialistId, { commissionPercent: percent });
+      // Only commit the optimistic row AFTER the API resolves — on a 403 the
+      // server keeps the old value, so applying it first lies to the manager.
       setCommissionRows((prev) => prev.map((r) => (r.specialistId === specialistId ? { ...r, percent } : r)));
       showToast('پورسانت پیش‌فرض متخصص ذخیره شد.');
     } catch (err: any) {
       showToast(err?.response?.data?.error || err?.message || 'خطا در ذخیره پورسانت.');
+      // Re-read this specialist's commissions to undo any optimistic blur.
+      try {
+        const { data } = await api.get(`/specialists/${specialistId}/commissions`);
+        setCommissionRows((prev) => prev.map((r) => (
+          r.specialistId === specialistId ? { ...r, percent: data?.commissionPercent ?? null } : r
+        )));
+      } catch { /* keep old rows on double failure */ }
     }
   };
 
@@ -966,7 +980,15 @@ export const SalonAdminDashboard: React.FC = () => {
     try {
       const { data } = await api.get(`/salons/${currentSalon.id}/schedule`);
       setWeeklySchedule(Array.isArray(data) ? data : []);
-    } catch { setWeeklySchedule([]); }
+    } catch (err: any) {
+      // A 403 means this salon is not ours: say so instead of rendering a
+      // blank editable week the manager might then "fix".
+      const denied = err?.response?.status === 403;
+      setWeeklySchedule([]);
+      showToast(denied
+        ? 'شما به زمان‌بندی این سالن دسترسی ندارید.'
+        : (err?.response?.data?.error || err?.message || 'خطا در دریافت زمان‌بندی.'));
+    }
   };
 
   const handleSaveSchedule = async () => {
@@ -1943,13 +1965,12 @@ export const SalonAdminDashboard: React.FC = () => {
                 </div>
 
                 <form onSubmit={handleAddBlock} className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                  <input
-                    type="text"
-                    required
-                    placeholder="تاریخ (مثال: دوشنبه ۷ آبان)"
-                    value={newBlockDate}
-                    onChange={(e) => setNewBlockDate(e.target.value)}
-                    className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
+                  <JalaliDatePicker
+                    selectedDate={newBlockDate}
+                    onDateChange={(jalaliStr) => setNewBlockDate(jalaliStr)}
+                    label="روز مسدودسازی:"
+                    placeholder="انتخاب روز از تقویم..."
+                    minDate={new Date()}
                   />
                   <input
                     type="text"
@@ -2449,6 +2470,22 @@ export const SalonAdminDashboard: React.FC = () => {
             Only rendered when activeSpecialistView === null
         ======================================================== */
         <>
+          {!currentSalon ? (
+            /* Scoped role with no salon record (or still loading): show an
+               empty state instead of fabricating a foreign/fake salon. */
+            <div className="bg-white rounded-3xl p-8 border border-[#E7E2DA] shadow-xs text-center space-y-3">
+              <Building2 className="w-10 h-10 text-[#6F9A8D] mx-auto" />
+              <h3 className="text-base font-bold text-[#173B3F]">
+                {isLoadingSalons ? 'در حال بارگذاری اطلاعات سالن…' : 'سالن شما هنوز ثبت نشده است'}
+              </h3>
+              {!isLoadingSalons && (
+                <p className="text-xs text-[#6C6C6C] max-w-md mx-auto leading-relaxed">
+                  حساب شما به سالنی متصل نیست. از مدیر کل بخواهید پروفایل سالن شما را ایجاد کند.
+                </p>
+              )}
+            </div>
+          ) : (
+          <>
           {/* Salon Identification Hero Card */}
           <div className="relative rounded-3xl overflow-hidden shadow-lg border border-[#6F9A8D]/40 bg-[#173B3F] text-white">
             <div className="absolute inset-0 z-0">
@@ -3527,12 +3564,12 @@ export const SalonAdminDashboard: React.FC = () => {
                 </p>
 
                 <form onSubmit={handleAddBlock} className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
-                  <input
-                    type="text"
-                    placeholder="تاریخ (مثال: دوشنبه ۷ آبان)"
-                    value={newBlockDate}
-                    onChange={(e) => setNewBlockDate(e.target.value)}
-                    className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs text-[#1C1C1C] focus:border-[#173B3F] outline-none"
+                  <JalaliDatePicker
+                    selectedDate={newBlockDate}
+                    onDateChange={(jalaliStr) => setNewBlockDate(jalaliStr)}
+                    label="روز مسدودسازی:"
+                    placeholder="انتخاب روز از تقویم..."
+                    minDate={new Date()}
                   />
                   <input
                     type="text"
@@ -3706,6 +3743,8 @@ export const SalonAdminDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+          )}
+          </>
           )}
         </>
       )}

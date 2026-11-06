@@ -97,7 +97,7 @@ export const SalonCard: React.FC<SalonCardProps> = ({
     onBookNow(salon, currentService, currentSpecialist, currentDateLabel, timeToBook);
   };
 
-  const { openQuickViewModal } = useModalStore();
+  const { openQuickViewModal, openShowcaseModal } = useModalStore();
 
   // Get unique lines available in this salon
   const availableLineIds = Array.from(new Set([
@@ -316,14 +316,24 @@ export const SalonCard: React.FC<SalonCardProps> = ({
             <span className="text-xs font-bold text-[#173B3F]">
               خدمات انتخابی ({toPersianDigits(activeServices.length)} مورد):
             </span>
-            <button
-              type="button"
-              onClick={() => openQuickViewModal(salon)}
-              className="text-[11px] text-[#173B3F] font-bold hover:underline flex items-center gap-1"
-            >
-              <span>لیست کامل خدمات سالن</span>
-              <ChevronLeft className="w-3 h-3 text-[#D9A2B0]" />
-            </button>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => openShowcaseModal(salon.id)}
+                className="text-[11px] text-[#173B3F] font-bold hover:underline flex items-center gap-1"
+              >
+                <Layers className="w-3 h-3 text-[#C99558]" />
+                <span>نمونه‌کار خدمات سالن</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => openQuickViewModal(salon)}
+                className="text-[11px] text-[#173B3F] font-bold hover:underline flex items-center gap-1"
+              >
+                <span>لیست کامل خدمات سالن</span>
+                <ChevronLeft className="w-3 h-3 text-[#D9A2B0]" />
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -29,6 +29,8 @@ test-results
 # uploads (runtime user content)
 uploads
 public/uploads
+data/uploads
+dist/uploads
 
 # misc
 .DS_Store

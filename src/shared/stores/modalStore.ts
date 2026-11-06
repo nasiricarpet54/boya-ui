@@ -18,6 +18,11 @@ interface ModalState {
   quickViewSalon: Salon | null;
   isQuickViewModalOpen: boolean;
 
+  //.services-portfolio showcase ("نمایشگاه نمونه‌کارها"): keyed by salon id,
+  // null means the cross-salon showcase of every published sample-work image.
+  showcaseSalonId: number | string | null;
+  isShowcaseModalOpen: boolean;
+
   isAuthModalOpen: boolean;
 
   isSearchModalOpen: boolean;
@@ -27,12 +32,15 @@ interface ModalState {
 
   openBookingModal: (salon: Salon, service: SalonService, specialist: Specialist, date: string, time: string) => void;
   closeBookingModal: () => void;
-  
+
   openPortfolioModal: (specialist: Specialist, salon: Salon) => void;
   closePortfolioModal: () => void;
 
   openQuickViewModal: (salon: Salon) => void;
   closeQuickViewModal: () => void;
+
+  openShowcaseModal: (salonId?: number | string | null) => void;
+  closeShowcaseModal: () => void;
 
   openAuthModal: () => void;
   closeAuthModal: () => void;
@@ -74,6 +82,11 @@ export const useModalStore = create<ModalState>((set) => ({
     isQuickViewModalOpen: true,
   }),
   closeQuickViewModal: () => set({ isQuickViewModalOpen: false, quickViewSalon: null }),
+
+  showcaseSalonId: null,
+  isShowcaseModalOpen: false,
+  openShowcaseModal: (salonId = null) => set({ isShowcaseModalOpen: true, showcaseSalonId: salonId }),
+  closeShowcaseModal: () => set({ isShowcaseModalOpen: false, showcaseSalonId: null }),
 
   openAuthModal: () => set({ isAuthModalOpen: true }),
   closeAuthModal: () => set({ isAuthModalOpen: false }),

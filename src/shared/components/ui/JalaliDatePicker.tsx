@@ -132,6 +132,17 @@ export const JalaliDatePicker: React.FC<JalaliDatePickerProps> = ({
     setIsOpen(false);
   };
 
+  // Respect minDate: days before it (e.g. the past, for booking/blocking)
+  // render disabled instead of being selectable.
+  const isDayDisabled = (dayNum: number): boolean => {
+    if (!minDate) return false;
+    const raw = jalaliToGregorian(currentYear, currentMonth + 1, dayNum);
+    if (isNaN(raw.getTime())) return true;
+    const floor = new Date(minDate);
+    floor.setHours(0, 0, 0, 0);
+    return raw < floor;
+  };
+
   const formattedDisplayDate = useMemo(() => {
     if (!selectedDate) return '';
     return formatJalaliDate(selectedDate, {
@@ -242,7 +253,8 @@ export const JalaliDatePicker: React.FC<JalaliDatePickerProps> = ({
                   key={dayNum}
                   type="button"
                   onClick={() => handleSelectDay(dayNum)}
-                  className={`h-8 rounded-xl font-bold transition-all flex items-center justify-center text-xs ${
+                  disabled={isDayDisabled(dayNum)}
+                  className={`h-8 rounded-xl font-bold transition-all flex items-center justify-center text-xs disabled:opacity-40 disabled:cursor-not-allowed ${
                     isSelectedDay
                       ? 'bg-[#173B3F] text-white shadow-sm ring-2 ring-[#173B3F]/30'
                       : isToday
@@ -269,7 +281,11 @@ export const JalaliDatePicker: React.FC<JalaliDatePickerProps> = ({
                 const s = getCurrentShamsiParts(nowTehran);
                 handleSelectDay(s.day);
               }}
-              className="text-[#173B3F] font-bold hover:underline"
+              disabled={(() => {
+                const s = getCurrentShamsiParts(nowTehran);
+                return s.year !== currentYear || s.month !== currentMonth || isDayDisabled(s.day);
+              })()}
+              className="text-[#173B3F] font-bold hover:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:no-underline"
             >
               امروز
             </button>

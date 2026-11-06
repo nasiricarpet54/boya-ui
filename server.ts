@@ -106,23 +106,30 @@ async function createServer() {
     console.log('[DB BOOT] Skipping seed execution (RUN_SEED != true).');
   }
 
-  // AUDIT (P0): Upload persistence. Container filesystems are ephemeral, so
-  // prefer UPLOADS_DIR (point it at a mounted volume), then /app/uploads,
-  // then a local public/uploads for bare-metal/PM2 deploys.
+  // AUDIT (P0): Upload persistence. Container filesystems are ephemeral AND
+  // `vite build` empties `dist/`, so storing uploads there would lose every
+  // uploaded image on the next deploy. Prefer (1) UPLOADS_DIR env (mounted
+  // volume), (2) /app/uploads (docker), (3) <projectRoot>/data/uploads — a
+  // stable location Vite never touches, and mirror symlinks into public/uploads
+  // and dist/uploads so any static layer still finds the files.
   const envUploads = process.env.UPLOADS_DIR;
   const dockerUploads = '/app/uploads';
+  const dataUploads = path.resolve(__dirname, 'data/uploads');
   const localUploads = path.resolve(process.cwd(), 'public/uploads');
+  const distUploads = path.resolve(__dirname, 'dist/uploads');
   const uploadsDir = envUploads
     ? path.resolve(envUploads)
     : fs.existsSync(dockerUploads)
       ? dockerUploads
-      : localUploads;
-  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-  if (!fs.existsSync(localUploads)) fs.mkdirSync(localUploads, { recursive: true });
+      : dataUploads;
+  for (const dir of [uploadsDir, localUploads, distUploads]) {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  }
   console.log(`[BOOT] Upload storage directory: ${uploadsDir}`);
 
   app.use('/uploads', express.static(uploadsDir));
   app.use('/uploads', express.static(localUploads));
+  app.use('/uploads', express.static(distUploads));
 
   function validateAndProcessImage(rawData: string): { buffer: Buffer; ext: string } {
     if (!rawData || typeof rawData !== 'string') throw new Error('داده تصویر نامعتبر است.');
@@ -440,6 +447,50 @@ async function createServer() {
     }
   });
 
+  // Public showcase: sample-work images per service ("نمونه‌کار خدمات") for
+  // the customer panel. One row per (salon, service): the service with its
+  // images embedded. Owner-rooted (independent specialist) services have no
+  // salon to hang off of this listing, so they appear with salonId null and
+  // the customer app can group them separately.
+  app.get('/api/services-portfolio', async (_req, res) => {
+    try {
+      const rows = await db.select().from(services);
+      const ids = rows.map((s: any) => s.id);
+      if (ids.length === 0) return res.json([]);
+
+      const items = await db.select().from(servicePortfolioItems)
+        .where(inArray(servicePortfolioItems.serviceId, ids))
+        .orderBy(desc(servicePortfolioItems.createdAt));
+
+      const byService = new Map<number, any[]>();
+      for (const it of items) {
+        const arr = byService.get(it.serviceId) || [];
+        arr.push(it);
+        byService.set(it.serviceId, arr);
+      }
+      res.json(rows.map((s: any) => ({
+        id: s.id,
+        salonId: s.salonId,
+        ownerId: s.ownerId,
+        serviceLineId: s.serviceLineId,
+        name: s.name,
+        price: s.price,
+        durationMinutes: s.durationMinutes,
+        isMobileAvailable: s.isMobileAvailable,
+        imageUrl: s.imageUrl,
+        publicationStatus: s.publicationStatus,
+        portfolio: (byService.get(s.id) || []).map((i: any) => ({
+          id: i.id,
+          imageUrl: i.imageUrl,
+          title: i.title,
+        })),
+      })));
+    } catch (err: any) {
+      console.error('[GET SERVICES PORTFOLIO ERROR]', err);
+      res.status(500).json({ error: 'خطا در دریافت نمونه‌کار خدمات.' });
+    }
+  });
+
   app.get('/api/managed/salons', requireAuth, requireRole(['super_admin', 'salon_admin', 'salon_specialist', 'mobile_specialist', 'line_manager']), async (req: AuthRequest, res) => {
     try {
       const salonId = req.dbUser.salonId;
@@ -477,6 +528,12 @@ async function createServer() {
   app.patch('/api/salons/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
       const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ error: 'شناسه سالن نامعتبر است.' });
+      // MULTI-TENANCY: a salon admin may only patch their OWN salon.
+      const allowed = assertSalonScope(req, id);
+      if (allowed === null) {
+        return res.status(403).json({ error: 'شما فقط می‌توانید اطلاعات سالن خود را ویرایش کنید.' });
+      }
       const data = schemas.salonUpdateSchema.parse(req.body);
 
       // AUDIT (P0): `gallery` is a TEXT column but the salon admin sends an
@@ -568,7 +625,29 @@ async function createServer() {
   app.patch('/api/bookings/:id/status', requireAuth, async (req: AuthRequest, res) => {
     try {
       const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ error: 'شناسه نوبت نامعتبر است.' });
+      // MULTI-TENANCY: only the owning salon's staff (or the booking's own
+      // specialist / the customer who made it) may change a booking's status.
+      const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id)).limit(1);
+      if (!booking) return res.status(404).json({ error: 'نوبت یافت نشد.' });
+      const role = req.dbUser.role;
+      let mayUpdate = role === 'super_admin';
+      if (!mayUpdate && (role === 'salon_admin' || role === 'line_manager')) {
+        mayUpdate = assertSalonScope(req, booking.salonId) !== null;
+      }
+      if (!mayUpdate && (role === 'salon_specialist' || role === 'mobile_specialist')) {
+        const [owner] = await db.select().from(specialists)
+          .where(eq(specialists.id, booking.specialistId)).limit(1);
+        mayUpdate = !!owner && owner.userId === req.dbUser.id;
+      }
+      if (!mayUpdate && role === 'customer') {
+        mayUpdate = booking.customerId === req.dbUser.id;
+      }
+      if (!mayUpdate) {
+        return res.status(403).json({ error: 'شما فقط می‌توانید وضعیت نوبت‌های سالن خود را تغییر دهید.' });
+      }
       const updated = await updateBookingStatus(id, req.body.status);
+      if (!updated) return res.status(404).json({ error: 'نوبت یافت نشد.' });
       res.json(updated);
     } catch (err) {
       res.status(500).json({ error: 'خطا در تغییر وضعیت.' });
@@ -855,11 +934,20 @@ async function createServer() {
     try {
       const id = Number(req.params.id);
       const data = schemas.serviceUpdateSchema.parse(req.body);
-      const [existing] = await db.select({ salonId: services.salonId }).from(services).where(eq(services.id, id)).limit(1);
+      const [existing] = await db.select().from(services).where(eq(services.id, id)).limit(1);
       if (!existing) return res.status(404).json({ error: 'خدمت یافت نشد.' });
-      const allowed = assertSalonScope(req, existing.salonId);
-      if (allowed === null) {
-        return res.status(403).json({ error: 'شما فقط می‌توانید خدمات سالن خود را ویرایش کنید.' });
+      // Independent (owner-rooted) services belong to the specialist, not any
+      // salon: assertSalonScope(..., null) would otherwise treat them as the
+      // caller's own. Only the owner or super_admin may touch them here.
+      if (existing.ownerId != null) {
+        if (req.dbUser.role !== 'super_admin' && existing.ownerId !== req.dbUser.id) {
+          return res.status(403).json({ error: 'این خدمت متعلق به متخصص مستقل است.' });
+        }
+      } else {
+        const allowed = assertSalonScope(req, existing.salonId);
+        if (allowed === null) {
+          return res.status(403).json({ error: 'شما فقط می‌توانید خدمات سالن خود را ویرایش کنید.' });
+        }
       }
       const [updated] = await db.update(services).set(data as any).where(eq(services.id, id)).returning();
       if (!updated) return res.status(404).json({ error: 'خدمت یافت نشد.' });
@@ -873,11 +961,17 @@ async function createServer() {
   app.delete('/api/services/:id', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
       const id = Number(req.params.id);
-      const [existing] = await db.select({ salonId: services.salonId }).from(services).where(eq(services.id, id)).limit(1);
+      const [existing] = await db.select().from(services).where(eq(services.id, id)).limit(1);
       if (!existing) return res.status(404).json({ error: 'خدمت یافت نشد.' });
-      const allowed = assertSalonScope(req, existing.salonId);
-      if (allowed === null) {
-        return res.status(403).json({ error: 'شما فقط می‌توانید خدمات سالن خود را حذف کنید.' });
+      if (existing.ownerId != null) {
+        if (req.dbUser.role !== 'super_admin' && existing.ownerId !== req.dbUser.id) {
+          return res.status(403).json({ error: 'این خدمت متعلق به متخصص مستقل است.' });
+        }
+      } else {
+        const allowed = assertSalonScope(req, existing.salonId);
+        if (allowed === null) {
+          return res.status(403).json({ error: 'شما فقط می‌توانید خدمات سالن خود را حذف کنید.' });
+        }
       }
       await db.delete(services).where(eq(services.id, id));
       res.json({ success: true });

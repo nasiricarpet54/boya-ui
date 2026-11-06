@@ -4,7 +4,7 @@ import { users, salons, services, specialists, bookings as bookingsTable, refres
 import { eq, and, desc, inArray, ne, sql } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import crypto from 'crypto';
-import { requireAuth, requireRole, type AuthRequest } from '../middleware/auth.ts';
+import { requireAuth, requireRole, assertSalonScope, type AuthRequest } from '../middleware/auth.ts';
 import * as schemas from '../lib/validation.ts';
 import { generateJwtToken, generateRefreshTokenValue, REFRESH_TOKEN_EXPIRES_IN_MS } from '../lib/jwt.ts';
 import { logSecurityAction } from '../db/audit.ts';
@@ -620,6 +620,12 @@ router.get('/specialists', requireAuth, async (req: AuthRequest, res) => {
   try {
     const salonId = req.query.salonId ? Number(req.query.salonId) : Number(req.dbUser.salonId);
     if (!Number.isFinite(salonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
+    // MULTI-TENANCY: a staff caller may only read their own salon's
+    // specialists — a spoofed ?salonId= must not expose another tenant.
+    if (req.dbUser.role !== 'super_admin') {
+      const allowed = assertSalonScope(req, salonId);
+      if (allowed === null) return res.status(403).json({ error: 'شما فقط به متخصصین سالن خود دسترسی دارید.' });
+    }
     const list = await db.select().from(specialists).where(eq(specialists.salonId, salonId));
     res.json({ data: list });
   } catch {
@@ -691,6 +697,12 @@ router.get('/portfolio', requireAuth, async (req: AuthRequest, res) => {
   try {
     const salonId = req.query.salonId ? Number(req.query.salonId) : Number(req.dbUser.salonId);
     if (!Number.isFinite(salonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
+    // MULTI-TENANCY: portfolio rows are salon-scoped — a spoofed ?salonId=
+    // must not expose another tenant's sample-work images.
+    if (req.dbUser.role !== 'super_admin') {
+      const allowed = assertSalonScope(req, salonId);
+      if (allowed === null) return res.status(403).json({ error: 'شما فقط به نمونه‌کارهای سالن خود دسترسی دارید.' });
+    }
     const list = await db.select().from(portfolioItems)
       .where(inArray(portfolioItems.specialistId,
         (await db.select().from(specialists).where(eq(specialists.salonId, salonId))).map((s) => s.id)));

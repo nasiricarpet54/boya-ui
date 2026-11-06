@@ -12,6 +12,7 @@ import { useModalStore } from '../stores/modalStore';
 import { useLocationStore } from '../stores/locationStore';
 import { useDataStore } from '../stores/dataStore';
 import { QuickServicesModal } from '../components/modals/QuickServicesModal';
+import { ServicesShowcaseModal } from '../components/modals/ServicesShowcaseModal';
 import { ProtectedRoute } from '../components/guards/ProtectedRoute';
 import { AuthModal } from '../components/modals/AuthModal';
 import { GlobalSearchModal } from '../components/search/GlobalSearchModal';
@@ -121,6 +122,7 @@ const Root = () => {
           }
       }} />
       <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
+      <ServicesShowcaseModal />
       <GlobalSearchModal />
       <BoyaSplashScreen isOpen={showSplashScreen} appName={splashAppName} onFinish={() => setShowSplashScreen(false)} />
     </div>

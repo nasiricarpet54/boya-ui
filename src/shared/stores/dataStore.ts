@@ -338,10 +338,10 @@ export const useDataStore = create<DataState>()(
     }),
     {
       name: 'boya-core-data-v6',
-      partialize: (state) => ({ 
-        tickets: state.tickets,
-        auditLogs: state.auditLogs
-      }),
+      // MULTI-TENANCY: nothing tenant-scoped is persisted. `tickets` and
+      // `auditLogs` leaked a previous tenant's data across logins on shared
+      // browsers, so the store now persists nothing at all.
+      partialize: () => ({}),
     }
   )
 );

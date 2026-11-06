@@ -87,6 +87,36 @@ export const useSalonDetail = (id: string | number) => {
 };
 
 /**
+ * Public showcase of per-service sample-work images ("نمونه‌کار خدمات").
+ * Each row is one service with its `portfolio` array embedded; group by
+ * salonId on the client. Independent (owner-rooted) services have salonId null.
+ */
+export const useServicesPortfolio = () => {
+  return useQuery({
+    queryKey: ['services-portfolio'],
+    queryFn: async () => {
+      const { data } = await api.get('/services-portfolio');
+      if (!Array.isArray(data)) return [];
+      return data as Array<{
+        id: number;
+        salonId: number | null;
+        ownerId: number | null;
+        serviceLineId: string;
+        name: string;
+        price: string | number;
+        durationMinutes: number;
+        isMobileAvailable: boolean;
+        imageUrl: string | null;
+        publicationStatus: string;
+        portfolio: Array<{ id: number; imageUrl: string; title: string | null }>;
+      }>;
+    },
+    staleTime: 1000 * 60,
+    refetchOnWindowFocus: true,
+  });
+};
+
+/**
  * Query hook for user bookings.
  * Only executes when the user is authenticated, avoiding 401 Unauthorized errors for guests.
  * Does NOT fall back to stale mock data on network errors, ensuring PostgreSQL state integrity.
