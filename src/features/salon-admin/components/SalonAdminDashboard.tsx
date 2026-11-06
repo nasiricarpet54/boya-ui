@@ -2129,7 +2129,7 @@ export const SalonAdminDashboard: React.FC = () => {
 
               {/* Portfolio Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {activeSpecialistView.portfolio.map((item: any) => (
+                {(activeSpecialistView.portfolio || []).map((item: any) => (
                   <div
                     key={item.id}
                     className="group relative rounded-2xl overflow-hidden border border-[#E7E2DA] bg-[#FAF7F2] shadow-xs hover:border-[#173B3F] transition-all"
@@ -3513,7 +3513,7 @@ export const SalonAdminDashboard: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                          {spec.portfolio.map((p: any) => (
+                          {(spec.portfolio || []).map((p: any) => (
                             <div
                               key={p.id}
                               onClick={() =>

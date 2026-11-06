@@ -501,22 +501,38 @@ async function createServer() {
       // F-10: flatten the nested specialist rows into the shape the admin and
       // salon panels expect (name/avatar from the related user row). This fix
       // previously lived only in the dead src/routes/salons.ts copy.
+      // The salon panel ALSO reads the nested fields below (user, portfolio,
+      // documents, publicationStatus, isRentedChair) — dropping them crashes
+      // the specialists tab (spec.portfolio.map on undefined), so both shapes
+      // are returned together.
       const mapped = rows.map((s: any) => ({
         ...s,
         specialists: (s.specialists || []).map((sp: any) => ({
           id: sp.id,
           salonId: sp.salonId,
+          userId: sp.userId,
           name: sp.user?.fullName || '',
           role: sp.user?.role || 'salon_specialist',
           phone: sp.user?.phone || '',
           avatar: sp.avatarUrl || sp.user?.avatar || '',
+          avatarUrl: sp.avatarUrl || sp.user?.avatar || '',
           verified: sp.isVerified,
+          isVerified: sp.isVerified,
           isMobileSpecialist: sp.isMobileActive,
+          isMobileActive: sp.isMobileActive,
           specialtyLine: sp.specialtyLine,
           experienceYears: sp.experienceYears,
           bio: sp.bio || '',
           rating: Number(sp.user?.rating ?? 4.8),
           reviewsCount: Number(sp.user?.reviewsCount ?? 0),
+          isRentedChair: sp.isRentedChair,
+          commissionPercent: sp.commissionPercent,
+          publicationStatus: sp.publicationStatus,
+          documents: sp.documents,
+          workingHours: sp.workingHours,
+          workingDays: sp.workingDays,
+          user: sp.user ? { id: sp.user.id, fullName: sp.user.fullName, phone: sp.user.phone, role: sp.user.role, avatar: sp.user.avatar } : null,
+          portfolio: Array.isArray(sp.portfolio) ? sp.portfolio : [],
         })),
       }));
       res.json(mapped);
@@ -1743,10 +1759,27 @@ async function createServer() {
   app.get('/api/line-manager/staff', requireAuth, requireRole(['super_admin', 'line_manager']), async (req: AuthRequest, res) => {
     try {
       const line = req.dbUser.managedLine;
-      const list = line
+      // Return the same flattened member shape the staff tab renders
+      // (fullName/phone/status) — the raw specialists rows have none of these.
+      const specs = line
         ? await db.select().from(specialists).where(eq(specialists.specialtyLine, line))
         : await db.select().from(specialists);
-      res.json(list);
+      const ids = [...new Set(specs.map((s) => s.userId))];
+      const owners = ids.length
+        ? await db.select().from(users).where(inArray(users.id, ids))
+        : [];
+      const byId = new Map(owners.map((u) => [u.id, u]));
+      res.json(specs.map((sp) => {
+        const u: any = byId.get(sp.userId);
+        return {
+          id: sp.id,
+          fullName: u?.fullName || '',
+          phone: u?.phone || '',
+          status: u?.status || 'active',
+          specialtyLine: sp.specialtyLine,
+          isVerified: sp.isVerified,
+        };
+      }));
     } catch (err: any) {
       console.error('[GET LINE-MANAGER STAFF ERROR]', err);
       res.status(500).json({ error: 'خطا در دریافت پرسنل.' });

@@ -166,7 +166,9 @@ export const useBookings = () => {
  */
 export const useStaff = () => {
   const { isAuthenticated, user } = useAuthStore();
-  const isStaff = isAuthenticated && !!user && ['super_admin', 'salon_admin', 'line_manager'].includes(user.role);
+  // The server's /line-manager/staff endpoint only admits super_admin and
+  // line_manager — enabling this query for salon_admin produces a 403 storm.
+  const isStaff = isAuthenticated && !!user && ['super_admin', 'line_manager'].includes(user.role);
 
   return useQuery({
     queryKey: ['staff', user?.id || 'guest'],
