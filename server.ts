@@ -17,7 +17,7 @@ import { ZodError, z } from 'zod';
 
 import { requireAuth, requireRole, assertSalonScope, type AuthRequest } from './src/middleware/auth.ts';
 import { db } from './src/db/index.ts';
-import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems, auditLogs, supportTickets, ticketMessages, refreshTokens, specialistServiceCommissions, salonWeeklySchedule, specialistWeeklySchedule, servicePortfolioItems } from './src/db/schema.ts';
+import { users, salons, services, bookings as bookingsTable, revokedTokens, notifications, adminProfile, specialists, portfolioItems, auditLogs, supportTickets, ticketMessages, refreshTokens, specialistServiceCommissions, salonWeeklySchedule, specialistWeeklySchedule, servicePortfolioItems, serviceSpecialists } from './src/db/schema.ts';
 import { eq, desc, and, inArray, asc, ne, sql } from 'drizzle-orm';
 import { createBooking, getBookingsForUser, updateBookingStatus } from './src/db/bookings.ts';
 import { sendMeliPayamakSms } from './src/lib/meliPayamak.ts';
@@ -470,7 +470,20 @@ async function createServer() {
         });
       }
 
-      res.json(result.map((s: any) => sanitizeSalonForPublic(s)));
+      // Per-service providers ("متخصص ارائه‌دهنده خدمات") for the storefront.
+      const withProviders = await Promise.all(result.map(async (s: any) => {
+        const sanitized = sanitizeSalonForPublic(s);
+        const enriched = await embedServiceSpecialists(s.services || [], s.specialists || []);
+        const byServiceId = new Map(enriched.map((sv: any) => [sv.id, sv]));
+        return {
+          ...sanitized,
+          services: (sanitized.services || []).map((sv: any) => {
+            const e = byServiceId.get(sv.id);
+            return e ? { ...sv, specialistIds: e.specialistIds, specialistNames: e.specialistNames } : sv;
+          }),
+        };
+      }));
+      res.json(withProviders);
     } catch (err) {
       console.error('❌ API SALONS CRITICAL ERROR:', err); res.status(500).json({ error: 'خطا در دریافت لیست.' });
     }
@@ -902,10 +915,11 @@ async function createServer() {
       if (!Number.isFinite(targetSalonId)) return res.status(400).json({ error: 'شناسه سالن الزامی است.' });
 
       if (!salonIdParam && req.dbUser.role === 'super_admin') {
-        return res.json(await db.select().from(services));
+        const all = await db.select().from(services);
+        return res.json(await embedServiceSpecialists(all));
       }
       const list = await db.select().from(services).where(eq(services.salonId, targetSalonId));
-      res.json(list);
+      res.json(await embedServiceSpecialists(list));
     } catch (err: any) {
       console.error('[GET SERVICES ERROR]', err);
       res.status(500).json({ error: 'خطا در دریافت خدمات.' });
@@ -952,6 +966,80 @@ async function createServer() {
     }
   });
 
+  // Validates the "لاین خدمات با متخصص آن لاین" rule: every specialist attached
+  // to a service must belong to the owning salon and work in the SAME line as
+  // the service. Returns the resolved ids or a response-ready error.
+  const resolveServiceSpecialists = async (
+    req: AuthRequest,
+    salonId: number,
+    serviceLineId: string,
+    rawIds: unknown,
+  ): Promise<{ ids: number[] } | { status: number; error: string }> => {
+    if (rawIds == null) return { ids: [] };
+    const ids = (Array.isArray(rawIds) ? rawIds : []).map(Number).filter(Number.isFinite);
+    if (ids.length === 0) return { ids: [] };
+    const rows = await db.select().from(specialists).where(inArray(specialists.id, ids));
+    if (rows.length !== ids.length) {
+      return { status: 404, error: 'یکی از متخصصین انتخاب‌شده یافت نشد.' };
+    }
+    for (const sp of rows) {
+      const allowed = assertSalonScope(req, sp.salonId);
+      if (allowed === null) {
+        return { status: 403, error: 'شما فقط می‌توانید متخصصین سالن خود را انتخاب کنید.' };
+      }
+      if (sp.specialtyLine !== serviceLineId) {
+        return { status: 400, error: `متخصص «${sp.specialtyLine}» در لاین این خدمت (${serviceLineId}) نیست.` };
+      }
+    }
+    return { ids };
+  };
+
+  // Replace the whole specialist set of a service in one transactional sweep.
+  const setServiceSpecialists = async (serviceId: number, ids: number[]) => {
+    await db.delete(serviceSpecialists).where(eq(serviceSpecialists.serviceId, serviceId));
+    if (ids.length > 0) {
+      await db.insert(serviceSpecialists).values(ids.map((specialistId) => ({ serviceId, specialistId })));
+    }
+  };
+
+  // Attach each service's provider ids (and names, when the salon's
+  // specialists are known) so panels can render "متخصص ارائه‌دهنده".
+  const embedServiceSpecialists = async (rows: any[], knownSpecialists?: any[]) => {
+    if (rows.length === 0) return rows;
+    const ids = rows.map((s: any) => s.id);
+    const junction = await db.select().from(serviceSpecialists)
+      .where(inArray(serviceSpecialists.serviceId, ids));
+    const byService = new Map<number, number[]>();
+    for (const j of junction) {
+      const arr = byService.get(j.serviceId) ?? [];
+      arr.push(j.specialistId);
+      byService.set(j.serviceId, arr);
+    }
+    let nameById = new Map<number, string>();
+    const wantNames = !knownSpecialists || knownSpecialists.length === 0;
+    if (wantNames) {
+      const specIds = [...new Set(junction.map((j) => j.specialistId))];
+      if (specIds.length > 0) {
+        const specs = await db.select().from(specialists).where(inArray(specialists.id, specIds));
+        const userIds = [...new Set(specs.map((s: any) => s.userId))];
+        const owners = userIds.length
+          ? await db.select().from(users).where(inArray(users.id, userIds))
+          : [];
+        const nameByUserId = new Map<number, string>(owners.map((u: any) => [u.id, u.fullName]));
+        nameById = new Map<number, string>(specs.map((s: any) => [s.id, nameByUserId.get(s.userId) || '']));
+      }
+    } else {
+      nameById = new Map<number, string>(knownSpecialists.map((s: any) => [s.id, s.name || s.user?.fullName || '']));
+    }
+    return rows.map((s: any) => ({
+      ...s,
+      specialistIds: byService.get(s.id) ?? [],
+      specialistNames: (byService.get(s.id) ?? [])
+        .map((id) => nameById.get(id))
+        .filter(Boolean) as string[],
+    }));
+  };
+
   app.post('/api/services', requireAuth, requireRole(['super_admin', 'salon_admin']), async (req: AuthRequest, res) => {
     try {
       const data = schemas.serviceCreateSchema.parse(req.body);
@@ -961,6 +1049,9 @@ async function createServer() {
       if (allowed === null) {
         return res.status(403).json({ error: 'شما فقط می‌توانید به سالن خود خدمت اضافه کنید.' });
       }
+      const resolved = await resolveServiceSpecialists(req, salonId, data.serviceLineId, data.specialistIds);
+      if ('status' in resolved) return res.status(resolved.status).json({ error: resolved.error });
+
       const [created] = await db.insert(services).values({
         salonId,
         serviceLineId: data.serviceLineId,
@@ -971,6 +1062,7 @@ async function createServer() {
         isMobileAvailable: Boolean(data.isMobileAvailable),
         imageUrl: data.imageUrl ?? null,
       } as any).returning();
+      await setServiceSpecialists(created.id, resolved.ids);
       res.status(201).json(created);
     } catch (err) {
       console.error('[POST SERVICES ERROR]', err);
@@ -997,7 +1089,23 @@ async function createServer() {
           return res.status(403).json({ error: 'شما فقط می‌توانید خدمات سالن خود را ویرایش کنید.' });
         }
       }
-      const [updated] = await db.update(services).set(data as any).where(eq(services.id, id)).returning();
+      const patch: Record<string, any> = { ...data };
+      delete patch.specialistIds;
+
+      // Line change re-checks every attached specialist against the new line.
+      const effectiveLine = patch.serviceLineId ?? existing.serviceLineId;
+      if (data.specialistIds != null) {
+        const ownerSalonId = existing.salonId ?? Number(req.dbUser.salonId);
+        const resolved = await resolveServiceSpecialists(req, ownerSalonId, effectiveLine, data.specialistIds);
+        if ('status' in resolved) return res.status(resolved.status).json({ error: resolved.error });
+        await setServiceSpecialists(id, resolved.ids);
+      } else if (patch.serviceLineId != null && patch.serviceLineId !== existing.serviceLineId) {
+        // The line changed without an explicit specialist list: the previous
+        // specialists of the OTHER line are no longer valid — clear them.
+        await setServiceSpecialists(id, []);
+      }
+
+      const [updated] = await db.update(services).set(patch as any).where(eq(services.id, id)).returning();
       if (!updated) return res.status(404).json({ error: 'خدمت یافت نشد.' });
       res.json({ success: true, service: updated });
     } catch (err) {
@@ -1290,31 +1398,53 @@ async function createServer() {
   app.get('/api/me/services', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
     try {
       const list = await db.select().from(services).where(eq(services.ownerId, req.dbUser.id));
-      res.json(list);
+      // Embed the provider (the calling specialist) so the panel can show
+      // "متخصص ارائه‌دهنده" without a second round-trip.
+      const ids = list.map((s: any) => s.id);
+      const junction = ids.length
+        ? await db.select().from(serviceSpecialists).where(inArray(serviceSpecialists.serviceId, ids))
+        : [];
+      const byService = new Map<number, number[]>();
+      for (const j of junction) {
+        const arr = byService.get(j.serviceId) ?? [];
+        arr.push(j.specialistId);
+        byService.set(j.serviceId, arr);
+      }
+      res.json(list.map((s: any) => ({ ...s, specialistIds: byService.get(s.id) ?? [] })));
     } catch (err: any) {
       console.error('[GET ME SERVICES ERROR]', err);
       res.status(500).json({ error: 'خطا در دریافت خدمات.' });
     }
   });
 
-  // POST /api/me/services — create own service (pending until super_admin approves).
+  // POST /api/me/services — create own service. Per the platform rules the
+  // independent/mobile specialist's services are active immediately; no
+  // super-admin approval is required.
   app.post('/api/me/services', requireAuth, requireRole(['salon_specialist', 'mobile_specialist']), async (req: AuthRequest, res) => {
     try {
       const sp = await resolveMySpecialist(req);
       if (!sp) return res.status(404).json({ error: 'پروفایل متخصص شما یافت نشد.' });
       const data = schemas.myServiceSchema.parse(req.body);
+      // LINE LOCK: an independent/mobile specialist offers services only in
+      // their own line ("لاین مستقل خدمات با متخصص آن لاین").
+      const lineId = sp.specialtyLine || data.serviceLineId || 'hair';
+      if (data.serviceLineId && data.serviceLineId !== sp.specialtyLine) {
+        return res.status(400).json({ error: 'شما فقط می‌توانید در لاین تخصصی خود خدمت ثبت کنید.' });
+      }
       const [created] = await db.insert(services).values({
         ownerId: req.dbUser.id,
         salonId: null,
-        serviceLineId: data.serviceLineId || sp.specialtyLine,
+        serviceLineId: lineId,
         name: data.name,
         description: data.description ?? null,
         price: String(data.price),
         durationMinutes: Number(data.durationMinutes),
         isMobileAvailable: Boolean(data.isMobileAvailable),
         imageUrl: data.imageUrl ?? null,
-        publicationStatus: 'pending',
+        publicationStatus: 'active',
       } as any).returning();
+      // The specialist is by definition the sole provider of their own service.
+      await setServiceSpecialists(created.id, [sp.id]);
       res.status(201).json(created);
     } catch (err) {
       console.error('[POST ME SERVICES ERROR]', err);

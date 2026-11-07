@@ -60,6 +60,7 @@ import { SpecialistFinancialsView } from '../../../shared/components/ui/Speciali
 import { SafeHtml } from '../../../shared/components/ui/SafeHtml';
 import { ImageFileUploader } from '../../../shared/components/ui/ImageFileUploader';
 import { UserHeader } from '../../../shared/components/layout/UserHeader';
+import { ServiceFormModal, ServiceFormValue } from './ServiceFormModal';
 
 import { useUIStore } from '../../../shared/stores/uiStore';
 import { useDataStore } from '../../../shared/stores/dataStore';
@@ -278,16 +279,15 @@ export const SalonAdminDashboard: React.FC = () => {
 
   // Local state for services
   const [salonServices, setSalonServices] = useState<any[]>([]);
-  const [isAddingService, setIsAddingService] = useState(false);
-  const [newServiceName, setNewServiceName] = useState('');
-  const [newServicePrice, setNewServicePrice] = useState(1500000);
-  const [newServiceDuration, setNewServiceDuration] = useState(60);
-  const [newServiceMobile, setNewServiceMobile] = useState(true);
-  const [newServiceLineId, setNewServiceLineId] = useState('hair');
-  const [newServiceImage, setNewServiceImage] = useState(PRESET_SERVICE_PHOTOS[0].url);
 
   // Local state for specialists in this salon
   const [specialistsList, setSpecialistsList] = useState<any[]>([]);
+
+  // Service form modal: create AND edit share one form so every field
+  // (line, providers, duration, price, name) is editable in place.
+  const [serviceModalOpen, setServiceModalOpen] = useState(false);
+  const [editingService, setEditingService] = useState<any | null>(null);
+  const [serviceFormSpecialists, setServiceFormSpecialists] = useState<number[]>([]);
 
   // Specialist CRUD (salon-admin feature: create/edit/delete + documents → approval)
   const [showSpecialistForm, setShowSpecialistForm] = useState(false);
@@ -507,60 +507,86 @@ export const SalonAdminDashboard: React.FC = () => {
   // Handler: Add service (Specialist can only add in their specialty line)
   const [serviceError, setServiceError] = useState('');
   const [serviceBusy, setServiceBusy] = useState(false);
-  const handleAddService = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newServiceName.trim()) return;
-    if (![ROLES.SALON_ADMIN, ROLES.SUPER_ADMIN, ROLES.SALON_SPECIALIST, ROLES.MOBILE_SPECIALIST].includes(user?.role as any)) {
-      showToast('حساب شما مجاز به ثبت خدمت نیست.');
+
+  // Service modal: opened for create (null) or edit (existing row). For
+  // independent/mobile specialists the line + provider are locked to their
+  // own profile ("لاین مستقل خدمات با متخصص آن لاین").
+  const openServiceModal = (serv: any | null) => {
+    setEditingService(serv);
+    setServiceError('');
+    setServiceModalOpen(true);
+  };
+
+  const closeServiceModal = () => {
+    setServiceModalOpen(false);
+    setEditingService(null);
+    setServiceError('');
+  };
+
+  // Single submit path used by ServiceFormModal (create AND edit) across all
+  // three panels: salon_admin, independent (rented chair) and mobile specialist.
+  const handleServiceFormSubmit = async (value: ServiceFormValue) => {
+    if (!value.name.trim()) { setServiceError('نام خدمت الزامی است.'); return; }
+    if (!value.price || value.price <= 0) { setServiceError('هزینه ارائه خدمت الزامی و باید بیشتر از صفر باشد.'); return; }
+    if (!value.durationMinutes || value.durationMinutes <= 0) { setServiceError('مدت زمان ارائه خدمت الزامی است.'); return; }
+    if (!isIndependentSpecialist && value.specialistIds.length === 0) {
+      setServiceError('انتخاب حداقل یک متخصص از لاین مربوطه الزامی است.');
       return;
     }
-
-    const priceNum = Number(newServicePrice);
-    const durationNum = Number(newServiceDuration);
-
-    if (!priceNum || priceNum <= 0) {
-      setServiceError('قیمت خدمت الزامی و باید بیشتر از صفر باشد.');
-      return;
-    }
-    if (!durationNum || durationNum <= 0) {
-      setServiceError('مدت زمان خدمت الزامی و باید بیشتر از صفر باشد.');
-      return;
-    }
-
     setServiceBusy(true);
     setServiceError('');
     try {
-      const lineId = activeSpecialistView ? activeSpecialistView.specialtyLine : newServiceLineId;
       if (isIndependentSpecialist) {
-        // Independent/mobile specialist: owner-rooted service, pending approval.
-        const { data: created } = await api.post('/me/services', {
-          name: newServiceName.trim(),
-          serviceLineId: lineId,
-          durationMinutes: durationNum,
-          price: priceNum,
-          isMobileAvailable: newServiceMobile,
-          imageUrl: newServiceImage,
-        });
-        setMyServices((prev) => [created, ...prev]);
-        setIsAddingService(false);
-        setNewServiceName('');
-        showToast('خدمت ثبت شد — پس از تایید ادمین کل منتشر می‌شود.');
+        const payload: any = {
+          name: value.name.trim(),
+          serviceLineId: value.serviceLineId,
+          durationMinutes: value.durationMinutes,
+          price: value.price,
+          isMobileAvailable: value.isMobileAvailable,
+          imageUrl: value.imageUrl,
+        };
+        if (editingService) {
+          const { data } = await api.patch(`/me/services/${editingService.id}`, payload);
+          const updated = data?.service ?? data;
+          if (updated) setMyServices((prev) => prev.map((s) => (s.id === editingService.id ? { ...s, ...updated } : s)));
+          showToast('خدمت ویرایش شد.');
+        } else {
+          const { data: created } = await api.post('/me/services', payload);
+          setMyServices((prev) => [created, ...prev]);
+          showToast('خدمت با موفقیت ثبت شد.');
+        }
+        closeServiceModal();
         return;
       }
-      const created = await createService({
-        salonId: Number(currentSalon.id),
-        serviceLineId: lineId,
-        name: newServiceName.trim(),
-        durationMinutes: durationNum,
-        price: priceNum,
-        description: 'سرویس ثبت شده توسط مدیریت سالن در پلتفرم بویا',
-        isMobileAvailable: newServiceMobile,
-        imageUrl: newServiceImage,
-      });
-      setSalonServices((prev) => [created, ...prev]);
-      setIsAddingService(false);
-      setNewServiceName('');
-      showToast('خدمت با موفقیت ثبت شد.');
+      if (editingService) {
+        const { data } = await api.patch(`/services/${editingService.id}`, {
+          name: value.name.trim(),
+          serviceLineId: value.serviceLineId,
+          durationMinutes: value.durationMinutes,
+          price: value.price,
+          isMobileAvailable: value.isMobileAvailable,
+          imageUrl: value.imageUrl,
+          specialistIds: value.specialistIds,
+        });
+        const updated = data?.service ?? data;
+        if (updated) setSalonServices((prev) => prev.map((s) => (s.id === editingService.id ? { ...s, ...updated } : s)));
+        showToast('خدمت ویرایش شد.');
+      } else {
+        const created = await createService({
+          salonId: Number(currentSalon.id),
+          serviceLineId: value.serviceLineId,
+          name: value.name.trim(),
+          durationMinutes: value.durationMinutes,
+          price: value.price,
+          description: 'سرویس ثبت شده توسط مدیریت سالن در پلتفرم بویا',
+          isMobileAvailable: value.isMobileAvailable,
+          imageUrl: value.imageUrl,
+          specialistIds: value.specialistIds,
+        } as any);
+        setSalonServices((prev) => [created, ...prev]);
+        showToast('خدمت با موفقیت ثبت شد.');
+      }
+      closeServiceModal();
       await queryClient.invalidateQueries({ queryKey: ['salons'] });
     } catch (err: any) {
       setServiceError(err?.response?.data?.error || err?.message || 'خطا در ثبت خدمت.');
@@ -569,33 +595,10 @@ export const SalonAdminDashboard: React.FC = () => {
     }
   };
 
-  // Salon-admin feature: edit price/duration of an existing service.
+
+  // Salon-admin feature: edit every field of an existing service via the modal.
   const handleEditService = (serv: any) => {
-    const priceStr = window.prompt('قیمت جدید خدمت (تومان):', String(serv.price ?? ''));
-    if (priceStr === null) return;
-    const durationStr = window.prompt('مدت زمان جدید (دقیقه):', String(serv.durationMinutes ?? 60));
-    if (durationStr === null) return;
-    const price = Number(priceStr);
-    const durationMinutes = Number(durationStr);
-    if (!Number.isFinite(price) || price <= 0) { showToast('قیمت نامعتبر است.'); return; }
-    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) { showToast('مدت زمان نامعتبر است.'); return; }
-    if (isIndependentSpecialist) {
-      api.patch(`/me/services/${serv.id}`, { price, durationMinutes })
-        .then(({ data }) => {
-          const updated = data?.service ?? data;
-          if (updated) setMyServices((prev) => prev.map((s) => (s.id === serv.id ? updated : s)));
-          showToast('خدمت ویرایش شد.');
-        })
-        .catch((err: any) => showToast(err?.response?.data?.error || err?.message || 'خطا در ویرایش خدمت.'));
-      return;
-    }
-    updateService(serv.id, { price, durationMinutes })
-      .then(({ service }) => {
-        if (service) setSalonServices((prev) => prev.map((s) => (s.id === serv.id ? service : s)));
-        showToast('خدمت ویرایش شد.');
-        queryClient.invalidateQueries({ queryKey: ['salons'] });
-      })
-      .catch((err: any) => showToast(err?.response?.data?.error || err?.message || 'خطا در ویرایش خدمت.'));
+    openServiceModal(serv);
   };
 
   const handleDeleteService = async (serv: any) => {
@@ -1592,113 +1595,13 @@ export const SalonAdminDashboard: React.FC = () => {
                 </div>
 
                 <button
-                  onClick={() => setIsAddingService(!isAddingService)}
+                  onClick={() => openServiceModal(null)}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#173B3F] text-white text-xs font-bold hover:bg-[#0F3232] shadow-sm"
                 >
                   <Plus className="w-3.5 h-3.5 text-[#D9A2B0]" />
                   <span>تعریف خدمت جدید در لاین شما</span>
                 </button>
               </div>
-
-              {/* Add Service Form locked to specialist's specialty line */}
-              {serviceError && <div role="alert" className="p-3 bg-rose-50 text-rose-700 rounded-xl">{serviceError}</div>}
-              {isAddingService && (
-                <form onSubmit={handleAddService} className="p-4 bg-white rounded-3xl border border-[#173B3F] space-y-3 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-[#173B3F]">
-                      تعریف خدمت جدید برای لاین {currentSpecialistLine?.name}
-                    </h4>
-                    <span className="text-[10px] text-[#2E5E52] bg-[#EAF2EF] px-2.5 py-0.5 rounded-full font-bold">
-                      ثبت به نام {activeSpecialistView.user?.fullName}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      required
-                      placeholder="عنوان خدمت تخصصی (مثال: فیشیال طلا با ماساژ لنفاوی)"
-                      value={newServiceName}
-                      onChange={(e) => setNewServiceName(e.target.value)}
-                      className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
-                    />
-                    <input
-                      type="number"
-                      required
-                      placeholder="قیمت به تومان (مثال: ۱۸۰۰۰۰۰)"
-                      value={newServicePrice}
-                      onChange={(e) => setNewServicePrice(Number(e.target.value))}
-                      className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
-                    />
-                    <input
-                      type="number"
-                      required
-                      placeholder="مدت زمان (دقیقه)"
-                      value={newServiceDuration}
-                      onChange={(e) => setNewServiceDuration(Number(e.target.value))}
-                      className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
-                    />
-
-                    {/* Locked Specialty Line Display */}
-                    <div className="h-10 px-3 rounded-xl border border-[#E7E2DA] bg-[#FAF7F2] text-xs text-[#173B3F] font-bold flex items-center justify-between">
-                      <span>لاین خدمت: {currentSpecialistLine?.name}</span>
-                      <Lock className="w-3.5 h-3.5 text-[#6C6C6C]" />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <span className="text-[11px] font-semibold text-[#1C1C1C] block mb-1">
-                        تصویر ژورنالی خدمت:
-                      </span>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        {PRESET_SERVICE_PHOTOS.map((preset) => (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            onClick={() => setNewServiceImage(preset.url)}
-                            className={`flex items-center gap-1.5 p-1 rounded-xl border text-xs shrink-0 transition-all ${
-                              newServiceImage === preset.url
-                                ? 'border-[#173B3F] bg-[#173B3F]/5 font-bold'
-                                : 'border-[#E7E2DA] bg-white'
-                            }`}
-                          >
-                            <img src={preset.url} alt={preset.label} className="w-8 h-8 rounded-lg object-cover" />
-                            <span className="text-[11px] px-1">{preset.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-xs text-[#1C1C1C] sm:col-span-2">
-                      <input
-                        type="checkbox"
-                        id="specMobileServiceCheck"
-                        checked={newServiceMobile}
-                        onChange={(e) => setNewServiceMobile(e.target.checked)}
-                        className="accent-[#173B3F] w-4 h-4"
-                      />
-                      <label htmlFor="specMobileServiceCheck">
-                        امکان ارائه این خدمت در محل مشتری (Mobile Service)
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="submit" disabled={serviceBusy}
-                      className="px-4 py-2 rounded-full bg-[#173B3F] text-white text-xs font-bold hover:bg-[#0F3232]"
-                    >
-                      ثبت خدمت در ویترین بویا
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingService(false)}
-                      className="px-4 py-2 rounded-full border border-slate-200 text-xs text-[#6C6C6C]"
-                    >
-                      انصراف
-                    </button>
-                  </div>
-                </form>
-              )}
 
               {/* Specialist's Services List */}
               <div className="space-y-2.5">
@@ -3127,7 +3030,7 @@ export const SalonAdminDashboard: React.FC = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsAddingService(!isAddingService)}
+                  onClick={() => openServiceModal(null)}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#173B3F] text-white text-xs font-bold hover:bg-[#0F3232] shadow-sm"
                 >
                   <Plus className="w-3.5 h-3.5 text-[#D9A2B0]" />
@@ -3135,107 +3038,6 @@ export const SalonAdminDashboard: React.FC = () => {
                 </button>
               </div>
 
-              {serviceError && <div role="alert" className="p-3 bg-rose-50 text-rose-700 rounded-xl">{serviceError}</div>}
-              {isAddingService && (
-                <form onSubmit={handleAddService} className="p-4 bg-white rounded-3xl border border-[#173B3F] space-y-3 shadow-sm">
-                  <h4 className="text-xs font-bold text-[#173B3F]">فرم تعریف خدمت جدید در پلتفرم بویا</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      required
-                      placeholder="نام خدمت (مثال: شینیون خطی ژورنالی)"
-                      value={newServiceName}
-                      onChange={(e) => setNewServiceName(e.target.value)}
-                      className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
-                    />
-                    <input
-                      type="number"
-                      required
-                      placeholder="قیمت به تومان"
-                      value={newServicePrice}
-                      onChange={(e) => setNewServicePrice(Number(e.target.value))}
-                      className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
-                    />
-                    <input
-                      type="number"
-                      required
-                      placeholder="مدت زمان (دقیقه)"
-                      value={newServiceDuration}
-                      onChange={(e) => setNewServiceDuration(Number(e.target.value))}
-                      className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
-                    />
-                    <select
-                      value={newServiceLineId}
-                      onChange={(e) => setNewServiceLineId(e.target.value)}
-                      className="h-10 px-3 rounded-xl border border-[#E7E2DA] text-xs focus:border-[#173B3F] outline-none"
-                    >
-                      <option value="hair">مو و استایل</option>
-                      <option value="nail">ناخن و اسپا دست</option>
-                      <option value="skincare">پوست و فیشیال</option>
-                      <option value="eyelash_eyebrow">مژه و ابرو</option>
-                      <option value="massage_spa">اسپا و ماساژ</option>
-                    </select>
-
-                    <div className="sm:col-span-2 space-y-2">
-                      <ImageFileUploader
-                        label="تصویر کاور یا نتیجه خدمت"
-                        subLabel="بارگذاری عکس از لوکال یا دوربین عکاسی"
-                        value={newServiceImage}
-                        onChange={(url) => setNewServiceImage(url)}
-                        allowCamera={true}
-                      />
-
-                      <span className="text-[11px] font-semibold text-[#6C6C6C] block">
-                        یا انتخاب سریع از عکس‌های ژورنالی:
-                      </span>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        {PRESET_SERVICE_PHOTOS.map((preset) => (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            onClick={() => setNewServiceImage(preset.url)}
-                            className={`flex items-center gap-1.5 p-1 rounded-xl border text-xs shrink-0 transition-all ${
-                              newServiceImage === preset.url
-                                ? 'border-[#173B3F] bg-[#173B3F]/5 font-bold'
-                                : 'border-[#E7E2DA] bg-white'
-                            }`}
-                          >
-                            <img src={preset.url} alt={preset.label} className="w-8 h-8 rounded-lg object-cover" />
-                            <span className="text-[11px] px-1">{preset.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-xs text-[#1C1C1C] sm:col-span-2">
-                      <input
-                        type="checkbox"
-                        id="mobileServiceCheck"
-                        checked={newServiceMobile}
-                        onChange={(e) => setNewServiceMobile(e.target.checked)}
-                        className="accent-[#173B3F] w-4 h-4"
-                      />
-                      <label htmlFor="mobileServiceCheck">قابل ارائه در محل مشتری (Mobile Service)</label>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="submit" disabled={serviceBusy}
-                      className="px-4 py-2 rounded-full bg-[#173B3F] text-white text-xs font-bold hover:bg-[#0F3232]"
-                    >
-                      ثبت و انتشار در ویترین
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingService(false)}
-                      className="px-4 py-2 rounded-full border border-slate-200 text-xs text-[#6C6C6C]"
-                    >
-                      انصراف
-                    </button>
-                  </div>
-                </form>
-              )}
 
               <div className="space-y-2.5">
                 {salonServices.map((serv) => (
@@ -3270,6 +3072,11 @@ export const SalonAdminDashboard: React.FC = () => {
                         <span className="text-[11px] text-[#6C6C6C] block mt-0.5">
                           مدت زمان: {toPersianDigits(serv.durationMinutes)} دقیقه • {serv.description}
                         </span>
+                        {(serv.specialistNames || []).length > 0 && (
+                          <span className="text-[10px] text-[#2E5E52] font-semibold block mt-0.5">
+                            ارائه‌دهندگان: {(serv.specialistNames as string[]).join('، ')}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -3779,6 +3586,27 @@ export const SalonAdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
+      <ServiceFormModal
+        isOpen={serviceModalOpen}
+        initial={editingService ? {
+          id: editingService.id,
+          name: editingService.name || '',
+          serviceLineId: editingService.serviceLineId || (isIndependentSpecialist ? activeSpecialistView?.specialtyLine : 'hair'),
+          price: Number(editingService.price) || 0,
+          durationMinutes: Number(editingService.durationMinutes) || 60,
+          isMobileAvailable: Boolean(editingService.isMobileAvailable),
+          imageUrl: editingService.imageUrl || null,
+          specialistIds: (editingService.specialistIds || []).map(Number),
+        } : null}
+        busy={serviceBusy}
+        error={serviceError}
+        lockToOwnLine={isIndependentSpecialist}
+        ownSpecialistId={activeSpecialistView?.id ?? null}
+        ownLineName={isIndependentSpecialist ? activeSpecialistView?.specialtyLine : undefined}
+        selectableSpecialists={isIndependentSpecialist ? [] : (specialistsList || []).filter((s: any) => !s.isRentedChair)}
+        onSubmit={handleServiceFormSubmit}
+        onClose={closeServiceModal}
+      />
     </>
   );
 };

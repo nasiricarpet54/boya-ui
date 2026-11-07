@@ -239,6 +239,15 @@ export async function runMigrations() {
         image_url TEXT NOT NULL,
         title TEXT,
         created_at TIMESTAMP DEFAULT NOW() NOT NULL
+      )`,
+      // Service ↔ specialists junction (0008): a service can be offered by
+      // several specialists of the matching line.
+      `CREATE TABLE IF NOT EXISTS service_specialists (
+        id SERIAL PRIMARY KEY,
+        service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+        specialist_id INTEGER NOT NULL REFERENCES specialists(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+        UNIQUE (service_id, specialist_id)
       )`
     ];
 

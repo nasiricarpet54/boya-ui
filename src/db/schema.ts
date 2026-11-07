@@ -222,6 +222,18 @@ export const servicePortfolioItems = pgTable('service_portfolio_items', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Service → specialists junction: a service can be offered by several
+// specialists, and each specialist offers many services. Deleted rows vanish
+// automatically via the cascading FKs.
+export const serviceSpecialists = pgTable('service_specialists', {
+  id: serial('id').primaryKey(),
+  serviceId: integer('service_id').references(() => services.id, { onDelete: 'cascade' }).notNull(),
+  specialistId: integer('specialist_id').references(() => specialists.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  uniq: uniqueIndex('service_specialist_uniq').on(t.serviceId, t.specialistId),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   salon: one(salons, {
@@ -255,6 +267,7 @@ export const specialistsRelations = relations(specialists, ({ one, many }) => ({
   portfolio: many(portfolioItems),
   serviceCommissions: many(specialistServiceCommissions),
   weeklySchedule: many(specialistWeeklySchedule),
+  offeredServices: many(serviceSpecialists),
 }));
 
 export const specialistServiceCommissionsRelations = relations(specialistServiceCommissions, ({ one }) => ({
@@ -316,12 +329,24 @@ export const servicesRelations = relations(services, ({ many, one }) => ({
   }),
   bookings: many(bookings),
   portfolioItems: many(servicePortfolioItems),
+  offeredBy: many(serviceSpecialists),
 }));
 
 export const servicePortfolioItemsRelations = relations(servicePortfolioItems, ({ one }) => ({
   service: one(services, {
     fields: [servicePortfolioItems.serviceId],
     references: [services.id],
+  }),
+}));
+
+export const serviceSpecialistsRelations = relations(serviceSpecialists, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceSpecialists.serviceId],
+    references: [services.id],
+  }),
+  specialist: one(specialists, {
+    fields: [serviceSpecialists.specialistId],
+    references: [specialists.id],
   }),
 }));
 

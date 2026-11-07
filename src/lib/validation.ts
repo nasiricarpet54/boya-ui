@@ -138,6 +138,9 @@ export const serviceCreateSchema = z.object({
   ]).transform(val => Number(val)),
   isMobileAvailable: z.boolean().default(false),
   imageUrl: z.string().optional().nullable(),
+  // specialists offering this service ("لاین خدمات با متخصص آن لاین").
+  // The server validates each belongs to the salon AND to the same line.
+  specialistIds: z.array(z.union([z.number(), z.string()])).optional(),
 });
 
 export const serviceUpdateSchema = serviceCreateSchema.partial();
@@ -161,6 +164,8 @@ export const myServiceSchema = z.object({
   isMobileAvailable: z.boolean().default(false),
   imageUrl: z.string().optional().nullable(),
   serviceLineId: z.string().optional(),
+  // Own junction row is implied for the caller; client may not set it.
+  specialistIds: z.array(z.union([z.number(), z.string()])).optional(),
 });
 
 export const myServiceUpdateSchema = myServiceSchema.partial();
